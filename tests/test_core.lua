@@ -192,3 +192,29 @@ test("own entry for a known rune keeps its HP safety check", function()
   for _, x in ipairs(ns.FullList(2)) do if x.id == 12662 then it = x end end
   eq(it.hpCost, 1000)
 end)
+
+test("tick marks follow a bar thickness change", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.9; M.tick()
+  local t = bar(ns).ticks[1][1]
+  local before = t.front.h
+  ns.db.barThickness = 30; ns.Layout(true); M.tick()
+  eq(t.front.h, before + 16, "tick height after thickness 14 -> 30")
+end)
+
+test("own amount for a known rune keeps it in the rune slot", function()
+  local ns = M.load(nil, { bags = { [12662] = 1 } })
+  SlashCmdList.FULLMANAFOREVER("item 12662 1400")
+  local inRune, inPotion = false, false
+  for _, it in ipairs(ns.FullList(2)) do if it.id == 12662 then inRune = true end end
+  for _, it in ipairs(ns.FullList(1)) do if it.id == 12662 then inPotion = true end end
+  ok(inRune, "rune left its slot"); ok(not inPotion, "rune moved into the potion slot")
+end)
+
+test("known item added to another category stays in its own slot too", function()
+  local ns = M.load(nil)
+  ns.AddCustom(12662, 1400, "potion") -- explicit (odd) choice of the player
+  local inRune = false
+  for _, it in ipairs(ns.FullList(2)) do if it.id == 12662 then inRune = true end end
+  ok(inRune, "built-in rune entry removed from the rune slot")
+end)

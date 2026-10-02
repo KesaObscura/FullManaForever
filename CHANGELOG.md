@@ -5,7 +5,7 @@
 - Faster: about 27 times less memory churn and half the item API calls per update
 - Safer: if the game's mana check stops working, icons stay hidden instead of lighting up at full mana
 - One broken item or group no longer hides all the other icons
-- Own items: the amount must be a whole number from 1 to 99999; an own entry for a known item replaces it instead of showing twice, and keeps the rune health check and the sleep warning
+- Own items: the amount must be a whole number from 1 to 99999; an own entry for a known item replaces it in that category instead of showing twice, keeps the rune health check and the sleep warning, and without a category it stays in its own one
 - Equal restore: Dreamless Sleep is never suggested over a normal potion
 - Item list: updates after /fmf item and /fmf item clear, the scrollbar can be dragged, no hidden frames pile up anymore
 - Mana bar: shows empty instead of full if mana cannot be read; the mana numbers come back after a loading screen

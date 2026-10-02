@@ -115,12 +115,14 @@ local candStamp = {} -- per group: tick in which BandCandidates was computed
 local INHERIT = { "sleep", "pvp", "class", "hpCost" }
 
 function ns.RebuildLists()
-  local own, known = {}, {}
+  local own, known = {}, {} -- own: [group key][id] = true
   for _, g in ipairs(ns.GROUPS) do
+    own[g.key] = {}
     for _, it in ipairs(g.items) do known[it.id] = it end
   end
   for _, c in ipairs(db.custom) do
-    own[c.id] = true
+    local mine = own[c.group or "potion"]
+    if mine then mine[c.id] = true end
     local base = known[c.id]
     if base then
       for _, k in ipairs(INHERIT) do c[k] = base[k] end
@@ -134,9 +136,9 @@ function ns.RebuildLists()
         full[#full + 1] = c
       end
     end
-    -- an own entry for a known item replaces it (no double row, no double layer)
+    -- an own entry for a known item replaces it in the same group (no double row/layer)
     for _, it in ipairs(group.items) do
-      if ns.ForMyClass(it) and not own[it.id] then full[#full + 1] = it end
+      if ns.ForMyClass(it) and not own[group.key][it.id] then full[#full + 1] = it end
     end
     for _, it in ipairs(full) do
       if ns.IsItemEnabled(it) then active[#active + 1] = it end
@@ -860,8 +862,8 @@ end
 
 -- one tick mark; it is only moved when its position really changes
 local function PlaceTick(t, thr, len, thick, long, vertical)
-  if t.thr ~= thr or t.len ~= len or t.long ~= long or t.vertical ~= vertical then
-    t.thr, t.len, t.long, t.vertical = thr, len, long, vertical
+  if t.thr ~= thr or t.len ~= len or t.long ~= long or t.vertical ~= vertical or t.thick ~= thick then
+    t.thr, t.len, t.long, t.vertical, t.thick = thr, len, long, vertical, thick
     local size = long and thick + 6 or thick
     t.front:ClearAllPoints()
     if vertical then
@@ -1078,9 +1080,13 @@ function ns.AddCustom(id, amount, group)
   if not amount then Print("|cffff4444" .. L.errAmount:format(MAX_RESTORE) .. "|r") return false end
   local ok, err = ValidateItem(id)
   if not ok then Print("|cffff4444" .. err .. "|r") return false end
-  local valid = false
-  for _, g in ipairs(ns.GROUPS) do if g.key == group then valid = true end end
-  if not valid then group = "potion" end
+  local valid, home = false, nil
+  for _, g in ipairs(ns.GROUPS) do
+    if g.key == group then valid = true end
+    for _, it in ipairs(g.items) do if it.id == id then home = g.key end end
+  end
+  -- no (valid) category given: a known item stays in its own group, others are potions
+  if not valid then group = home or "potion" end
   for i = #db.custom, 1, -1 do
     if db.custom[i].id == id then table.remove(db.custom, i) end
   end
