@@ -58,7 +58,7 @@
 - Item list: visible scrollbar with a draggable thumb (mouse wheel works on the list and on the bar)
 - CurseForge project ID added to the TOC
 
-**Full Mana Forever 0.6.3 — first public release**
+**Full Mana Forever 0.6.3**
 
 - Icons for mana potions, runes, mage gems, other mana consumables and equipped gear, shown only when ready and your mana deficit is large enough
 - Potion choice by deficit (strongest potion that will not overflow) or always the strongest
