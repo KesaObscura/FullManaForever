@@ -4,7 +4,7 @@
 
 Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules. Made for healers first, useful for every mana user.
 
-> **Beta.** The addon works in combat and was tested in the Forever beta at low level. Level-60 items (runes, raid trinkets) could not be tested yet. Please report anything odd — see *Bug reports* below.
+> **Tested so far:** works in combat; tested in Forever at low level. Level-60 items (runes, raid trinkets) could not be tested yet. Please report anything odd — see *Bug reports* below.
 
 ## What it does
 
@@ -13,6 +13,7 @@ Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules
 - **One simple setting: Drinking.** *No waste* waits until the whole potion fits. *More per fight* uses the average restore, so you drink earlier and fit more potions into a long fight. *Strongest only* keeps it simple.
 - **Runes are safe.** A rune is only shown when you will keep a configurable share of your health after its damage (30 % by default).
 - **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length, icon size and spacing are adjustable.
+- **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
 - **Item list.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
 - **Hold potions.** `/fmf hold` stops potion suggestions for fights where you want the potion cooldown for something else.
@@ -40,6 +41,8 @@ In Forever your current mana is a *secret value*: addons cannot read it. Full Ma
 | `/fmf hold` | hold / release potion suggestions |
 | `/fmf unlock` / `/fmf lock` | move the icons |
 | `/fmf test` | show icons whenever an item is ready (ignores mana) |
+| `/fmf reset` | move the icons back to the default position |
+| `/fmf reset size` | icon size, spacing, bar thickness and length back to the defaults |
 | `/fmf probe` | print API status for bug reports |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap.
