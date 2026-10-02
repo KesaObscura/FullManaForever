@@ -1,8 +1,9 @@
 local _, ns = ...
 
--- Each group is one icon. Inside a group items are in priority order: the first one you
--- carry (and, for "equipped" groups, have equipped and ready) is shown.
--- min/max = mana restored (threshold: deficit >= max, or >= average in "max per fight" mode)
+-- Each group is one icon slot. Groups with a shared cooldown (potions, runes, gems) can
+-- stack several items in the slot: the strongest one that fits the missing mana is shown.
+-- Other groups show the first item in this order that you carry (or have equipped and ready).
+-- min/max = mana restored (threshold: deficit >= max, or >= average in "More per fight")
 -- hpCost = maximum health the item costs (runes); icon also needs enough HP
 -- defaultOff = not suggested until the player ticks it in the item list
 -- pvp    = only usable in battlegrounds

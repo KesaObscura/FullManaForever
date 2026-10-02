@@ -1,6 +1,6 @@
 -- Full Mana Forever
 -- Shows a mana consumable only when it is off cooldown AND your mana deficit is at
--- least its maximum restore. Current mana is a secret value in Forever, so the addon
+-- least what it restores (maximum by default, average in "More per fight"). Current mana is a secret value in Forever, so the addon
 -- never reads it: a step curve is handed to UnitPowerPercent and the engine returns a
 -- secret alpha that is applied straight to a frame. Nested frames multiply their alpha,
 -- which gives "ready AND deficit big enough (AND enough HP for runes)".
@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.6.7"
+ns.VERSION = "0.6.8"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)

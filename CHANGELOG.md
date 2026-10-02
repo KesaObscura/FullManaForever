@@ -1,5 +1,19 @@
 # Changelog
 
+**0.6.8 beta**
+
+- Faster: about 27 times less memory churn and half the item API calls per update
+- Safer: if the game's mana check stops working, icons stay hidden instead of lighting up at full mana
+- One broken item or group no longer hides all the other icons
+- Own items: the amount must be a whole number from 1 to 99999; an own entry for a known item replaces it instead of showing twice, and keeps the rune health check and the sleep warning
+- Equal restore: Dreamless Sleep is never suggested over a normal potion
+- Item list: updates after /fmf item and /fmf item clear, the scrollbar can be dragged, no hidden frames pile up anymore
+- Mana bar: shows empty instead of full if mana cannot be read; the mana numbers come back after a loading screen
+- Old FMF_* macros: removal is retried when macro data loads later than login
+- Settings: only one dropdown open at a time, the window comes to the front when clicked, long status lines no longer overlap, picking the current layout or language no longer rebuilds the window
+- Texts: unused strings removed, the "Add own item" hint and /fmf help updated (category argument)
+- Automated tests (tests/run.lua), not part of the release zip
+
 **0.6.7 beta**
 
 - Fixed: after locking, the icons no longer jump away from where you placed them (row and column layout); the frame is now pinned by its top-left corner

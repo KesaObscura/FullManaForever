@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Full Mana Forever
-## Notes: Shows a mana potion / rune only when it is ready AND your mana deficit is large enough that nothing is wasted.
-## Version: 0.6.7
+## Notes: Shows a mana potion, rune or mana item when it is ready and your missing mana is big enough (by default: nothing is wasted).
+## Version: 0.6.8
 ## IconTexture: Interface\Icons\INV_Potion_76
 ## AddonCompartmentFunc: FullManaForever_OnCompartmentClick
 ## SavedVariables: FullManaForeverDB
