@@ -3,3 +3,4 @@ package-as: FullManaForever
 ignore:
   - tests
   - .gitignore
+  - CURSEFORGE.md
