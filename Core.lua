@@ -12,6 +12,8 @@ local L = ns.L
 ns.VERSION = "0.6.7"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
+local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
+local MAX_RESTORE = 99999 -- sanity limit for own items
 
 local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
@@ -24,7 +26,6 @@ local DEFAULTS = {
   showParty  = true,
   showRaid   = true,
   language   = "auto",
-  showAdvanced = false,
   pickMode   = "fit",   -- "fit": strongest item that does not overflow / "strongest": always the best
   thresholdMode = "max", -- "max": no waste / "avg": more drinks per fight
   showBar    = true,
@@ -32,7 +33,7 @@ local DEFAULTS = {
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
   barThickness = 14,
-  barLength  = 0,       -- 0 = as long as the icons (at least 3 icons)
+  barLength  = 0,       -- 0 = auto: room for every group of the class
   barColor   = "blue",
   iconGap    = 6,
   iconSize   = 44,
@@ -41,13 +42,11 @@ local DEFAULTS = {
   custom     = {},    -- { {id=, max=, group=}, ... } own items, highest priority in their group
   disabled   = {},    -- [itemID] = true: never suggest this item
 }
-ns.DEFAULTS = DEFAULTS
 
 local db, anchor
 local buttons = {}
 local lists = {}
 local warned = {}
-ns.buttons = buttons
 
 ------------------------------------------------------------------------
 -- helpers
@@ -110,7 +109,23 @@ function ns.ForMyClass(x)
 end
 
 -- lists[i]: what the icons may use (enabled only); fullLists[i]: everything, for the item list window
+local candStamp = {} -- per group: tick in which BandCandidates was computed
+
+-- flags of a known item that an own entry for the same id keeps (warnings, safety)
+local INHERIT = { "sleep", "pvp", "class", "hpCost" }
+
 function ns.RebuildLists()
+  local own, known = {}, {}
+  for _, g in ipairs(ns.GROUPS) do
+    for _, it in ipairs(g.items) do known[it.id] = it end
+  end
+  for _, c in ipairs(db.custom) do
+    own[c.id] = true
+    local base = known[c.id]
+    if base then
+      for _, k in ipairs(INHERIT) do c[k] = base[k] end
+    end
+  end
   for i, group in ipairs(ns.GROUPS) do
     local full, active = {}, {}
     for _, c in ipairs(db.custom) do
@@ -119,14 +134,16 @@ function ns.RebuildLists()
         full[#full + 1] = c
       end
     end
+    -- an own entry for a known item replaces it (no double row, no double layer)
     for _, it in ipairs(group.items) do
-      if ns.ForMyClass(it) then full[#full + 1] = it end
+      if ns.ForMyClass(it) and not own[it.id] then full[#full + 1] = it end
     end
     for _, it in ipairs(full) do
       if ns.IsItemEnabled(it) then active[#active + 1] = it end
     end
     fullLists[i], lists[i] = full, active
   end
+  wipe(candStamp)
 end
 
 function ns.FullList(i) return fullLists[i] or {} end
@@ -152,7 +169,6 @@ local function GroupAllowed()
   if group then return db.showParty end
   return db.showSolo
 end
-ns.GroupAllowed = GroupAllowed
 
 local function InBattleground()
   if not IsInInstance then return false end
@@ -185,17 +201,16 @@ local function OwnedItem(i)
   local bg = InBattleground()
   local preferReady, fallback, fallbackN = ns.GROUPS[i].preferReady
   for _, it in ipairs(lists[i]) do
-    if it.pvp and not bg then
-      -- battleground-only item: skip everywhere else
-    else
-    local n = C_Item.GetItemCount(it.id)
-    if IsSecret(n) then
-      Debug("countsecret", "item count is secret")
-      return it, 1
-    elseif n and n > 0 then
-      if not preferReady or CooldownState(it.id) then return it, n end
-      if not fallback then fallback, fallbackN = it, n end
-    end
+    if bg or not it.pvp then -- battleground-only items are skipped everywhere else
+      local n = C_Item.GetItemCount(it.id)
+      if IsSecret(n) then
+        -- never seen in Forever; assume the item is there rather than hide the group
+        Debug("countsecret", "item count is secret")
+        return it, 1
+      elseif n and n > 0 then
+        if not preferReady or CooldownState(it.id) then return it, n end
+        if not fallback then fallback, fallbackN = it, n end
+      end
     end
   end
   return fallback, fallbackN
@@ -213,15 +228,18 @@ CooldownState = function(id)
   return left <= 0.05, math.max(left, 0)
 end
 
--- restore used for thresholds: max ("no waste") or average ("max per fight")
+-- restore used for thresholds: max ("No waste") or average ("More per fight")
 local function Restore(it)
   if db.thresholdMode == "avg" and it.min then return (it.min + it.max) / 2 end
   return it.max
 end
-ns.Restore = function(it) return Restore(it) end
 
+-- mana% (0..1) at or below which the whole item fits into the missing mana
 local function Threshold(item, maxMana)
-  return 1 - Restore(item) / maxMana
+  local t = 1 - Restore(item) / maxMana
+  if t < 0 then return 0 end
+  if t > 1 then return 1 end
+  return t
 end
 
 -- groups whose items share one cooldown can stack several items in one slot ("bands")
@@ -229,23 +247,46 @@ local function CanBand(group)
   return not group.equipped and not group.preferReady
 end
 
--- ready items of a shared-cooldown group, strongest first, one per distinct restore
+-- strongest first; equal restore: never the sleep potion, then list order (own items first)
+local function ByRestore(a, b)
+  if a.r ~= b.r then return a.r > b.r end
+  if (a.it.sleep and true) ~= (b.it.sleep and true) then return not a.it.sleep end
+  return a.idx < b.idx
+end
+
+-- ready items of a shared-cooldown group, strongest first, one per distinct restore.
+-- Called several times per tick (icons, bar, options), so the result is computed once
+-- per tick and all tables are reused: nothing is allocated in steady state.
+local candTick = 0
+local candRes, candAll, candPool, seen = {}, {}, {}, {}
+
 local function BandCandidates(i)
-  local out, seen, bg = {}, {}, InBattleground()
-  for _, it in ipairs(lists[i]) do
-    if not (it.pvp and not bg) then
+  local res = candRes[i]
+  if res and candStamp[i] == candTick then return res end
+  res = res or {}
+  candRes[i] = res
+  local all = candAll[i] or {}
+  candAll[i] = all
+  local pool = candPool[i] or {}
+  candPool[i] = pool
+  wipe(res); wipe(all); wipe(seen)
+  local bg = InBattleground()
+  for idx, it in ipairs(lists[i]) do
+    if bg or not it.pvp then
       local n = C_Item.GetItemCount(it.id)
       if not IsSecret(n) and n and n > 0 and CooldownState(it.id) then
-        out[#out + 1] = { it = it, n = n }
+        local e = pool[#all + 1] or {}
+        pool[#all + 1] = e
+        e.it, e.n, e.r, e.idx = it, n, Restore(it), idx
+        all[#all + 1] = e
       end
     end
   end
-  table.sort(out, function(a, b) return Restore(a.it) > Restore(b.it) end)
-  local res = {}
-  for _, c in ipairs(out) do
-    local r = Restore(c.it)
-    if not seen[r] and #res < 4 then seen[r] = true; res[#res + 1] = c end
+  table.sort(all, ByRestore)
+  for _, c in ipairs(all) do
+    if not seen[c.r] and #res < MAX_LAYERS then seen[c.r] = true; res[#res + 1] = c end
   end
+  candStamp[i] = candTick
   return res
 end
 
@@ -261,18 +302,6 @@ local function FirstThreshold(i, maxMana)
   return item and Threshold(item, maxMana)
 end
 
--- every mana% where the slot switches to another item (weakest first), for bar ticks
-local function AllThresholds(i, maxMana)
-  local group = ns.GROUPS[i]
-  if db.pickMode == "fit" and CanBand(group) then
-    local out, c = {}, BandCandidates(i)
-    for k = #c, 1, -1 do out[#out + 1] = Threshold(c[k].it, maxMana) end
-    return out
-  end
-  local t = FirstThreshold(i, maxMana)
-  return t and { t } or {}
-end
-
 -- status for the options window
 function ns.GetStatus(i)
   local item, n = OwnedItem(i)
@@ -285,7 +314,7 @@ function ns.GetStatus(i)
   local maxMana = UnitPowerMax("player", MANA)
   local thr, hpThr
   if not IsSecret(maxMana) and maxMana and maxMana > 0 then
-    thr = FirstThreshold(i, maxMana) or Threshold(item, maxMana)
+    thr = Threshold(item, maxMana)
   end
   local maxHP = UnitHealthMax("player")
   if item.hpCost and not IsSecret(maxHP) and maxHP and maxHP > 0 then
@@ -331,48 +360,58 @@ end
 
 local powerVariant, healthVariant
 
-local function PowerColor(curve)
-  local variants = {
-    function() return UnitPowerPercent("player", MANA, false, curve) end,
-    function() return UnitPowerPercent("player", MANA, curve) end,
-  }
-  for v, fn in ipairs(variants) do
-    if powerVariant == nil or powerVariant == v then
-      local ok, r = pcall(fn)
-      if ok and type(r) == "table" then
-        if powerVariant == nil then Debug("pv", "UnitPowerPercent variant " .. v) end
-        powerVariant = v
-        return r
-      end
+-- two argument orders were seen during the beta; the working one is remembered and
+-- probed again whenever it stops working (e.g. after a client patch)
+local function TryPower(v, curve)
+  if v == 1 then return pcall(UnitPowerPercent, "player", MANA, false, curve) end
+  return pcall(UnitPowerPercent, "player", MANA, curve)
+end
+
+local function TryHealth(v, curve)
+  if v == 1 then return pcall(UnitHealthPercent, "player", false, curve) end
+  return pcall(UnitHealthPercent, "player", curve)
+end
+
+local function EngineColor(try, variant, curve)
+  if variant then
+    local ok, r = try(variant, curve)
+    if ok and type(r) == "table" then return r, variant end
+  end
+  for v = 1, 2 do
+    if v ~= variant then
+      local ok, r = try(v, curve)
+      if ok and type(r) == "table" then return r, v end
     end
   end
+end
+
+local function PowerColor(curve)
+  local r, v = EngineColor(TryPower, powerVariant, curve)
+  if r then
+    if v ~= powerVariant then Debug("pv" .. v, "UnitPowerPercent variant " .. v) end
+    powerVariant = v
+    return r
+  end
+  powerVariant = nil
   WarnOnce("power", L.warnPower)
 end
 
 local function HealthColor(curve)
-  local variants = {
-    function() return UnitHealthPercent("player", false, curve) end,
-    function() return UnitHealthPercent("player", curve) end,
-  }
-  for v, fn in ipairs(variants) do
-    if healthVariant == nil or healthVariant == v then
-      local ok, r = pcall(fn)
-      if ok and type(r) == "table" then
-        healthVariant = v
-        return r
-      end
-    end
-  end
+  local r, v = EngineColor(TryHealth, healthVariant, curve)
+  if r then healthVariant = v return r end
+  healthVariant = nil
   WarnOnce("health", L.warnHealth)
 end
 
-local function ApplyAlpha(frame, color)
-  if not color then frame:SetAlpha(1) return end
-  local ok = pcall(function() frame:SetAlpha(select(4, color:GetRGBA())) end)
-  if not ok then
+-- applies the engine's (secret) alpha; without a usable answer the frame gets failAlpha.
+-- Mana and HP gates fail closed (0): a hidden icon costs nothing, a wrong one wastes a potion.
+local function ApplyAlpha(frame, color, failAlpha)
+  if color then
+    local ok, _, _, _, a = pcall(color.GetRGBA, color)
+    if ok and pcall(frame.SetAlpha, frame, a) then return end
     WarnOnce("setalpha", L.warnAlpha)
-    frame:SetAlpha(1)
   end
+  frame:SetAlpha(failAlpha)
 end
 
 ------------------------------------------------------------------------
@@ -392,8 +431,6 @@ local TICK_COLOR = {
   herb   = { 0.4, 1, 0.5 },
   gear   = { 1, 0.8, 0.3 },
 }
-local MAX_LAYERS = 4
-
 ns.BAR_COLORS = {
   { key = "blue",   top = { 0.30, 0.62, 1.00 }, bottom = { 0.06, 0.28, 0.78 } },
   { key = "light",  top = { 0.55, 0.85, 1.00 }, bottom = { 0.15, 0.50, 0.85 } },
@@ -510,8 +547,10 @@ local function CreateBar()
   bar.ticks = {}
   for i = 1, #ns.GROUPS do
     bar.ticks[i] = {}
+    local c = TICK_COLOR[ns.GROUPS[i].key] or { 1, 1, 1 }
     for k = 1, MAX_LAYERS do
       local t = { back = top:CreateTexture(nil, "OVERLAY", nil, 1), front = top:CreateTexture(nil, "OVERLAY", nil, 2) }
+      t.front:SetColorTexture(c[1], c[2], c[3], 1)
       t.back:SetColorTexture(0, 0, 0, 0.85)
       t.back:SetPoint("TOPLEFT", t.front, "TOPLEFT", -1, 1)
       t.back:SetPoint("BOTTOMRIGHT", t.front, "BOTTOMRIGHT", 1, -1)
@@ -545,12 +584,12 @@ end
 -- "412 / 664" (vertical: two lines): the secret current value goes straight into the text
 local textFails = 0
 local function SetBarText(maxMana)
-  if textFails > 20 then bar.text:SetText("") return end
-  local fmt = "%d / %d"
-  local ok = pcall(function()
-    bar.text:SetText(string.format(fmt, UnitPower("player", MANA), maxMana))
-  end)
-  if not ok then
+  if textFails > 20 then return end -- given up until the next loading screen
+  local ok, text = pcall(string.format, "%d / %d", UnitPower("player", MANA), maxMana)
+  if ok then
+    textFails = 0
+    bar.text:SetText(text)
+  else
     textFails = textFails + 1
     bar.text:SetText("")
     Debug("bartext", "mana text could not be formatted")
@@ -560,14 +599,16 @@ end
 -- Buttons that are shown (item present and ready) are packed in a row (or a column),
 -- so no empty gaps appear for groups you have nothing for. The mana check itself is
 -- secret, so a ready item below its threshold still keeps its (invisible) slot.
+-- Settings changes call Layout(true); every tick only the set of shown icons is compared
 local layoutKey
 function ns.Layout(force)
   if not anchor then return end
   local size, gap, vertical = db.iconSize, db.iconGap or 6, db.vertical
-  local key = ("%d|%d|%s|%s|%s|%d|%d|%s"):format(size, gap, tostring(vertical), db.barPosition,
-    db.barSide, db.barThickness, db.barLength, db.barColor)
-  for _, g in ipairs(ns.GROUPS) do key = key .. (db.enabled[g.key] and "e" or "d") end
-  for _, b in ipairs(buttons) do key = key .. (b.outer:IsShown() and "1" or "0") end
+  local key, bit = 0, 1
+  for _, b in ipairs(buttons) do
+    if b.outer:IsShown() then key = key + bit end
+    bit = bit * 2
+  end
   if key == layoutKey and not force then return end
   layoutKey = key
   local pos, count = 0, 0
@@ -719,7 +760,7 @@ local function HideLayers(b, from)
   for k = from, MAX_LAYERS do
     local l = b.layers[k]
     l:Hide()
-    l.curveKey = nil
+    l.hi = nil
   end
 end
 
@@ -735,7 +776,7 @@ local function ShowPreview(i, b, item, n)
   end
   SetLayer(l, item and item.id, n, ph)
   l:SetAlpha(1)
-  l.curveKey = nil
+  l.hi = nil
   l:Show()
   HideLayers(b, 2)
   b.hp:SetAlpha(1)
@@ -745,40 +786,48 @@ end
 local function ApplyHpGate(b, hpCost, maxHP)
   if hpCost and not db.test and not IsSecret(maxHP) and maxHP and maxHP > 0 then
     local t = hpCost / maxHP + db.runeMargin
-    local hkey = ("%.4f"):format(t)
-    if b.hpKey ~= hkey then b.hpCurve, b.hpKey = HealthCurve(t), hkey end
-    local hc = HealthColor(b.hpCurve)
-    if hc then ApplyAlpha(b.hp, hc) else b.hp:SetAlpha(0) end -- no HP check -> never risk it
+    if b.hpT ~= t then b.hpCurve, b.hpT = HealthCurve(t), t end
+    ApplyAlpha(b.hp, HealthColor(b.hpCurve), 0) -- no HP check -> never risk it
   else
     b.hp:SetAlpha(1)
   end
 end
 
+-- curves are rebuilt only when a threshold changes (lo = nil: band starts at 0%)
 local function ApplyBand(l, lo, hi)
-  local key = ("%s|%.4f"):format(lo and ("%.4f"):format(lo) or "-", hi)
-  if l.curveKey ~= key then l.curve, l.curveKey = BandCurve(lo, hi), key end
-  ApplyAlpha(l, PowerColor(l.curve))
+  lo = lo or -1
+  if l.lo ~= lo or l.hi ~= hi then
+    l.curve, l.lo, l.hi = BandCurve(lo >= 0 and lo or nil, hi), lo, hi
+  end
+  ApplyAlpha(l, PowerColor(l.curve), 0)
 end
+
+local groupOK = true -- solo/party/raid filter, evaluated once per tick
+local NONE = {}
 
 local function UpdateButton(i, b, maxMana, maxHP)
   local group = ns.GROUPS[i]
   if not db.enabled[group.key] or not ns.ForMyClass(group) then b.outer:Hide() return end
-
-  local item, n = OwnedItem(i)
-  if not db.locked then ShowPreview(i, b, item, n) return end  -- positioning preview
+  if not db.locked then ShowPreview(i, b, OwnedItem(i)) return end  -- positioning preview
 
   if db.onlyCombat and not db.test and not InCombatLockdown() then b.outer:Hide() return end
-  if not db.test and not GroupAllowed() then b.outer:Hide() return end
-  if not item and db.test then ShowPreview(i, b, nil, nil) return end  -- test: grey placeholder
+  if not db.test and not groupOK then b.outer:Hide() return end
 
   -- which items go into the slot, and their mana bands
   local cands
   if db.pickMode == "fit" and CanBand(group) and not db.test then
     cands = BandCandidates(i)
-  elseif item and CooldownState(item.id) then
-    cands = { { it = item, n = n } }
   else
-    cands = {}
+    local item, n = OwnedItem(i)
+    if not item and db.test then ShowPreview(i, b, nil, nil) return end  -- test: grey placeholder
+    if item and CooldownState(item.id) then
+      local single = b.single or { {} }
+      b.single = single
+      single[1].it, single[1].n = item, n
+      cands = single
+    else
+      cands = NONE
+    end
   end
   if #cands == 0 then b.outer:Hide() return end
 
@@ -788,7 +837,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
     SetLayer(l, c.it.id, c.n)
     if db.test then
       l:SetAlpha(1)
-      l.curveKey = nil
+      l.hi = nil
     else
       -- strongest first: band (threshold of the stronger item, own threshold]
       local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
@@ -805,47 +854,77 @@ end
 local function BarVisible()
   if not db.showBar then return false end
   if not db.locked or db.test then return true end
-  if not GroupAllowed() then return false end
+  if not groupOK then return false end
   return not db.onlyCombat or InCombatLockdown()
+end
+
+-- one tick mark; it is only moved when its position really changes
+local function PlaceTick(t, thr, len, thick, long, vertical)
+  if t.thr ~= thr or t.len ~= len or t.long ~= long or t.vertical ~= vertical then
+    t.thr, t.len, t.long, t.vertical = thr, len, long, vertical
+    local size = long and thick + 6 or thick
+    t.front:ClearAllPoints()
+    if vertical then
+      t.front:SetSize(size, 2)
+      t.front:SetPoint("CENTER", bar, "BOTTOM", 0, len * thr)
+    else
+      t.front:SetSize(2, size)
+      t.front:SetPoint("CENTER", bar, "LEFT", len * thr, 0)
+    end
+  end
+  if not t.front:IsShown() then t.front:Show(); t.back:Show() end
+end
+
+local function HideTick(t)
+  if t.front:IsShown() then t.front:Hide(); t.back:Hide() end
 end
 
 local function UpdateBar(maxMana)
   if not bar then return end
   if not BarVisible() then bar:Hide() return end
-  bar:SetMinMaxValues(0, maxMana)
-  local ok = pcall(bar.SetValue, bar, UnitPower("player", MANA))
-  if not ok then bar:SetValue(maxMana) end
+  if bar.maxMana ~= maxMana then
+    bar:SetMinMaxValues(0, maxMana)
+    bar.maxMana = maxMana
+  end
+  if not pcall(bar.SetValue, bar, UnitPower("player", MANA)) then
+    -- unknown mana: show an empty bar rather than a full one
+    bar:SetValue(0)
+    WarnOnce("barvalue", L.warnPower)
+  end
   SetBarText(maxMana)
-  local vertical = db.vertical
+  local vertical = db.vertical and true or false
   local len = (vertical and bar:GetHeight() or bar:GetWidth()) or 0
   local thick = db.barThickness or 14
   for i, group in ipairs(ns.GROUPS) do
-    local list = (db.enabled[group.key] and ns.ForMyClass(group)) and AllThresholds(i, maxMana) or {}
-    local c = TICK_COLOR[group.key] or { 1, 1, 1 }
-    for k, t in ipairs(bar.ticks[i]) do
-      local thr = list[k]
-      if thr and thr > 0 and thr < 1 then
-        -- first tick (the icon lights up) is long, the switches to stronger items are short
-        local long = k == 1 and thick + 6 or thick
-        t.front:SetColorTexture(c[1], c[2], c[3], 1)
-        t.front:ClearAllPoints()
-        if vertical then
-          t.front:SetSize(long, 2)
-          t.front:SetPoint("CENTER", bar, "BOTTOM", 0, len * thr)
-        else
-          t.front:SetSize(2, long)
-          t.front:SetPoint("CENTER", bar, "LEFT", len * thr, 0)
+    local ticks = bar.ticks[i]
+    local used = 0
+    if db.enabled[group.key] and ns.ForMyClass(group) then
+      if db.pickMode == "fit" and CanBand(group) then
+        -- weakest first: long mark where the icon lights up, short marks where a
+        -- stronger item becomes the best fit
+        local c = BandCandidates(i)
+        for k = #c, 1, -1 do
+          local thr = Threshold(c[k].it, maxMana)
+          if thr > 0 and thr < 1 then
+            used = used + 1
+            PlaceTick(ticks[used], thr, len, thick, used == 1, vertical)
+          end
         end
-        t.front:Show(); t.back:Show()
       else
-        t.front:Hide(); t.back:Hide()
+        local thr = FirstThreshold(i, maxMana)
+        if thr and thr > 0 and thr < 1 then
+          used = 1
+          PlaceTick(ticks[1], thr, len, thick, true, vertical)
+        end
       end
     end
+    for k = used + 1, #ticks do HideTick(ticks[k]) end
   end
   bar:Show()
 end
 
 local function Update()
+  candTick = candTick + 1
   -- the frame rect may not be known yet at login: convert old positions on the first tick
   if anchor and not IsPinned(db.point) then PinTopLeft() end
   local maxMana = UnitPowerMax("player", MANA)
@@ -856,8 +935,14 @@ local function Update()
     return
   end
   local maxHP = UnitHealthMax("player")
+  groupOK = GroupAllowed()
+  -- one broken group (odd item, API change) must not blank the others
   for i, b in ipairs(buttons) do
-    UpdateButton(i, b, maxMana, maxHP)
+    local ok, err = pcall(UpdateButton, i, b, maxMana, maxHP)
+    if not ok then
+      b.outer:Hide()
+      WarnOnce("update" .. i, L.warnUpdate:format(tostring(err)))
+    end
   end
   ns.Layout()
   UpdateBar(maxMana)
@@ -870,8 +955,8 @@ end
 
 function ns.InvalidateCurves()
   for _, b in ipairs(buttons) do
-    b.hpKey = nil
-    for _, l in ipairs(b.layers) do l.curveKey = nil end
+    b.hpT = nil
+    for _, l in ipairs(b.layers) do l.hi = nil end
   end
 end
 
@@ -881,14 +966,19 @@ end
 ------------------------------------------------------------------------
 local OLD_MACROS = { "FMF_Potion", "FMF_Rune", "FMF_Gem", "FMF_Other" }
 
+-- Macro data can arrive after login (UPDATE_MACROS). While no macro at all is known the
+-- data is probably not loaded yet, so the job stays pending and runs again later.
 local function DeleteOldMacros()
-  if not db.cleanMacros then return end
-  if InCombatLockdown() or not (GetMacroIndexByName and DeleteMacro) then return end
+  if not db.cleanMacros then return true end
+  if InCombatLockdown() or not (GetMacroIndexByName and DeleteMacro and GetNumMacros) then return false end
+  local global, char = GetNumMacros()
+  if (global or 0) + (char or 0) == 0 then return false end
   for _, name in ipairs(OLD_MACROS) do
     local idx = GetMacroIndexByName(name)
-    if idx and idx > 0 then pcall(DeleteMacro, idx) end
+    if idx and idx > 0 and not pcall(DeleteMacro, idx) then return false end
   end
   db.cleanMacros = nil
+  return true
 end
 
 ------------------------------------------------------------------------
@@ -916,6 +1006,7 @@ end
 ------------------------------------------------------------------------
 -- slash commands
 ------------------------------------------------------------------------
+local RefreshLibrary
 SLASH_FULLMANAFOREVER1 = "/fmf"
 SlashCmdList.FULLMANAFOREVER = function(msg)
   local args = {}
@@ -936,11 +1027,10 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
   elseif cmd == "test" then
     db.test = not db.test; Print(db.test and L.testOn or L.testOff)
   elseif cmd == "item" and args[2] == "clear" then
-    wipe(db.custom); ns.RebuildLists(); Print(L.itemClear)
+    wipe(db.custom); ns.RebuildLists(); RefreshLibrary(); Print(L.itemClear)
   elseif cmd == "item" then
-    local id, amount = tonumber(args[2]), tonumber(args[3])
-    if not id or not amount then Print(L.itemUsage) return end
-    ns.AddCustom(id, amount, args[4])
+    if not args[2] or not args[3] then Print(L.itemUsage) return end
+    ns.AddCustom(args[2], args[3], args[4])
   elseif cmd == "probe" then
     Probe()
   elseif cmd == "debug" then
@@ -970,7 +1060,22 @@ local function ValidateItem(id)
   return false, L.errNoUse:format(id)
 end
 
+RefreshLibrary = function()
+  if ns.RebuildLibrary then ns.RebuildLibrary() end
+end
+
+-- returns a whole amount 1..MAX_RESTORE, or nil (also rejects nan and inf)
+local function ValidAmount(amount)
+  amount = tonumber(amount)
+  if not amount or amount ~= amount or amount < 1 or amount > MAX_RESTORE then return nil end
+  return math.floor(amount)
+end
+
 function ns.AddCustom(id, amount, group)
+  id = tonumber(id)
+  if not id or id < 1 or id ~= math.floor(id) then Print("|cffff4444" .. L.errId .. "|r") return false end
+  amount = ValidAmount(amount)
+  if not amount then Print("|cffff4444" .. L.errAmount:format(MAX_RESTORE) .. "|r") return false end
   local ok, err = ValidateItem(id)
   if not ok then Print("|cffff4444" .. err .. "|r") return false end
   local valid = false
@@ -981,6 +1086,7 @@ function ns.AddCustom(id, amount, group)
   end
   table.insert(db.custom, 1, { id = id, max = amount, group = group })
   ns.RebuildLists()
+  RefreshLibrary()
   Print(L.itemAdded, id, amount)
   return true
 end
@@ -990,6 +1096,7 @@ function ns.RemoveCustom(id)
     if db.custom[i].id == id then table.remove(db.custom, i) end
   end
   ns.RebuildLists()
+  RefreshLibrary()
 end
 
 -- addon compartment (minimap addon menu) entry
@@ -1013,9 +1120,15 @@ local function InitDB()
     db.dbVersion = 3
   end
   if db.dbVersion < 4 then
-    if db.macros then db.cleanMacros = true end -- only users who had them on
     db.macros = nil
     db.dbVersion = 4
+  end
+  if db.dbVersion < 5 then
+    -- 0.6.7 could miss macros that were not loaded yet at login: look again for everyone
+    -- (the FMF_* names were only ever created by this addon)
+    db.cleanMacros = true
+    db.showAdvanced = nil
+    db.dbVersion = 5
   end
   ns.SetLanguage(db.language)
   ns.db = db
@@ -1028,8 +1141,13 @@ boot:RegisterEvent("PLAYER_LOGIN")
 boot:SetScript("OnEvent", function(self, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON then
     InitDB()
-  elseif event == "PLAYER_REGEN_ENABLED" then
-    DeleteOldMacros()
+  elseif event == "PLAYER_REGEN_ENABLED" or event == "UPDATE_MACROS" then
+    if DeleteOldMacros() then
+      self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+      self:UnregisterEvent("UPDATE_MACROS")
+    end
+  elseif event == "PLAYER_ENTERING_WORLD" then
+    textFails = 0
   elseif event == "PLAYER_LOGIN" then
     if not db then InitDB() end -- saved variables not delivered (old beta builds)
     ns.RebuildLists() -- player class is known now
@@ -1039,8 +1157,11 @@ boot:SetScript("OnEvent", function(self, event, arg1)
       if not ok then Print(L.warnOptions, tostring(err)) end
     end
     C_Timer.NewTicker(0.1, SafeUpdate)
-    pcall(self.RegisterEvent, self, "PLAYER_REGEN_ENABLED")
-    DeleteOldMacros()
+    self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    if not DeleteOldMacros() then
+      self:RegisterEvent("PLAYER_REGEN_ENABLED")
+      self:RegisterEvent("UPDATE_MACROS")
+    end
     Print(L.loaded, ns.VERSION)
   end
 end)
