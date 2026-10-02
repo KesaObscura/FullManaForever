@@ -3,12 +3,15 @@
 
 local _, ns = ...
 local L = ns.L
+local ui = ns.UI        -- Options.lua is loaded first (TOC order)
 local lib, scroll, content, sbar
-local reg = {}          -- widgets that need Refresh()
-local rows = {}         -- name / owned labels, refreshed while open
+local reg = {}          -- window widgets that need Refresh()
+local rowReg = {}       -- row checkboxes (one per pooled row)
+local rows = {}         -- pooled rows: frames are created once and reused
+local headers = {}      -- pooled category headers
 local W, H, PAD, ROW = 500, 600, 16, 30
-
-local function UI() return ns.UI end
+local CW = W - 2 * PAD - 22 -- list width, room for the scrollbar
+local AMOUNT_X = 305        -- x of the "up to N" column
 
 local function OwnedText(it, group)
   if group.equipped then
@@ -22,87 +25,69 @@ local function OwnedText(it, group)
   return "|cff888888" .. L.libMissing .. "|r"
 end
 
-local function BuildContent()
-  local ui, db = UI(), ns.db
-  if content then content:Hide() end
-  wipe(rows)
-  content = CreateFrame("Frame", nil, scroll)
-  local cw = W - 2 * PAD - 22 -- room for the scrollbar
-  content:SetSize(cw, 10)
-  scroll:SetScrollChild(content)
-
-  ui.SetRegistry(reg)
-  local y = -2
-  for gi, group in ipairs(ns.GROUPS) do
-    if ns.ForMyClass(group) then
-    local h = ui.Label(content, L["grp_" .. group.key], "GameFontNormal")
-    h:SetPoint("TOPLEFT", 0, y)
-    local line = content:CreateTexture(nil, "ARTWORK")
-    line:SetColorTexture(0.3, 0.55, 1, 0.5)
-    line:SetHeight(1)
-    line:SetPoint("LEFT", h, "RIGHT", 6, 0)
-    line:SetPoint("RIGHT", content, "RIGHT", 0, 0)
-    y = y - 24
-
-    for _, it in ipairs(ns.FullList(gi)) do
-      local row = CreateFrame("Frame", nil, content)
-      row:SetSize(cw, ROW - 2)
-      row:SetPoint("TOPLEFT", 0, y)
-      row:EnableMouse(true)
-      row:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        pcall(GameTooltip.SetItemByID, GameTooltip, it.id)
-        GameTooltip:Show()
-      end)
-      row:SetScript("OnLeave", function() GameTooltip:Hide() end)
-      local hl = row:CreateTexture(nil, "BACKGROUND")
-      hl:SetAllPoints()
-      hl:SetColorTexture(1, 1, 1, 0.04)
-
-      local cb = ui.Check(row, "", function() return ns.IsItemEnabled(it) end,
-        function(v) ns.SetItemEnabled(it.id, v) end)
-      cb:SetPoint("LEFT", 0, 0)
-      cb.label:Hide()
-
-      local icon = row:CreateTexture(nil, "ARTWORK")
-      icon:SetSize(24, 24)
-      icon:SetPoint("LEFT", cb, "RIGHT", 4, 0)
-      icon:SetTexture(C_Item.GetItemIconByID(it.id))
-      icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-
-      local name = ui.Label(row, "", "GameFontHighlight")
-      name:SetPoint("LEFT", icon, "RIGHT", 8, 0)
-      name:SetWidth(240)
-      if name.SetWordWrap then name:SetWordWrap(false) end
-
-      local amount = ui.Label(row, L.libRestore:format(it.max), "GameFontHighlightSmall")
-      amount:SetPoint("LEFT", row, "LEFT", 305, 0)
-
-      local owned = ui.Label(row, "", "GameFontHighlightSmall")
-      owned:SetJustifyH("RIGHT")
-      owned:SetPoint("RIGHT", row, "RIGHT", it.custom and -32 or -4, 0)
-
-      if it.custom then
-        local del = ui.Button(row, "x", 20, 18)
-        del:SetPoint("RIGHT", row, "RIGHT", -2, 0)
-        del:SetScript("OnClick", function()
-          ns.RemoveCustom(it.id)
-          ns.RebuildLibrary()
-        end)
-      end
-
-      rows[#rows + 1] = { it = it, group = group, name = name, owned = owned, icon = icon }
-      y = y - ROW
-    end
-    y = y - 8
-    end
-  end
-  ui.SetRegistry(nil)
-  content:SetHeight(-y + 4)
-  ns.UpdateLibraryScrollbar()
+local function RowOnEnter(self)
+  GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+  pcall(GameTooltip.SetItemByID, GameTooltip, self.it.id)
+  GameTooltip:Show()
 end
 
-function ns.UpdateLibraryScrollbar()
+local function RowOnLeave() GameTooltip:Hide() end
+
+local function NewRow()
+  local r = {}
+  local row = CreateFrame("Frame", nil, content)
+  row:SetSize(CW, ROW - 2)
+  row:EnableMouse(true)
+  row:SetScript("OnEnter", RowOnEnter)
+  row:SetScript("OnLeave", RowOnLeave)
+  local hl = row:CreateTexture(nil, "BACKGROUND")
+  hl:SetAllPoints()
+  hl:SetColorTexture(1, 1, 1, 0.04)
+
+  ui.WithRegistry(rowReg, function()
+    r.cb = ui.Check(row, "", function() return ns.IsItemEnabled(row.it) end,
+      function(v) ns.SetItemEnabled(row.it.id, v) end)
+  end)
+  r.cb:SetPoint("LEFT", 0, 0)
+  r.cb.label:Hide()
+
+  r.icon = row:CreateTexture(nil, "ARTWORK")
+  r.icon:SetSize(24, 24)
+  r.icon:SetPoint("LEFT", r.cb, "RIGHT", 4, 0)
+  r.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+
+  r.name = ui.Label(row, "", "GameFontHighlight")
+  r.name:SetPoint("LEFT", r.icon, "RIGHT", 8, 0)
+  r.name:SetWidth(240)
+  if r.name.SetWordWrap then r.name:SetWordWrap(false) end
+
+  r.amount = ui.Label(row, "", "GameFontHighlightSmall")
+  r.amount:SetPoint("LEFT", row, "LEFT", AMOUNT_X, 0)
+
+  r.owned = ui.Label(row, "", "GameFontHighlightSmall")
+  r.owned:SetJustifyH("RIGHT")
+
+  r.del = ui.Button(row, "x", 20, 18)
+  r.del:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+  r.del:SetScript("OnClick", function() ns.RemoveCustom(row.it.id) end)
+
+  r.frame = row
+  return r
+end
+
+local function Header(k)
+  local h = headers[k]
+  if h then return h end
+  h = { label = ui.Label(content, "", "GameFontNormal"), line = content:CreateTexture(nil, "ARTWORK") }
+  h.line:SetColorTexture(0.3, 0.55, 1, 0.5)
+  h.line:SetHeight(1)
+  h.line:SetPoint("LEFT", h.label, "RIGHT", 6, 0)
+  h.line:SetPoint("RIGHT", content, "RIGHT", 0, 0)
+  headers[k] = h
+  return h
+end
+
+local function UpdateScrollbar()
   if not (sbar and scroll and content) then return end
   local view = scroll:GetHeight() or 0
   local total = content:GetHeight() or 0
@@ -119,22 +104,58 @@ function ns.UpdateLibraryScrollbar()
   sbar:SetValue(math.min(scroll:GetVerticalScroll() or 0, range))
 end
 
+-- lays the current item lists out in the pooled rows (no new frames after the first build)
+local function BuildContent()
+  local y, n, hn = -2, 0, 0
+  for gi, group in ipairs(ns.GROUPS) do
+    if ns.ForMyClass(group) then
+      hn = hn + 1
+      local h = Header(hn)
+      h.label:SetText(L["grp_" .. group.key])
+      h.label:ClearAllPoints()
+      h.label:SetPoint("TOPLEFT", 0, y)
+      h.label:Show(); h.line:Show()
+      y = y - 24
+      for _, it in ipairs(ns.FullList(gi)) do
+        n = n + 1
+        local r = rows[n] or NewRow()
+        rows[n] = r
+        r.it, r.group, r.frame.it = it, group, it
+        r.frame:ClearAllPoints()
+        r.frame:SetPoint("TOPLEFT", 0, y)
+        r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
+        r.amount:SetText(L.libRestore:format(it.max))
+        r.owned:ClearAllPoints()
+        r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it.custom and -32 or -4, 0)
+        r.del:SetShown(it.custom and true or false)
+        r.frame:Show()
+        y = y - ROW
+      end
+      y = y - 8
+    end
+  end
+  for k = n + 1, #rows do rows[k].frame:Hide(); rows[k].it = nil end
+  for k = hn + 1, #headers do headers[k].label:Hide(); headers[k].line:Hide() end
+  content:SetHeight(-y + 4)
+  UpdateScrollbar()
+end
+
 local function RefreshRows()
-  local ui = UI()
   for _, r in ipairs(rows) do
-    local n = ui.ItemName(r.it.id)
-    if r.it.custom then n = n .. " |cff4fa3ff(" .. L.libOwn .. ")|r" end
-    if r.it.sleep then n = n .. " |cffff8844" .. L.libSleep .. "|r" end
-    if r.it.pvp then n = n .. " |cffaaaaaa" .. L.libPvp .. "|r" end
-    r.name:SetText(n)
-    r.owned:SetText(OwnedText(r.it, r.group))
-    if not r.icon:GetTexture() then r.icon:SetTexture(C_Item.GetItemIconByID(r.it.id)) end
+    if r.it then
+      local n = ui.ItemName(r.it.id)
+      if r.it.custom then n = n .. " |cff4fa3ff(" .. L.libOwn .. ")|r" end
+      if r.it.sleep then n = n .. " |cffff8844" .. L.libSleep .. "|r" end
+      if r.it.pvp then n = n .. " |cffaaaaaa" .. L.libPvp .. "|r" end
+      r.name:SetText(n)
+      r.owned:SetText(OwnedText(r.it, r.group))
+      r.cb.Refresh()
+    end
   end
   for _, w in ipairs(reg) do w.Refresh() end
 end
 
 local function Build()
-  local ui, db = UI(), ns.db
   wipe(reg)
   lib = CreateFrame("Frame", "FullManaForeverItems", UIParent)
   lib:SetSize(W, H)
@@ -181,6 +202,8 @@ local function Build()
 
   -- visible scrollbar: a track with a draggable thumb whose size shows how much is hidden
   sbar = CreateFrame("Slider", nil, lib)
+  sbar:EnableMouse(true) -- without a template a slider does not take the mouse
+  if sbar.SetObeyStepOnDrag then sbar:SetObeyStepOnDrag(true) end
   sbar:SetOrientation("VERTICAL")
   sbar:SetPoint("TOPLEFT", scroll, "TOPRIGHT", 4, 0)
   sbar:SetPoint("BOTTOMLEFT", scroll, "BOTTOMRIGHT", 4, 0)
@@ -232,33 +255,34 @@ local function Build()
   for _, g in ipairs(ns.GROUPS) do
     if ns.ForMyClass(g) then entries[#entries + 1] = { value = g.key, text = L["grp_" .. g.key] } end
   end
-  ui.SetRegistry(reg)
-  local cat = ui.Dropdown(lib, 220, entries, function() return L["grp_" .. chosen] end,
-    function(v) chosen = v; RefreshRows() end)
-  ui.SetRegistry(nil)
+  local cat
+  ui.WithRegistry(reg, function()
+    -- RefreshRows also refreshes this dropdown's text
+    cat = ui.Dropdown(lib, 220, entries, function() return L["grp_" .. chosen] end,
+      function(v) chosen = v; RefreshRows() end)
+  end)
   cat:SetPoint("LEFT", catLabel, "LEFT", 100, 0)
   cat.Refresh()
 
   local add = ui.Button(lib, L.optAdd, 100)
   add:SetPoint("BOTTOMRIGHT", lib, "BOTTOMRIGHT", -PAD, 14)
+  -- AddCustom checks both fields, prints what is wrong and refreshes this list
   local function DoAdd()
-    local id, amount = tonumber(idBox:GetText()), tonumber(amBox:GetText())
-    if id and amount and amount > 0 then
-      if ns.AddCustom(id, amount, chosen) then
-        idBox:SetText("")
-        amBox:SetText("")
-        idBox:ClearFocus()
-        amBox:ClearFocus()
-        ns.RebuildLibrary()
-      end
-    else
-      ns.Print(L.itemUsage)
+    if ns.AddCustom(idBox:GetText(), amBox:GetText(), chosen) then
+      idBox:SetText("")
+      amBox:SetText("")
+      idBox:ClearFocus()
+      amBox:ClearFocus()
     end
   end
   add:SetScript("OnClick", DoAdd)
   idBox:SetScript("OnEnterPressed", function() amBox:SetFocus() end)
   amBox:SetScript("OnEnterPressed", DoAdd)
 
+  content = CreateFrame("Frame", nil, scroll)
+  content:SetSize(CW, 10)
+  scroll:SetScrollChild(content)
+  wipe(rows); wipe(headers); wipe(rowReg)
   BuildContent()
 
   local acc = 0
@@ -271,7 +295,7 @@ end
 -- rebuild the rows (after add/remove) or the whole window (after a language change)
 function ns.RebuildLibrary(full)
   if not lib then return end
-  if full then
+  if full then -- new language: the window texts are rebuilt (only on a real change)
     local shown = lib:IsShown()
     lib:Hide()
     lib, scroll, content = nil, nil, nil
@@ -282,7 +306,7 @@ function ns.RebuildLibrary(full)
   BuildContent()
   RefreshRows()
   scroll:SetVerticalScroll(math.min(off, scroll:GetVerticalScrollRange() or 0))
-  ns.UpdateLibraryScrollbar()
+  UpdateScrollbar()
 end
 
 function ns.ToggleLibrary(forceShow)
@@ -290,7 +314,7 @@ function ns.ToggleLibrary(forceShow)
   if forceShow or not lib:IsShown() then
     lib:Show()
     RefreshRows()
-    if C_Timer and C_Timer.After then C_Timer.After(0, ns.UpdateLibraryScrollbar) else ns.UpdateLibraryScrollbar() end
+    if C_Timer and C_Timer.After then C_Timer.After(0, UpdateScrollbar) else UpdateScrollbar() end
   else
     lib:Hide()
   end

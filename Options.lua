@@ -5,8 +5,10 @@
 local _, ns = ...
 local L = ns.L
 local win, panelButton
-local widgets = {}
-local registry = widgets
+local widgets = {}        -- options widgets that need Refresh()
+local statusLabels = {}   -- [group index] = status line under the group checkbox
+local registry = widgets  -- where the widget helpers register (see WithRegistry)
+local openList            -- the dropdown list that is open right now (only one at a time)
 
 local W, PAD = 440, 16
 
@@ -99,10 +101,20 @@ local function Stepper(parent, text, get, set, step, lo, hi, fmt)
   return s
 end
 
--- Blizzard-style dropdown: a button that opens a list below it
+-- Blizzard-style dropdown: a button that opens a list below it.
+-- dd.Select(value) is what a click on a list row does (also used by the tests).
 local function Dropdown(parent, width, entries, getText, onPick)
-  local dd = Button(parent, "", width)
+  local dd = Button(parent, " ", width)
   dd:SetWidth(width)
+  dd.entries = entries
+  local fs = dd:GetFontString()
+  if fs then
+    fs:ClearAllPoints()
+    fs:SetPoint("LEFT", 10, 0)
+    fs:SetPoint("RIGHT", -24, 0)
+    fs:SetJustifyH("LEFT")
+    if fs.SetWordWrap then fs:SetWordWrap(false) end
+  end
   local arrow = dd:CreateTexture(nil, "OVERLAY")
   arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
   arrow:SetSize(12, 12)
@@ -123,37 +135,39 @@ local function Dropdown(parent, width, entries, getText, onPick)
   edge:SetColorTexture(0.3, 0.55, 1, 0.8)
   list:Hide()
 
+  function dd.Select(value)
+    list:Hide()
+    onPick(value)
+  end
+
   local rows, maxW = {}, width
   for i, e in ipairs(entries) do
     local r = Button(list, e.text, width, 20)
-    local fs = r:GetFontString()
-    if fs then
-      fs:ClearAllPoints()
-      fs:SetPoint("LEFT", 10, 0)
+    local rfs = r:GetFontString()
+    if rfs then
+      rfs:ClearAllPoints()
+      rfs:SetPoint("LEFT", 10, 0)
     end
     r:SetPoint("TOPLEFT", list, "TOPLEFT", 2, -2 - (i - 1) * 21)
-    r:SetScript("OnClick", function()
-      list:Hide()
-      onPick(e.value)
-    end)
+    r:SetScript("OnClick", function() dd.Select(e.value) end)
     maxW = math.max(maxW, r:GetWidth())
     rows[i] = r
   end
   for _, r in ipairs(rows) do r:SetWidth(maxW) end
   list:SetSize(maxW + 4, #entries * 21 + 3)
 
-  dd:SetScript("OnClick", function() list:SetShown(not list:IsShown()) end)
+  dd:SetScript("OnClick", function()
+    if list:IsShown() then list:Hide() return end
+    if openList and openList ~= list then openList:Hide() end
+    openList = list
+    list:Show()
+  end)
   dd:SetScript("OnHide", function() list:Hide() end)
   dd.Refresh = function()
-    dd:SetText(getText())
-    dd:SetWidth(width)
-    local fs = dd:GetFontString()
-    if fs then
-      fs:ClearAllPoints()
-      fs:SetPoint("LEFT", 10, 0)
-      fs:SetPoint("RIGHT", -24, 0)
-      fs:SetJustifyH("LEFT")
-      if fs.SetWordWrap then fs:SetWordWrap(false) end
+    local text = getText()
+    if text ~= dd.text then
+      dd.text = text
+      dd:SetText(text)
     end
   end
   registry[#registry + 1] = dd
@@ -176,10 +190,19 @@ local function ItemName(id)
   return name or L.itemFallback:format(id)
 end
 
+-- runs fn with the widget helpers registering into t; the options registry is restored
+-- even if fn fails, so one bad build cannot break the options window
+local function WithRegistry(t, fn)
+  local prev = registry
+  registry = t
+  local ok, err = pcall(fn)
+  registry = prev
+  if not ok then error(err, 0) end
+end
+
 ns.UI = {
   Label = Label, Button = Button, Check = Check, Edit = Edit, Dropdown = Dropdown,
-  Header = Header, FitWidth = FitWidth, ItemName = ItemName,
-  SetRegistry = function(t) registry = t or widgets end,
+  ItemName = ItemName, WithRegistry = WithRegistry,
 }
 
 ------------------------------------------------------------------------
@@ -195,6 +218,7 @@ local function Rebuild()
   end
   win = nil
   wipe(widgets)
+  wipe(statusLabels)
   Build()
   if point and point[1] then
     win:ClearAllPoints()
@@ -207,9 +231,9 @@ end
 Build = function()
   local db = ns.db
   win = CreateFrame("Frame", "FullManaForeverOptions", UIParent)
-  win:SetSize(W, 540)
-  win:SetPoint("CENTER")
+  win:SetPoint("CENTER")          -- size is set at the end, from the two columns
   win:SetFrameStrata("DIALOG")
+  win:SetToplevel(true)
   win:SetMovable(true)
   win:EnableMouse(true)
   win:SetClampedToScreen(true)
@@ -292,6 +316,7 @@ Build = function()
     if db.language == "auto" then return L.langAuto end
     return ns.LanguageName(db.language, true)
   end, function(code)
+    if code == db.language then return end -- rebuilding creates new frames: only on a change
     db.language = code
     ns.SetLanguage(code)
     ns.OnLanguageChanged()
@@ -311,7 +336,10 @@ Build = function()
   local lay = Dropdown(col, 230, {
     { value = false, text = L.layoutH }, { value = true, text = L.layoutV },
   }, function() return db.vertical and L.layoutV or L.layoutH end,
-  function(v) db.vertical = v; ns.Layout(true); Rebuild() end)
+  function(v)
+    if v == db.vertical then return end
+    db.vertical = v; ns.Layout(true); Rebuild()
+  end)
   c.Right(lay)
   c.Row(layLabel, PAD + 4, 30)
 
@@ -390,15 +418,15 @@ Build = function()
   desc:SetWidth(W - 2 * PAD - 8)
   c.Row(desc, PAD + 4, 44)
   registry[#registry + 1] = { Refresh = function() desc:SetText(stratDesc[Strategy()]) end }
-  widgets.status = {}
   for i, group in ipairs(ns.GROUPS) do
     if ns.ForMyClass(group) then
       c.Row(Check(col, L["grp_" .. group.key], function() return db.enabled[group.key] end,
         function(v) db.enabled[group.key] = v end), PAD, 20)
       local st = Label(col, "", "GameFontHighlightSmall")
       st:SetWidth(W - 2 * PAD - 30)
+      if st.SetWordWrap then st:SetWordWrap(false) end -- one line; long texts end in "..."
       c.Row(st, PAD + 30, 22)
-      widgets.status[i] = st
+      statusLabels[i] = st
     end
   end
   local margin = Stepper(col, L.optMargin .. ":", function() return db.runeMargin end,
@@ -424,38 +452,35 @@ end
 ------------------------------------------------------------------------
 -- refresh
 ------------------------------------------------------------------------
-function ns.RefreshOptions()
-  if not win or not win:IsShown() then return end
+local function StatusText(i, group)
   local db = ns.db
-  for _, w in ipairs(widgets) do w.Refresh() end
-
-  for i, group in ipairs(ns.GROUPS) do
-    if widgets.status[i] then
-    local text
-    if not db.enabled[group.key] then
-      text = "|cff888888" .. L.stDisabled .. "|r"
+  if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r" end
+  local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
+  if not item then return "|cff888888" .. L.stNone .. "|r" end
+  if not ready then
+    return "|cffffaa33" .. L.stCooldown:format(ItemName(item.id), n, math.ceil(left)) .. "|r"
+  end
+  local text = "|cff66ff66" .. L.stReady:format(ItemName(item.id), n, math.floor(math.max(thr or 0, 0) * 100))
+  if hpThr then
+    if hpThr >= 1 then
+      text = text .. " |cffff4444" .. L.stHpNever .. "|r"
     else
-      local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
-      if not item then
-        text = "|cff888888" .. L.stNone .. "|r"
-      elseif not ready then
-        text = "|cffffaa33" .. L.stCooldown:format(ItemName(item.id), n, math.ceil(left)) .. "|r"
-      else
-        text = "|cff66ff66" .. L.stReady:format(ItemName(item.id), n, math.floor(math.max(thr or 0, 0) * 100))
-        if hpThr then
-          if hpThr >= 1 then
-            text = text .. " |cffff4444" .. L.stHpNever .. "|r"
-          else
-            text = text .. L.stHp:format(math.ceil(hpThr * 100))
-          end
-        end
-        text = text .. "|r"
-      end
-    end
-    widgets.status[i]:SetText(text)
+      text = text .. L.stHp:format(math.ceil(hpThr * 100))
     end
   end
+  return text .. "|r"
+end
 
+function ns.RefreshOptions()
+  if not win or not win:IsShown() then return end
+  for _, w in ipairs(widgets) do w.Refresh() end
+  for i, group in ipairs(ns.GROUPS) do
+    local st = statusLabels[i]
+    if st then
+      local text = StatusText(i, group)
+      if text ~= st.text then st.text = text; st:SetText(text) end
+    end
+  end
 end
 
 function ns.ToggleOptions(forceShow)
@@ -479,7 +504,8 @@ function ns.InitOptions()
   panelButton = Button(panel, L.optOpen, 220, 26)
   panelButton:SetPoint("TOPLEFT", 16, -50)
   panelButton:SetScript("OnClick", function()
-    if SettingsPanel then pcall(HideUIPanel, SettingsPanel) end
+    -- closing Blizzard's panel from addon code is only safe out of combat
+    if SettingsPanel and not InCombatLockdown() then pcall(HideUIPanel, SettingsPanel) end
     ns.ToggleOptions(true)
   end)
   local category = Settings.RegisterCanvasLayoutCategory(panel, "Full Mana Forever")
