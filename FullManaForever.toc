@@ -5,7 +5,9 @@
 ## IconTexture: Interface\Icons\INV_Potion_76
 ## AddonCompartmentFunc: FullManaForever_OnCompartmentClick
 ## SavedVariables: FullManaForeverDB
+## Author: KesaObscura
 ## X-License: MIT
+## X-Website: https://github.com/KesaObscura/FullManaForever
 ## X-Curse-Project-ID: 1717647
 
 Locale.lua

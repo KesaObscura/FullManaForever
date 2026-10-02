@@ -70,7 +70,7 @@ otherwise the game does not load it.
 
 ## Bug reports
 
-Please open an issue with the output of `/fmf probe`, your class and level, what you
+Please open an [issue](https://github.com/KesaObscura/FullManaForever/issues) with the output of `/fmf probe`, your class and level, what you
 did and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
 ## Development
