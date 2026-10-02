@@ -15,7 +15,7 @@ for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDr
   "SetRotation", "SetScrollChild", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
   "SetTextInsets", "SetThumbTexture", "SetToAlpha", "SetToplevel", "SetValueStep", "SetVertexColor",
   "SetWordWrap", "StopMovingOrSizing", "StartMoving", "SetItemByID", "SetJustifyV", "SetMaxLines",
-  "SetObeyStepOnDrag", "SetHitRectInsets" }) do
+  "SetObeyStepOnDrag", "SetHitRectInsets", "SetDisabledFontObject" }) do
   methods[name] = M.noop
 end
 
@@ -63,6 +63,10 @@ function methods:GetFrameLevel() return 1 end
 function methods:GetChecked() return self.checked end
 function methods:SetChecked(v) self.checked = v end
 function methods:SetAlpha(a) self.alpha = a end
+function methods:SetEnabled(v) self.enabled = v and true or false end
+function methods:IsEnabled() return self.enabled ~= false end
+function methods:SetTextColor(r, g, b) self.color = { r, g, b } end
+function methods:AddLine(t) self.lines = self.lines or {}; self.lines[#self.lines + 1] = t end
 function methods:GetAlpha() return self.alpha end
 function methods:EnableMouse(v) self.mouse = v end
 function methods:IsMouseEnabled() return self.mouse end

@@ -602,6 +602,18 @@ end
 -- so no empty gaps appear for groups you have nothing for. The mana check itself is
 -- secret, so a ready item below its threshold still keeps its (invisible) slot.
 -- Settings changes call Layout(true); every tick only the set of shown icons is compared
+-- auto bar length is fixed: room for every group this class can ever show (priest 4,
+-- mage 5). It does not follow lit icons or groups switched off in the options.
+function ns.AutoBarLength()
+  local size, gap = db.iconSize, db.iconGap or 6
+  local slots = 0
+  for _, g in ipairs(ns.GROUPS) do
+    if ns.ForMyClass(g) then slots = slots + 1 end
+  end
+  slots = math.max(slots, 3)
+  return size * slots + gap * (slots - 1)
+end
+
 local layoutKey
 function ns.Layout(force)
   if not anchor then return end
@@ -634,14 +646,7 @@ function ns.Layout(force)
   local span = math.max(pos - gap, size, count == 0 and size * 2 or 0)
   if vertical then anchor:SetSize(size, span) else anchor:SetSize(span, size) end
   if bar then
-    -- auto length is fixed: room for every group this class can ever show (priest 4,
-    -- mage 5). It does not follow lit icons or groups switched off in the options.
-    local slots = 0
-    for _, g in ipairs(ns.GROUPS) do
-      if ns.ForMyClass(g) then slots = slots + 1 end
-    end
-    slots = math.max(slots, 3)
-    local len = db.barLength and db.barLength > 0 and db.barLength or (size * slots + gap * (slots - 1))
+    local len = db.barLength and db.barLength > 0 and db.barLength or ns.AutoBarLength()
     local thick = db.barThickness or 14
     if vertical then bar:SetSize(thick, len) else bar:SetSize(len, thick) end
     ns.PositionBar()

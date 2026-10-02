@@ -177,7 +177,7 @@ local function Build()
 
   local bg = lib:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
-  bg:SetColorTexture(0.05, 0.06, 0.09, 0.97)
+  bg:SetColorTexture(0.05, 0.06, 0.09, 1)
   local top = lib:CreateTexture(nil, "ARTWORK")
   top:SetPoint("TOPLEFT")
   top:SetPoint("TOPRIGHT")

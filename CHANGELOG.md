@@ -2,7 +2,16 @@
 
 **0.6.9 beta**
 
-- New: "Reset size" button next to "Reset position" and `/fmf reset size`: icon size, icon spacing, bar thickness and bar length go back to the defaults (position, colors and layout stay)
+- New: "Reset size" button (under the size settings) and `/fmf reset size`: icon size, icon spacing, bar thickness and bar length go back to the defaults (position, colors and layout stay)
+- Settings window reworked:
+  - all -/+ buttons in one column, values in one column, all dropdowns the same width
+  - -/+ are greyed out when they would not change anything
+  - bar length: + from "auto" starts at the auto length instead of 20; going below the icon size returns to "auto"
+  - new section "Visibility" on the right: "Show only in combat" and solo / party / raid
+  - consumables with nothing in the bags (or switched off) take one line instead of two
+  - tooltips on the settings; clicking a checkbox label toggles it
+  - the "Drinking" explanation is easier to read
+  - the settings window and the item list are no longer see-through
 
 **0.6.8 beta**
 
