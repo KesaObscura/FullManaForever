@@ -1,5 +1,9 @@
 # Changelog
 
+**0.6.9 beta**
+
+- New: "Reset size" button next to "Reset position" and `/fmf reset size`: icon size, icon spacing, bar thickness and bar length go back to the defaults (position, colors and layout stay)
+
 **0.6.8 beta**
 
 - Faster: about 27 times less memory churn and half the item API calls per update

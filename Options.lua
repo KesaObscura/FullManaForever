@@ -329,6 +329,9 @@ Build = function()
   local reset = Button(col, L.optReset, 150)
   c.Row(reset, PAD + 4, 34)
   reset:SetScript("OnClick", function() ns.ResetPosition() end)
+  local resetSize = Button(col, L.optResetSize, 150)
+  resetSize:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+  resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
 
   -- look
   c.Row(Header(col, L.optAppearance), PAD, 26)

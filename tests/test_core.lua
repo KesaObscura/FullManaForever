@@ -218,3 +218,29 @@ test("known item added to another category stays in its own slot too", function(
   for _, it in ipairs(ns.FullList(2)) do if it.id == 12662 then inRune = true end end
   ok(inRune, "built-in rune entry removed from the rune slot")
 end)
+
+test("reset size restores icon and bar sizes, keeps position and other settings", function()
+  local ns = M.load({ iconSize = 80, iconGap = 20, barThickness = 30, barLength = 400,
+    barColor = "teal", point = { "TOPLEFT", "UIParent", "BOTTOMLEFT", 100, 500 } }, { bags = POT })
+  M.tick()
+  SlashCmdList.FULLMANAFOREVER("reset size")
+  M.tick()
+  eq(ns.db.iconSize, 44); eq(ns.db.iconGap, 6); eq(ns.db.barThickness, 14); eq(ns.db.barLength, 0)
+  eq(ns.db.barColor, "teal", "color")
+  eq(ns.db.point[4], 100, "x"); eq(ns.db.point[5], 500, "y")
+  eq(buttons(ns)[1].outer.w, 44, "icon width")
+  eq(bar(ns).h, 14, "bar thickness")
+end)
+
+test("options: reset size button resets the sizes", function()
+  local ns = M.load({ iconSize = 80 })
+  local made, create = {}, CreateFrame
+  _G.CreateFrame = function(...) local f = create(...); made[#made + 1] = f; return f end
+  ns.ToggleOptions(true)
+  _G.CreateFrame = create
+  local btn
+  for _, f in ipairs(made) do if f.text == ns.L.optResetSize then btn = f end end
+  ok(btn, "no reset size button")
+  btn.scripts.OnClick(btn)
+  eq(ns.db.iconSize, 44)
+end)

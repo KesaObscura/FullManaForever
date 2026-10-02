@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.6.8"
+ns.VERSION = "0.6.9"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -717,6 +717,13 @@ function ns.ResetPosition()
   PinTopLeft()
 end
 
+-- icon size, spacing and bar thickness/length back to the defaults (position stays)
+local SIZE_KEYS = { "iconSize", "iconGap", "barThickness", "barLength" }
+function ns.ResetSize()
+  for _, k in ipairs(SIZE_KEYS) do db[k] = DEFAULTS[k] end
+  ns.Layout(true)
+end
+
 local function CreateAnchor()
   anchor = CreateFrame("Frame", "FullManaForeverAnchor", UIParent)
   local p = db.point
@@ -1041,6 +1048,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     db.scale100 = not db.scale100
     ns.InvalidateCurves()
     Print("scale100 = %s", tostring(db.scale100))
+  elseif cmd == "reset" and args[2] == "size" then
+    ns.ResetSize(); Print(L.resetSize)
   elseif cmd == "reset" then
     ns.ResetPosition(); Print(L.reset)
   else
