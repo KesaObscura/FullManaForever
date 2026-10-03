@@ -63,3 +63,5 @@ Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua �
   so mp5 in combat is impossible; per second stays, no mp5 option. "/с" showed as a box: the
   cause was `OutlineFont` setting a single font file (Latin only) instead of the game's font
   family. Text with letters must use the game's "...Outline" font objects or stay as is.
+- `CurveConstants.ScaleTo100` exists in Forever: `UnitPowerPercent(..., ScaleTo100)` gives the
+  mana percentage (shown in game as 58 %, 69 %).

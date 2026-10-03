@@ -233,8 +233,8 @@ end)
 
 test("text with letters keeps the game's font family (no boxes for other alphabets)", function()
   local ns = M.load(nil)
-  local unit = M.upvalue(ns.PositionBar, "bar").regenUnit
-  eq(unit.font, nil, "the unit label was switched to a single font file")
+  local regen = M.upvalue(ns.PositionBar, "bar").regen
+  eq(regen.font, nil, "the regen text was switched to a single font file")
 end)
 
 test("options: text size of the rule's seconds and of the regen can be changed", function()
@@ -244,7 +244,7 @@ test("options: text size of the rule's seconds and of the regen can be changed",
   eq(b.fsrBox.scale, 1); eq(b.regenBox.scale, 1)
   local sizes = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
-    if w.minus and w.label and w.label.text == "" then sizes[#sizes + 1] = w end
+    if w.minus and w.label and w.label.text == ns.L.optTextSize .. ":" then sizes[#sizes + 1] = w end
   end
   eq(#sizes, 2, "size steppers")
   sizes[1].plus.scripts.OnClick(sizes[1].plus)

@@ -39,7 +39,7 @@ frame:SetScript("OnEvent", function(_, _, unit, _, spellID)
   if unit == "player" and CostsMana(spellID) then fsrUntil = GetTime() + FSR end
 end)
 
--- number for the mana bar: the regen that is running right now, per second ("14.8").
+-- text for the mana bar: the regen that is running right now, per second ("14.8/s").
 -- During the rule that is the casting rate: 0 without talents, more with talents,
 -- Innervate or gear (the game includes all of it). In combat the value is secret: it can
 -- only be formatted, never compared or multiplied, which is why there is no mp5 here.
@@ -52,9 +52,8 @@ function ns.RegenText()
   local value
   if inRule then value = casting else value = base end
   if value == nil then return nil end
-  -- only the number goes through the format: a secret string mangles multibyte letters
-  -- ("/с" came out as a box), so the unit is a separate plain text next to it
-  local okF, text = pcall(string.format, "%.1f", value)
+  -- the unit is part of the pattern; "%" in a unit would have to be escaped
+  local okF, text = pcall(string.format, "%.1f" .. ns.L.regenUnit, value)
   if not okF then return nil end
   return text, inRule
 end
