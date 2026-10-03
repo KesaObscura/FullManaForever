@@ -379,6 +379,11 @@ Build = function()
   -- one switch for placing: unlocked = movable and showing everything that is switched on
   c.Row(Check(col, L.optUnlock, function() return not db.locked end,
     function(v) db.locked = not v; ns.ApplyLock() end, L.tipUnlock))
+  -- placing the frame: unlock, then reset if it got lost
+  local reset = Button(col, L.optReset, 150)
+  c.Row(reset, PAD + 30, 34)
+  reset:SetScript("OnClick", function() ns.ResetPosition() end)
+  Tip(reset, L.optReset, L.tipReset)
   local langLabel = Label(col, L.optLang .. ":")
   local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
   for _, l in ipairs(ns.LANGUAGES) do entries[#entries + 1] = { value = l.code, text = l.name } end
@@ -395,11 +400,7 @@ Build = function()
     if ns.RebuildLibrary then ns.RebuildLibrary(true) end
   end)
   c.Right(lang)
-  c.Row(langLabel, PAD + 4, 30)
-  local reset = Button(col, L.optReset, 150)
-  c.Row(reset, PAD + 4, 34)
-  reset:SetScript("OnClick", function() ns.ResetPosition() end)
-  Tip(reset, L.optReset, L.tipReset)
+  c.Row(langLabel, PAD + 4, 34)
 
   -- look
   c.Row(Header(col, L.optAppearance), PAD, 26)
