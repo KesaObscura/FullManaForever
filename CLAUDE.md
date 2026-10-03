@@ -59,3 +59,7 @@ Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua �
 - Decision (owner): the bar shows only the regen running right now, per second, in and out of
   combat (x5 to mp5 is impossible on secret values); the rule's seconds sit at the end of the
   bar. The x5 curve attempt was removed.
+- Fourth log: `Curve:Evaluate` refuses a secret argument ("Usage: local y = self:Evaluate(x)"),
+  so mp5 in combat is impossible; per second stays, no mp5 option. A string built by
+  `string.format` from a secret value mangles multibyte letters ("/с" showed as a box):
+  format only the number, put localized units in a separate plain FontString.

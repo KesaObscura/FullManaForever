@@ -620,6 +620,9 @@ local function CreateBar()
   -- current regen ("14.8/s"), under the mana numbers or right of the bar
   bar.regen = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.regen)
+  bar.regenUnit = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.regenUnit)
+  bar.regenUnit:SetPoint("LEFT", bar.regen, "RIGHT", 0, 0)
   bar:Hide()
 end
 
@@ -729,7 +732,8 @@ function ns.PositionBar()
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -4)
     bar.regen:ClearAllPoints()
-    bar.regen:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
+    -- number ends at the middle, the unit starts there: the pair sits centered
+    bar.regen:SetPoint("TOPRIGHT", bar.text, "BOTTOM", 4, -2)
     bar.fsr:ClearAllPoints()
     bar.fsr:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
@@ -981,18 +985,22 @@ local function UpdateRegen()
   elseif bar.fsr:IsShown() then
     bar.fsr:Hide(); bar.fsrText:Hide()
   end
-  if not db.regenText or not ns.RegenText then bar.regen:Hide() return end
+  if not db.regenText or not ns.RegenText then bar.regen:Hide(); bar.regenUnit:Hide() return end
   local now, inRule = GetTime(), left > 0
   if now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
   local text = ns.RegenText()
   if text then
     bar.regen:SetText(text)
+    bar.regenUnit:SetText(L.regenUnit)
     -- reduced regen during the rule: gold like the strip; normal regen: light blue
-    if inRule then bar.regen:SetTextColor(1, 0.82, 0.2) else bar.regen:SetTextColor(0.6, 0.85, 1) end
-    bar.regen:Show()
+    local r, g, b = 0.6, 0.85, 1
+    if inRule then r, g, b = 1, 0.82, 0.2 end
+    bar.regen:SetTextColor(r, g, b)
+    bar.regenUnit:SetTextColor(r, g, b)
+    bar.regen:Show(); bar.regenUnit:Show()
   else
-    bar.regen:Hide()
+    bar.regen:Hide(); bar.regenUnit:Hide()
   end
 end
 
