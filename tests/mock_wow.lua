@@ -133,6 +133,7 @@ function M.reset(opts)
     raid = false, group = false, combat = false, instance = "none",
     macros = opts.macros or {}, macrosLoaded = opts.macrosLoaded ~= false,
     powerFails = false, locale = opts.locale or "enUS",
+    level = opts.level or 60, minLevel = opts.minLevel or {}, uncached = opts.uncached or {},
   }
   local S = M.state
   local function count(name) M.calls[name] = (M.calls[name] or 0) + 1 end
@@ -175,6 +176,7 @@ function M.reset(opts)
   _G.UnitPowerMax = function() return S.maxMana end
   _G.UnitHealthMax = function() return S.maxHP end
   _G.UnitClass = function() return "Class", S.class end
+  _G.UnitLevel = function() return S.level end
   _G.issecretvalue = isSecret
   _G.C_Item = {
     GetItemCount = function(id) count("GetItemCount"); return S.bags[id] or 0 end,
@@ -182,6 +184,11 @@ function M.reset(opts)
     GetItemNameByID = function(id) return "Item" .. id end,
     IsEquippedItem = function() return false end,
     GetItemInfoInstant = function(id) return id end,
+    -- name, link, quality, itemLevel, minLevel: like the real API, nil until "cached"
+    GetItemInfo = function(id)
+      if S.uncached[id] then return nil end
+      return "Item" .. id, nil, 1, 1, S.minLevel[id] or 0
+    end,
     GetItemSpell = function() return "Use" end,
   }
   _G.C_Container = { GetItemCooldown = function(id)

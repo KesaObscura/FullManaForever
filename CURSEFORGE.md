@@ -17,7 +17,7 @@ Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules
 - **Item list.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
 - **Hold potions.** `/fmf hold` stops potion suggestions for fights where you want the potion cooldown for something else.
-- Hides mage-only items for other classes and battleground-only items outside battlegrounds.
+- Only suggests what you can use: skips items above your level, mage-only items for other classes and battleground-only items outside battlegrounds.
 - 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português, 繁體中文, 简体中文.
 
 ## How it works with Forever's addon rules

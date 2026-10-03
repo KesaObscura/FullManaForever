@@ -219,3 +219,14 @@ test("item list keeps its scroll position when the language changes", function()
   end
   eq(scrollOf():GetVerticalScroll(), 120, "scroll after the language change")
 end)
+
+test("item list says which level an item needs", function()
+  local ns = M.load(nil, { level = 16, minLevel = { [3827] = 22 }, bags = { [3827] = 2 } })
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(ns.RebuildLibrary, "rows") or M.upvalue(M.upvalue(ns.RebuildLibrary, "BuildContent"), "rows")
+  local found
+  for _, r in ipairs(rows) do
+    if r.it and r.it.id == 3827 then found = r.owned.text end
+  end
+  ok(found and found:find(ns.L.libLevel:format(22), 1, true), "level text: " .. tostring(found))
+end)
