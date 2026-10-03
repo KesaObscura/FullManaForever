@@ -63,28 +63,31 @@ local function Times5(v)
   return r
 end
 
--- text for the mana bar: "3.2s  0 mp5" during the rule, "74 mp5" otherwise.
--- Returns text, inRule (the caller colors it); nil when there is nothing to show.
+-- text for the mana bar. Outside the rule: "74 mp5". During the rule both rates,
+-- "3.2s  0 / 74 mp5": what runs while casting (0 without talents, half with Spirit Tap,
+-- all with Innervate) and the normal rate you go back to. In combat the values are secret:
+-- they can only be formatted, and per second when x5 is not possible.
+-- Returns text, inRule; nil when there is nothing to show.
 function ns.RegenText(withRegen, withFsr)
   local left = withFsr and ns.FsrLeft() or 0
-  local value
+  local base, casting
   if withRegen and GetPowerRegen then
-    local ok, base, casting = pcall(GetPowerRegen)
-    if ok then
-      -- while the rule runs, regen is the casting rate (the game knows about talents and
-      -- Innervate, so they are included)
-      if ns.FsrLeft() > 0 then value = casting else value = base end
-    end
+    local ok, b, c = pcall(GetPowerRegen)
+    if ok then base, casting = b, c end
   end
   local text, ok
-  if value ~= nil then
-    local mp5 = Times5(value)
-    if mp5 ~= nil then
-      if left > 0 then ok, text = pcall(string.format, "%.1fs  %.0f mp5", left, mp5)
-      else ok, text = pcall(string.format, "%.0f mp5", mp5) end
+  if base ~= nil then
+    local b5 = Times5(base)
+    local c5 = left > 0 and casting ~= nil and Times5(casting)
+    if b5 ~= nil and (left == 0 or c5) then
+      if left > 0 then ok, text = pcall(string.format, "%.1fs  %.0f / %.0f mp5", left, c5, b5)
+      else ok, text = pcall(string.format, "%.0f mp5", b5) end
     else
-      if left > 0 then ok, text = pcall(string.format, "%.1fs  %.1f/s", left, value)
-      else ok, text = pcall(string.format, "%.1f/s", value) end
+      if left > 0 and casting ~= nil then
+        ok, text = pcall(string.format, "%.1fs  %.1f / %.1f/s", left, casting, base)
+      else
+        ok, text = pcall(string.format, "%.1f/s", base)
+      end
     end
     if not ok then text = nil end
   end

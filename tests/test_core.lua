@@ -382,7 +382,7 @@ test("a spell that costs mana starts the five-second rule, a wand does not", fun
   M.tick()
   ok(bar(ns).fsr.shown, "strip hidden during the rule")
   eq(bar(ns).fsr.value, 5)
-  ok(bar(ns).regen.text:find("5.0s  0 mp5", 1, true), "text during the rule: " .. tostring(bar(ns).regen.text))
+  ok(bar(ns).regen.text:find("5.0s  0 / 74 mp5", 1, true), "text during the rule: " .. tostring(bar(ns).regen.text))
   local real = GetTime
   _G.GetTime = function() return 106 end
   M.tick()
@@ -407,5 +407,14 @@ test("five-second rule and regen text can be switched off", function()
   M.tick()
   ok(not bar(ns).fsr.shown, "strip shown while off")
   ok(not bar(ns).regen.shown, "regen text shown while off")
+  noRegenApis()
+end)
+
+test("during the rule in combat both secret rates are shown per second", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(M.secret(23.25), M.secret(11.63))
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  eq(bar(ns).regen.text, "5.0s  11.6 / 23.2/s")
   noRegenApis()
 end)
