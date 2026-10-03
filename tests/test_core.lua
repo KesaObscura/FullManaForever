@@ -488,3 +488,31 @@ test("test mode shows the five-second rule without casting", function()
   ok(not bar(ns).fsr.shown, "strip shown although switched off")
   noRegenApis()
 end)
+
+test("/fmf scan writes spells, talents and use items with the game's descriptions", function()
+  local ns = M.load(nil)
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { name = "Holy", itemIndexOffset = 0, numSpellBookItems = 2 } end,
+    GetSpellBookItemInfo = function(i)
+      if i == 1 then return { spellID = 14751, name = "Inner Focus" } end
+      return { spellID = 14522, name = "Meditation", isPassive = true }
+    end,
+  }
+  _G.C_Spell = {
+    GetSpellDescription = function(id) return id == 14751 and "Your next spell\ncosts no mana." or "Regen while casting." end,
+    GetSpellPowerCost = function() return { { type = 0, cost = 0 } } end,
+    GetSpellCooldown = function() return { startTime = 0, duration = 0 } end,
+  }
+  _G.GetInventoryItemID = function(_, slot) if slot == 13 then return 23027 end end
+  _G.C_Item.GetItemSpell = function(id) if id == 23027 then return "Warmth", 29166 end end
+  _G.C_Container.GetContainerNumSlots = function() return 0 end
+  SlashCmdList.FULLMANAFOREVER("scan")
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  ok(all:find("---- scan", 1, true), "no scan header")
+  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
+  ok(all:find("14522 Meditation (passive)", 1, true), "passive not marked")
+  ok(all:find("item slot13 23027", 1, true), "use item missing")
+  ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
+  _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
+end)
