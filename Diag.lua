@@ -36,23 +36,59 @@ local function RegenText()
   if not GetPowerRegen then return "regen=missing" end
   local ok, base, casting = pcall(GetPowerRegen)
   if not ok then return "regen=error" end
-  return ("regen/s base=%s casting=%s"):format(Show(base), Show(casting))
+  local text = ("regen/s base=%s casting=%s"):format(Show(base), Show(casting))
+  if GetManaRegen then -- older API, maybe readable where GetPowerRegen is secret
+    local ok2, b2, c2 = pcall(GetManaRegen)
+    text = text .. (ok2 and (" manaRegen=%s/%s"):format(Show(b2), Show(c2)) or " manaRegen=error")
+  end
+  return text
+end
+
+-- can a secret regen value be shown as text (like the mana numbers on our bar)?
+local testText
+local function DisplayText()
+  if not GetPowerRegen then return "" end
+  local ok, base = pcall(GetPowerRegen)
+  if not ok or not IsSecret(base) then return "" end
+  testText = testText or UIParent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  testText:Hide()
+  local okF, str = pcall(string.format, "%.1f/s", base)
+  if not okF then return " text=format-error" end
+  local okS = pcall(testText.SetText, testText, str)
+  return okS and " text=ok" or " text=settext-error"
+end
+
+-- buffs that change regen, asked one by one (the full list was empty in combat)
+local WATCH = { { 15271, "SpiritTap" }, { 29166, "Innervate" }, { 14751, "InnerFocus" } }
+local function WatchText()
+  local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+  if not get then return " byID=missing" end
+  local out = {}
+  for _, w in ipairs(WATCH) do
+    local ok, a = pcall(get, w[1])
+    local state = not ok and "error" or a == nil and "no" or IsSecret(a) and "SECRET"
+      or (IsSecret(a.spellId) and "secret-fields" or "yes")
+    out[#out + 1] = w[2] .. "=" .. state
+  end
+  return " byID " .. table.concat(out, " ")
 end
 
 local function AuraText()
   if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return "buffs: API missing" end
-  local names, secret = {}, 0
+  local names, secret, why = {}, 0, ""
   for i = 1, 40 do
     local ok, a = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
-    if not ok or not a then break end
+    if not ok then why = " (error)" break end
+    if IsSecret(a) then why = " (secret)" break end
+    if not a then break end
     if IsSecret(a.name) or IsSecret(a.spellId) then
       secret = secret + 1
     else
       names[#names + 1] = ("%s(%s)"):format(tostring(a.name), tostring(a.spellId))
     end
   end
-  return ("buffs: %s%s"):format(#names > 0 and table.concat(names, ", ") or "-",
-    secret > 0 and (" +" .. secret .. " secret") or "")
+  return ("buffs: %s%s%s"):format(#names > 0 and table.concat(names, ", ") or "-",
+    secret > 0 and (" +" .. secret .. " secret") or "", why)
 end
 
 local function SpellText(id)
@@ -137,7 +173,7 @@ local function OnEvent(_, event, unit, arg2, arg3)
     if text ~= clock.lastAura then clock.lastAura = text; Emit(text) end
   else
     Emit((event == "UNIT_SPELLCAST_SUCCEEDED" and "cast " or "channel ") .. SpellText(arg3)
-      .. "  combat=" .. tostring(InCombatLockdown()) .. "  " .. RegenText())
+      .. "  combat=" .. tostring(InCombatLockdown()) .. "  " .. RegenText() .. WatchText())
   end
 end
 
@@ -152,7 +188,8 @@ local function OnUpdate()
       clock.power, regen))
   end
   if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
-    ToLog(("sample combat=%s mana events=%d %s"):format(tostring(InCombatLockdown()), clock.power, regen))
+    ToLog(("sample combat=%s mana events=%d %s%s%s"):format(tostring(InCombatLockdown()), clock.power, regen,
+      WatchText(), DisplayText()))
     clock.lastRegen, clock.lastSample = regen, now
   end
   clock.power = 0

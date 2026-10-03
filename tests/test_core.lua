@@ -289,7 +289,8 @@ local function diagApis()
   _G.GetPowerRegen = function() return M.secret(3), 1 end
   _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 50 } } end,
     GetSpellName = function() return "Heal" end }
-  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return { name = "Innervate", spellId = 29166 } end end }
+  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return { name = "Innervate", spellId = 29166 } end end,
+    GetPlayerAuraBySpellID = function(id) if id == 15271 then return { spellId = 15271 } end end }
 end
 local function noDiagApis() _G.GetPowerRegen, _G.C_Spell, _G.C_UnitAuras = nil, nil, nil end
 local function diagFrame(ns) return M.upvalue(M.upvalue(ns.Probe5SR, "Start"), "frame") end
@@ -325,6 +326,8 @@ test("/fmf log records into the saved log, never secret contents", function()
   M.Fire("PLAYER_REGEN_DISABLED")
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
   M.Fire("UNIT_AURA", "player")
+  local f = diagFrame(ns)
+  f.scripts.OnUpdate(f) -- one sample
   SlashCmdList.FULLMANAFOREVER("log off")
   local lines = FullManaForeverLog.lines
   local all = table.concat(lines, "\n")
@@ -332,6 +335,8 @@ test("/fmf log records into the saved log, never secret contents", function()
   ok(all:find("combat start", 1, true), "combat not logged")
   ok(all:find("spell=2050 Heal cost: type=0 cost=50", 1, true), "cast not logged")
   ok(all:find("log off", 1, true), "off not logged")
+  ok(all:find("byID SpiritTap=yes Innervate=no", 1, true), "buffs by ID not logged")
+  ok(all:find("text=ok", 1, true), "secret text test not logged")
   for _, l in ipairs(lines) do
     eq(type(l), "string", "non-string line")
     ok(not issecretvalue(l), "secret stored")

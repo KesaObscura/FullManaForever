@@ -39,3 +39,10 @@ Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua �
   it continues while casting. The beta is capped at level 30, so it cannot be tested there.
 - Unknown until the in-game log (`/fmf log on`) answers: whether `GetPowerRegen`, spell costs
   and player buffs are secret in combat.
+- First log (priest 16, beta): out of combat `GetPowerRegen` is readable (base 14.75/s, casting
+  0.00); from the first second of combat both values are SECRET. Spirit Tap: base 23.25,
+  casting 11.63 (50 % keeps running while casting). Spell IDs and mana costs from
+  `UNIT_SPELLCAST_SUCCEEDED` + `C_Spell.GetSpellPowerCost` are readable in combat and include
+  cost reductions (Eureka); wand Shoot, food and potions report no cost. The aura list
+  (`GetAuraDataByIndex`) is empty in combat. `UNIT_POWER_UPDATE` for mana fires only a few
+  times per 10 s.
