@@ -80,7 +80,7 @@ local function Times5(v)
 end
 
 -- text for the mana bar. Outside the rule: "74 mp5". During the rule both rates,
--- "3.2s  0 / 74 mp5": what runs while casting (0 without talents, half with Spirit Tap,
+-- "3.2s  0 -> 74 mp5": what runs while casting (0 without talents, half with Spirit Tap,
 -- all with Innervate) and the normal rate you go back to. In combat the values are secret:
 -- they can only be formatted, and per second when x5 is not possible.
 -- Returns text, inRule; nil when there is nothing to show.
@@ -96,11 +96,11 @@ function ns.RegenText(withRegen, withFsr)
     local b5 = Times5(base)
     local c5 = left > 0 and casting ~= nil and Times5(casting)
     if b5 ~= nil and (left == 0 or c5) then
-      if left > 0 then ok, text = pcall(string.format, "%.1fs  %.0f / %.0f mp5", left, c5, b5)
+      if left > 0 then ok, text = pcall(string.format, "%.1fs  %.0f -> %.0f mp5", left, c5, b5)
       else ok, text = pcall(string.format, "%.0f mp5", b5) end
     else
       if left > 0 and casting ~= nil then
-        ok, text = pcall(string.format, "%.1fs  %.1f / %.1f/s", left, casting, base)
+        ok, text = pcall(string.format, "%.1fs  %.1f -> %.1f/s", left, casting, base)
       else
         ok, text = pcall(string.format, "%.1f/s", base)
       end
