@@ -30,7 +30,7 @@ when the icon lights up.
   *Strongest only*.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
   (30 % by default).
-- **Mana bar with markers**: a long marker where an icon lights up, short ones where a
+- **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.
 - **Five-second rule and mana regen** on the bar: a gold strip and the seconds after a spell

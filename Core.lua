@@ -1006,15 +1006,18 @@ end
 local function PlaceTick(t, thr, len, thick, long, vertical)
   if t.thr ~= thr or t.len ~= len or t.long ~= long or t.vertical ~= vertical or t.thick ~= thick then
     t.thr, t.len, t.long, t.vertical, t.thick = thr, len, long, vertical, thick
-    local size = long and thick + 6 or thick
+    -- every mark stays inside the bar (nothing sticks out past the five-second strip);
+    -- the mark where the icon lights up is thicker and fully bright, the others thin and dimmer
+    local line = long and 3 or 2
     t.front:ClearAllPoints()
     if vertical then
-      t.front:SetSize(size, 2)
+      t.front:SetSize(thick, line)
       t.front:SetPoint("CENTER", bar, "BOTTOM", 0, len * thr)
     else
-      t.front:SetSize(2, size)
+      t.front:SetSize(line, thick)
       t.front:SetPoint("CENTER", bar, "LEFT", len * thr, 0)
     end
+    t.front:SetAlpha(long and 1 or 0.65)
   end
   if not t.front:IsShown() then t.front:Show(); t.back:Show() end
 end
@@ -1072,7 +1075,7 @@ local function UpdateBar(maxMana)
     local used = 0
     if db.enabled[group.key] and ns.ForMyClass(group) then
       if db.pickMode == "fit" and CanBand(group) then
-        -- weakest first: long mark where the icon lights up, short marks where a
+        -- weakest first: thick mark where the icon lights up, thin marks where a
         -- stronger item becomes the best fit
         local c = BandCandidates(i)
         for k = #c, 1, -1 do

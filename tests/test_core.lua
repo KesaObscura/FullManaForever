@@ -461,3 +461,14 @@ test("mana text: without the game's percent curve the number is shown", function
   M.state.manaPct = 0.89; M.tick()
   eq(bar(ns).text.text, "890 / 1000")
 end)
+
+test("bar markers stay inside the bar; the main one is thicker", function()
+  local ns = M.load({ vertical = false }, { bags = { [3385] = 2, [2455] = 2 } })
+  M.state.manaPct = 0.95; M.tick()
+  local ticks = bar(ns).ticks[1]
+  eq(ticks[1].front.h, 14, "main marker sticks out")
+  eq(ticks[1].front.w, 3, "main marker not thicker")
+  eq(ticks[1].front.alpha, 1)
+  ok(ticks[2].front.shown, "second marker missing")
+  eq(ticks[2].front.h, 14); eq(ticks[2].front.w, 2)
+end)
