@@ -12,7 +12,7 @@ for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDr
   "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
   "SetHighlightFontObject", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
   "SetMovable", "SetNormalFontObject", "SetNormalTexture", "SetNumeric", "SetOwner", "SetPushedTexture",
-  "SetRotation", "SetScrollChild", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
+  "SetRotation", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
   "SetTextInsets", "SetThumbTexture", "SetToAlpha", "SetToplevel", "SetValueStep", "SetVertexColor",
   "SetWordWrap", "StopMovingOrSizing", "StartMoving", "SetItemByID", "SetJustifyV", "SetMaxLines",
   "SetObeyStepOnDrag", "SetHitRectInsets", "SetDisabledFontObject" }) do
@@ -85,7 +85,11 @@ end
 function methods:SetMinMaxValues(a, b) M.calls.SetMinMaxValues = (M.calls.SetMinMaxValues or 0) + 1; self.min, self.max = a, b end
 function methods:GetVerticalScroll() return self.vscroll or 0 end
 function methods:SetVerticalScroll(v) self.vscroll = v end
-function methods:GetVerticalScrollRange() return 0 end
+function methods:SetScrollChild(c) self.child = c end
+function methods:GetVerticalScrollRange()
+  if not self.child then return 0 end
+  return math.max(0, (self.child.h or 0) - (self.h or 0))
+end
 function methods:SetTexture(t) self.texture = t end
 function methods:GetTexture() return self.texture end
 function methods:RegisterEvent(e)

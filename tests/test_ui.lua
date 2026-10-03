@@ -205,3 +205,15 @@ test("item list: rows are as wide as the visible list, nothing sticks out", func
   local p = rows[1].frame.points[2]
   eq(p[1], "RIGHT"); eq(p[2], content, "row not tied to the list's right edge")
 end)
+
+test("item list keeps its scroll position when the language changes", function()
+  local ns = M.load(nil)
+  ns.ToggleLibrary(true)
+  local function scrollOf() return M.upvalue(ns.RebuildLibrary, "scroll") end
+  scrollOf():SetVerticalScroll(120)
+  ns.ToggleOptions(true)
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "auto" then w.Select("ruRU") end
+  end
+  eq(scrollOf():GetVerticalScroll(), 120, "scroll after the language change")
+end)

@@ -316,12 +316,21 @@ end
 function ns.RebuildLibrary(full)
   if not lib then return end
   if full then -- new language: the window texts are rebuilt (only on a real change)
-    -- the new window opens where the old one was moved to
+    -- the new window opens where the old one was moved to, scrolled to the same spot
     local shown, point = lib:IsShown(), { lib:GetPoint() }
+    local off = scroll:GetVerticalScroll() or 0
     lib:Hide()
     lib, scroll, content = nil, nil, nil
     Build(point)
     if shown then ns.ToggleLibrary(true) end
+    -- the scroll range is only known once the new rows are laid out (next frame)
+    local function restore()
+      if not scroll then return end
+      local v = math.min(off, scroll:GetVerticalScrollRange() or 0)
+      scroll:SetVerticalScroll(v)
+      UpdateScrollbar()
+    end
+    if C_Timer and C_Timer.After then C_Timer.After(0, restore) else restore() end
     return
   end
   local off = scroll:GetVerticalScroll()
