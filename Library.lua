@@ -9,9 +9,11 @@ local reg = {}          -- window widgets that need Refresh()
 local rowReg = {}       -- row checkboxes (one per pooled row)
 local rows = {}         -- pooled rows: frames are created once and reused
 local headers = {}      -- pooled category headers
-local W, H, PAD, ROW = 500, 600, 16, 30
-local CW = W - 2 * PAD - 22 -- list width, room for the scrollbar
-local AMOUNT_X = 305        -- x of the "up to N" column
+local W, H, PAD, ROW = 560, 600, 16, 30
+local CW = W - 2 * PAD - 22 -- list width before the scroll area knows its real size
+local EDGE = 8              -- free space between the texts and the right edge of the list
+local NAME_W = 230          -- item name column (long names end in "...")
+local AMOUNT_X, AMOUNT_W = 295, 84 -- the "up to N" column
 
 local function OwnedText(it, group)
   if group.equipped then
@@ -36,7 +38,7 @@ local function RowOnLeave() GameTooltip:Hide() end
 local function NewRow()
   local r = {}
   local row = CreateFrame("Frame", nil, content)
-  row:SetSize(CW, ROW - 2)
+  row:SetHeight(ROW - 2) -- the width follows the list (see BuildContent)
   row:EnableMouse(true)
   row:SetScript("OnEnter", RowOnEnter)
   row:SetScript("OnLeave", RowOnLeave)
@@ -58,17 +60,21 @@ local function NewRow()
 
   r.name = ui.Label(row, "", "GameFontHighlight")
   r.name:SetPoint("LEFT", r.icon, "RIGHT", 8, 0)
-  r.name:SetWidth(240)
+  r.name:SetWidth(NAME_W)
   if r.name.SetWordWrap then r.name:SetWordWrap(false) end
 
   r.amount = ui.Label(row, "", "GameFontHighlightSmall")
   r.amount:SetPoint("LEFT", row, "LEFT", AMOUNT_X, 0)
+  r.amount:SetWidth(AMOUNT_W)
+  if r.amount.SetWordWrap then r.amount:SetWordWrap(false) end
 
+  -- "not in bags" gets the rest of the row: it can never run into the amount
   r.owned = ui.Label(row, "", "GameFontHighlightSmall")
   r.owned:SetJustifyH("RIGHT")
+  if r.owned.SetWordWrap then r.owned:SetWordWrap(false) end
 
   r.del = ui.Button(row, "x", 20, 18)
-  r.del:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+  r.del:SetPoint("RIGHT", row, "RIGHT", -EDGE, 0)
   r.del:SetScript("OnClick", function() ns.RemoveCustom(row.it.id) end)
 
   r.frame = row
@@ -123,10 +129,12 @@ local function BuildContent()
         r.it, r.group, r.frame.it = it, group, it
         r.frame:ClearAllPoints()
         r.frame:SetPoint("TOPLEFT", 0, y)
+        r.frame:SetPoint("RIGHT", content, "RIGHT", 0, 0)
         r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
         r.amount:SetText(L.libRestore:format(it.max))
         r.owned:ClearAllPoints()
-        r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it.custom and -32 or -4, 0)
+        r.owned:SetPoint("LEFT", r.frame, "LEFT", AMOUNT_X + AMOUNT_W + 4, 0)
+        r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it.custom and -(28 + EDGE) or -EDGE, 0)
         r.del:SetShown(it.custom and true or false)
         r.frame:Show()
         y = y - ROW
@@ -155,11 +163,15 @@ local function RefreshRows()
   for _, w in ipairs(reg) do w.Refresh() end
 end
 
-local function Build()
+local function Build(point)
   wipe(reg)
   lib = CreateFrame("Frame", "FullManaForeverItems", UIParent)
   lib:SetSize(W, H)
-  lib:SetPoint("CENTER", 40, 0)
+  if point and point[1] then
+    lib:SetPoint(point[1], UIParent, point[3], point[4], point[5])
+  else
+    lib:SetPoint("CENTER", 40, 0)
+  end
   lib:SetFrameStrata("DIALOG")
   lib:SetToplevel(true)
   lib:SetMovable(true)
@@ -177,7 +189,7 @@ local function Build()
 
   local bg = lib:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
-  bg:SetColorTexture(0.05, 0.06, 0.09, 0.97)
+  bg:SetColorTexture(0.05, 0.06, 0.09, 1)
   local top = lib:CreateTexture(nil, "ARTWORK")
   top:SetPoint("TOPLEFT")
   top:SetPoint("TOPRIGHT")
@@ -281,6 +293,14 @@ local function Build()
 
   content = CreateFrame("Frame", nil, scroll)
   content:SetSize(CW, 10)
+  -- the list is exactly as wide as the visible scroll area, whatever the UI scale:
+  -- nothing can stick out under the scrollbar and get cut off
+  local function FitContent()
+    local w = scroll:GetWidth() or 0
+    if w > 0 then content:SetWidth(w) end
+  end
+  scroll:SetScript("OnSizeChanged", FitContent)
+  FitContent()
   scroll:SetScrollChild(content)
   wipe(rows); wipe(headers); wipe(rowReg)
   BuildContent()
@@ -296,10 +316,21 @@ end
 function ns.RebuildLibrary(full)
   if not lib then return end
   if full then -- new language: the window texts are rebuilt (only on a real change)
-    local shown = lib:IsShown()
+    -- the new window opens where the old one was moved to, scrolled to the same spot
+    local shown, point = lib:IsShown(), { lib:GetPoint() }
+    local off = scroll:GetVerticalScroll() or 0
     lib:Hide()
     lib, scroll, content = nil, nil, nil
+    Build(point)
     if shown then ns.ToggleLibrary(true) end
+    -- the scroll range is only known once the new rows are laid out (next frame)
+    local function restore()
+      if not scroll then return end
+      local v = math.min(off, scroll:GetVerticalScrollRange() or 0)
+      scroll:SetVerticalScroll(v)
+      UpdateScrollbar()
+    end
+    if C_Timer and C_Timer.After then C_Timer.After(0, restore) else restore() end
     return
   end
   local off = scroll:GetVerticalScroll()

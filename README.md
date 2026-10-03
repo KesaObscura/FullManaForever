@@ -44,7 +44,7 @@ default because it puts you to sleep for 12 seconds.
 
 ## Install
 
-Recommended: install it from CurseForge (the CurseForge app keeps it up to date).
+Recommended: install it from [CurseForge](https://www.curseforge.com/wow/addons/full-mana-forever) (the CurseForge app keeps it up to date).
 
 Manual install: download a release zip and unpack it into
 `<your WoW Forever client folder>/Interface/AddOns/`. The result must be

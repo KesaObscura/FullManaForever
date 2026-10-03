@@ -1,10 +1,21 @@
 # Changelog
 
-**0.6.9 beta**
+**Full Mana Forever 0.6.9**
 
-- New: "Reset size" button next to "Reset position" and `/fmf reset size`: icon size, icon spacing, bar thickness and bar length go back to the defaults (position, colors and layout stay)
+- New: "Reset size" button (under the size settings) and `/fmf reset size`: icon size, icon spacing, bar thickness and bar length go back to the defaults (position, colors and layout stay)
+- Settings window reworked:
+  - all -/+ buttons in one column, values in one column, all dropdowns the same width
+  - -/+ are greyed out when they would not change anything
+  - bar length: + from "auto" starts at the auto length instead of 20; going below the icon size returns to "auto"
+  - new section "Visibility" on the right: "Show only in combat" and solo / party / raid
+  - consumables with nothing in the bags (or switched off) take one line instead of two
+  - tooltips on the settings; clicking a checkbox label toggles it
+  - the "Drinking" explanation is easier to read
+  - the settings window and the item list are no longer see-through
+- Item list: keeps its place and scroll position when you change the language; wider, so "up to N" and "not in bags" no longer overlap in long languages, and nothing is cut off at the right edge at any UI scale
+- Trinkets & gear: says "nothing equipped" instead of "none in bags"
 
-**0.6.8 beta**
+**Full Mana Forever 0.6.8**
 
 - Faster: about 27 times less memory churn and half the item API calls per update
 - Safer: if the game's mana check stops working, icons stay hidden instead of lighting up at full mana
@@ -18,7 +29,7 @@
 - Texts: unused strings removed, the "Add own item" hint and /fmf help updated (category argument)
 - Automated tests (tests/run.lua), not part of the release zip
 
-**0.6.7 beta**
+**Full Mana Forever 0.6.7**
 
 - Fixed: after locking, the icons no longer jump away from where you placed them (row and column layout); the frame is now pinned by its top-left corner
 - Removed: FMF_* macros. A macro cannot see your mana, so it could not match the icon; put your potions on the action bar directly
@@ -26,7 +37,7 @@
 - Settings: the "Drinking" explanations no longer mention macros
 - New option "Show": solo / in a party / in a raid, any combination (works together with "Only in combat")
 
-**0.6.6 beta**
+**Full Mana Forever 0.6.6**
 
 - New layout: icons in a column with a vertical mana bar on the left or right (the bar empties from the top down)
 - New look: icons with a thin dark frame, soft shadow and light from the top; outlined count
@@ -39,17 +50,17 @@
 - Fixed: the status line named the strongest potion with the threshold of the weakest
 - Settings window in two columns: display and look on the left, consumables on the right
 
-**0.6.5 beta**
+**Full Mana Forever 0.6.5**
 
 - New option: mana bar under or above the icons (shown only while the mana bar is on)
 - Empty-group placeholders in test/unlock mode now show the group's own item icon (greyed) instead of a question mark
 
-**0.6.4 beta**
+**Full Mana Forever 0.6.4**
 
 - Item list: visible scrollbar with a draggable thumb (mouse wheel works on the list and on the bar)
 - CurseForge project ID added to the TOC
 
-**0.6.3 beta — first public release**
+**Full Mana Forever 0.6.3**
 
 - Icons for mana potions, runes, mage gems, other mana consumables and equipped gear, shown only when ready and your mana deficit is large enough
 - Potion choice by deficit (strongest potion that will not overflow) or always the strongest

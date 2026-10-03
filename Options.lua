@@ -6,11 +6,17 @@ local _, ns = ...
 local L = ns.L
 local win, panelButton
 local widgets = {}        -- options widgets that need Refresh()
-local statusLabels = {}   -- [group index] = status line under the group checkbox
+local groupRows = {}      -- consumable groups in the window: { cb, st, i, compact, placed }
+local groupTail           -- { frame, dx }: what follows the last group (rune margin)
 local registry = widgets  -- where the widget helpers register (see WithRegistry)
 local openList            -- the dropdown list that is open right now (only one at a time)
 
 local W, PAD = 440, 16
+-- fixed columns inside a settings column: every dropdown has the same width and left
+-- edge, stepper values start where dropdown texts start, -/+ buttons right after them
+local DD_W = 230
+local VALUE_X = W - PAD - DD_W + 10
+local BTN_X = VALUE_X + 60
 
 ------------------------------------------------------------------------
 -- widget helpers
@@ -30,6 +36,27 @@ local function FitWidth(b, minW)
   end
 end
 
+-- tooltip on hover: title in white, explanation wrapped below
+local function Tip(frame, title, text)
+  if not text then return end
+  frame:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(title, 1, 1, 1)
+    GameTooltip:AddLine(text, 0.82, 0.82, 0.82, true)
+    GameTooltip:Show()
+  end)
+  frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
+end
+
+-- a mouse area over a text, so the text itself can carry a tooltip
+local function TipArea(parent, fs, title, text)
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetAllPoints(fs)
+  f:EnableMouse(true)
+  Tip(f, title, text)
+  return f
+end
+
 local function Button(parent, text, w, h)
   local b = CreateFrame("Button", nil, parent)
   b:SetSize(w, h or 22)
@@ -41,12 +68,13 @@ local function Button(parent, text, w, h)
   hl:SetColorTexture(0.3, 0.55, 1, 0.3)
   b:SetNormalFontObject("GameFontNormalSmall")
   b:SetHighlightFontObject("GameFontHighlightSmall")
+  b:SetDisabledFontObject("GameFontDisableSmall")
   b:SetText(text)
   FitWidth(b, w)
   return b
 end
 
-local function Check(parent, text, get, set)
+local function Check(parent, text, get, set, tip)
   local cb = CreateFrame("CheckButton", nil, parent)
   cb:SetSize(24, 24)
   cb:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
@@ -55,6 +83,9 @@ local function Check(parent, text, get, set)
   cb:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
   cb.label = Label(parent, text)
   cb.label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
+  -- the label is part of the button: it toggles the box and shows the tooltip
+  cb:SetHitRectInsets(0, -math.ceil((cb.label:GetStringWidth() or 0) + 4), 0, 0)
+  Tip(cb, text, tip)
   cb:SetScript("OnClick", function(self)
     set(self:GetChecked() and true or false)
     ns.RefreshOptions()
@@ -79,24 +110,41 @@ local function Edit(parent, w)
   return e
 end
 
--- "Label: value [-] [+]"
-local function Stepper(parent, text, get, set, step, lo, hi, fmt)
-  local s = {}
-  s.label = Label(parent, text)
+-- "Label:      value [-] [+]" with the value and the buttons in fixed columns.
+-- x = where the label starts (the caller places it there). o: step, lo, hi, fmt, tip,
+-- next(v, dir) for steppers that do not simply add a step (bar length).
+local function Stepper(parent, x, text, get, set, o)
+  local s = { x = x }
+  s.label = Label(parent, text .. ":")
   s.value = Label(parent, "", "GameFontNormal")
   s.minus = Button(parent, "-", 22)
   s.plus = Button(parent, "+", 22)
-  s.value:SetPoint("LEFT", s.label, "RIGHT", 8, 0)
-  s.minus:SetPoint("LEFT", s.label, "LEFT", 220, 0)
+  s.value:SetPoint("LEFT", s.label, "LEFT", VALUE_X - x, 0)
+  s.minus:SetPoint("LEFT", s.label, "LEFT", BTN_X - x, 0)
   s.plus:SetPoint("LEFT", s.minus, "RIGHT", 4, 0)
-  local function change(d)
-    local v = math.min(hi, math.max(lo, get() + d))
-    set(tonumber(("%.2f"):format(v)))
+  if o.tip then TipArea(parent, s.label, text, o.tip) end
+  local function step(v, dir)
+    if o.next then return o.next(v, dir) end
+    return tonumber(("%.2f"):format(math.min(o.hi, math.max(o.lo, v + dir * o.step))))
+  end
+  local function change(dir)
+    local v = get()
+    local nv = step(v, dir)
+    if nv ~= v then set(nv) end
     ns.RefreshOptions()
   end
-  s.minus:SetScript("OnClick", function() change(-step) end)
-  s.plus:SetScript("OnClick", function() change(step) end)
-  s.Refresh = function() s.value:SetText(fmt(get())) end
+  s.minus:SetScript("OnClick", function() change(-1) end)
+  s.plus:SetScript("OnClick", function() change(1) end)
+  s.Refresh = function()
+    local v = get()
+    s.value:SetText(o.fmt(v))
+    -- a button that would not change anything is greyed out
+    for _, b in ipairs({ { s.minus, -1 }, { s.plus, 1 } }) do
+      local on = step(v, b[2]) ~= v
+      b[1]:SetEnabled(on)
+      b[1]:SetAlpha(on and 1 or 0.3) -- a grey "-" alone is too small to notice
+    end
+  end
   registry[#registry + 1] = s
   return s
 end
@@ -210,6 +258,36 @@ ns.UI = {
 ------------------------------------------------------------------------
 local Build
 
+-- A group with a status to show ("Major Mana Potion x5: ...") takes two lines; one with
+-- nothing in the bags (or switched off) keeps the short status next to its name.
+-- Each row hangs on the one above, so only the anchors change, never the frames.
+local GROUP_FULL, GROUP_COMPACT = 42, 26
+local function PlaceGroups(force)
+  local changed = force
+  for _, r in ipairs(groupRows) do
+    if r.placed ~= (r.compact or false) then changed = true end
+  end
+  if not changed then return end
+  for k, r in ipairs(groupRows) do
+    r.placed = r.compact or false
+    r.st:ClearAllPoints()
+    if r.compact then
+      r.st:SetPoint("LEFT", r.cb.label, "RIGHT", 8, 0)
+      r.st:SetWidth(math.max(40, W - 2 * PAD - 36 - math.ceil(r.cb.label:GetStringWidth() or 0)))
+    else
+      r.st:SetPoint("TOPLEFT", r.cb, "TOPLEFT", 30, -20)
+      r.st:SetWidth(W - 2 * PAD - 30)
+    end
+    local nextRow = groupRows[k + 1]
+    local f, dx = nextRow and nextRow.cb, 0
+    if not nextRow and groupTail then f, dx = groupTail.frame, groupTail.dx end
+    if f then
+      f:ClearAllPoints()
+      f:SetPoint("TOPLEFT", r.cb, "TOPLEFT", dx, -(r.compact and GROUP_COMPACT or GROUP_FULL))
+    end
+  end
+end
+
 local function Rebuild()
   local point
   if win then
@@ -218,7 +296,8 @@ local function Rebuild()
   end
   win = nil
   wipe(widgets)
-  wipe(statusLabels)
+  wipe(groupRows)
+  groupTail = nil
   Build()
   if point and point[1] then
     win:ClearAllPoints()
@@ -249,7 +328,7 @@ Build = function()
 
   local bg = win:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
-  bg:SetColorTexture(0.05, 0.06, 0.09, 0.96)
+  bg:SetColorTexture(0.05, 0.06, 0.09, 1)
   local top = win:CreateTexture(nil, "ARTWORK")
   top:SetPoint("TOPLEFT")
   top:SetPoint("TOPRIGHT")
@@ -297,22 +376,13 @@ Build = function()
   local c = left
   local col = c.frame
   c.Row(Header(col, L.optDisplay), PAD, 24)
-  c.Row(Check(col, L.optLock, function() return db.locked end, function(v) db.locked = v; ns.ApplyLock() end))
-  c.Row(Check(col, L.optTest, function() return db.test end, function(v) db.test = v end))
-  c.Row(Check(col, L.optCombat, function() return db.onlyCombat end, function(v) db.onlyCombat = v end))
-  c.Row(Label(col, L.optShowIn .. ":"), PAD + 4, 24)
-  local x = PAD + 26
-  for _, key in ipairs({ "showSolo", "showParty", "showRaid" }) do
-    local cb = Check(col, L[key], function() return db[key] end, function(v) db[key] = v end)
-    cb:SetPoint("TOPLEFT", col, "TOPLEFT", x, c.y)
-    -- next box right after this label (label lengths differ a lot between languages)
-    x = x + 28 + math.max(60, math.ceil(cb.label:GetStringWidth() or 80)) + 18
-  end
-  c.y = c.y - 28
+  c.Row(Check(col, L.optLock, function() return db.locked end, function(v) db.locked = v; ns.ApplyLock() end,
+    L.tipLock))
+  c.Row(Check(col, L.optTest, function() return db.test end, function(v) db.test = v end, L.tipTest))
   local langLabel = Label(col, L.optLang .. ":")
   local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
   for _, l in ipairs(ns.LANGUAGES) do entries[#entries + 1] = { value = l.code, text = l.name } end
-  local lang = Dropdown(col, 190, entries, function()
+  local lang = Dropdown(col, DD_W, entries, function()
     if db.language == "auto" then return L.langAuto end
     return ns.LanguageName(db.language, true)
   end, function(code)
@@ -329,14 +399,12 @@ Build = function()
   local reset = Button(col, L.optReset, 150)
   c.Row(reset, PAD + 4, 34)
   reset:SetScript("OnClick", function() ns.ResetPosition() end)
-  local resetSize = Button(col, L.optResetSize, 150)
-  resetSize:SetPoint("LEFT", reset, "RIGHT", 8, 0)
-  resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
+  Tip(reset, L.optReset, L.tipReset)
 
   -- look
   c.Row(Header(col, L.optAppearance), PAD, 26)
   local layLabel = Label(col, L.optLayout .. ":")
-  local lay = Dropdown(col, 230, {
+  local lay = Dropdown(col, DD_W, {
     { value = false, text = L.layoutH }, { value = true, text = L.layoutV },
   }, function() return db.vertical and L.layoutV or L.layoutH end,
   function(v)
@@ -346,23 +414,24 @@ Build = function()
   c.Right(lay)
   c.Row(layLabel, PAD + 4, 30)
 
-  local size = Stepper(col, L.optSize .. ":", function() return db.iconSize end,
-    function(v) db.iconSize = v; ns.Layout(true) end, 4, 24, 96, function(v) return tostring(v) end)
+  local function num(v) return tostring(v) end
+  local size = Stepper(col, PAD + 4, L.optSize, function() return db.iconSize end,
+    function(v) db.iconSize = v; ns.Layout(true) end, { step = 4, lo = 24, hi = 96, fmt = num })
   c.Row(size.label, PAD + 4, 28)
-  local gap = Stepper(col, L.optGap .. ":", function() return db.iconGap end,
-    function(v) db.iconGap = v; ns.Layout(true) end, 2, 0, 24, function(v) return tostring(v) end)
+  local gap = Stepper(col, PAD + 4, L.optGap, function() return db.iconGap end,
+    function(v) db.iconGap = v; ns.Layout(true) end, { step = 2, lo = 0, hi = 24, fmt = num })
   c.Row(gap.label, PAD + 4, 30)
 
-  c.Row(Check(col, L.optBar, function() return db.showBar end, function(v) db.showBar = v end))
+  c.Row(Check(col, L.optBar, function() return db.showBar end, function(v) db.showBar = v end, L.tipBar))
   local bpLabel = Label(col, L.optBarPos .. ":")
   local bp
   if db.vertical then
-    bp = Dropdown(col, 230, {
+    bp = Dropdown(col, DD_W, {
       { value = "left", text = L.barLeft }, { value = "right", text = L.barRight },
     }, function() return db.barSide == "right" and L.barRight or L.barLeft end,
     function(v) db.barSide = v; ns.Layout(true); ns.RefreshOptions() end)
   else
-    bp = Dropdown(col, 230, {
+    bp = Dropdown(col, DD_W, {
       { value = "below", text = L.barBelow }, { value = "above", text = L.barAbove },
     }, function() return db.barPosition == "above" and L.barAbove or L.barBelow end,
     function(v) db.barPosition = v; ns.Layout(true); ns.RefreshOptions() end)
@@ -375,28 +444,59 @@ Build = function()
     colorEntries[#colorEntries + 1] = { value = bc.key, text = L["col_" .. bc.key] }
   end
   local colLabel = Label(col, L.optBarColor .. ":")
-  local colDD = Dropdown(col, 230, colorEntries, function() return L["col_" .. (db.barColor or "blue")] end,
+  local colDD = Dropdown(col, DD_W, colorEntries, function() return L["col_" .. (db.barColor or "blue")] end,
     function(v) db.barColor = v; ns.Layout(true); ns.RefreshOptions() end)
   c.Right(colDD)
   c.Row(colLabel, PAD + 30, 30)
 
-  local thick = Stepper(col, L.optBarThick .. ":", function() return db.barThickness end,
-    function(v) db.barThickness = v; ns.Layout(true) end, 2, 6, 40, function(v) return tostring(v) end)
-  thick.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 30, c.y)
-  c.y = c.y - 28
-  local blen = Stepper(col, L.optBarLen .. ":", function() return db.barLength end,
-    function(v) db.barLength = v; ns.Layout(true) end, 20, 0, 800,
-    function(v) return v == 0 and L.lenAuto or tostring(v) end)
-  blen.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 30, c.y)
-  c.y = c.y - 30
+  local thick = Stepper(col, PAD + 30, L.optBarThick, function() return db.barThickness end,
+    function(v) db.barThickness = v; ns.Layout(true) end, { step = 2, lo = 6, hi = 40, fmt = num })
+  c.Row(thick.label, PAD + 30, 28)
+  -- length: 0 = auto. Leaving auto starts at the auto length; going below one icon
+  -- (a bar shorter than an icon is useless) returns to auto.
+  local LEN_STEP, LEN_MAX = 20, 800
+  local blen = Stepper(col, PAD + 30, L.optBarLen, function() return db.barLength end,
+    function(v) db.barLength = v; ns.Layout(true) end, {
+      fmt = function(v) return v == 0 and L.lenAuto or tostring(v) end,
+      tip = L.tipBarLen,
+      next = function(v, dir)
+        if v == 0 then
+          if dir < 0 then return 0 end
+          return math.min(LEN_MAX, math.ceil(ns.AutoBarLength() / LEN_STEP) * LEN_STEP)
+        end
+        local nv = math.min(LEN_MAX, v + dir * LEN_STEP)
+        if nv < db.iconSize then return 0 end
+        return nv
+      end,
+    })
+  c.Row(blen.label, PAD + 30, 32)
   BarOnly(bpLabel, bp, colLabel, colDD, thick.label, thick.value, thick.minus, thick.plus,
     blen.label, blen.value, blen.minus, blen.plus)
+  local resetSize = Button(col, L.optResetSize, 150)
+  c.Row(resetSize, PAD + 4, 34)
+  resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
+  Tip(resetSize, L.optResetSize, L.tipResetSize)
 
   ------------------------------------------------------------ right column
   c = right
   col = c.frame
-  c.Row(Header(col, L.optGroups), PAD, 24)
+  -- when the icons are shown at all
+  c.Row(Header(col, L.optVisibility), PAD, 24)
+  c.Row(Check(col, L.optCombat, function() return db.onlyCombat end, function(v) db.onlyCombat = v end,
+    L.tipCombat))
+  local showLabel = Label(col, L.optShowIn .. ":")
+  c.Row(showLabel, PAD + 4, 24)
+  TipArea(col, showLabel, L.optShowIn, L.tipShowIn)
+  local x = PAD + 26
+  for _, key in ipairs({ "showSolo", "showParty", "showRaid" }) do
+    local cb = Check(col, L[key], function() return db[key] end, function(v) db[key] = v end, L.tipShowIn)
+    cb:SetPoint("TOPLEFT", col, "TOPLEFT", x, c.y)
+    -- next box right after this label (label lengths differ a lot between languages)
+    x = x + 28 + math.max(60, math.ceil(cb.label:GetStringWidth() or 80)) + 18
+  end
+  c.y = c.y - 34
 
+  c.Row(Header(col, L.optGroups), PAD, 24)
   -- one choice instead of two lists: how eagerly to drink
   local function Strategy()
     if db.pickMode == "strongest" then return "strong" end
@@ -405,7 +505,7 @@ Build = function()
   local stratText = { safe = L.stratSafe, often = L.stratOften, strong = L.stratStrong }
   local stratDesc = { safe = L.stratSafeDesc, often = L.stratOftenDesc, strong = L.stratStrongDesc }
   local stLabel = Label(col, L.optStrategy .. ":")
-  local strat = Dropdown(col, 230, {
+  local strat = Dropdown(col, DD_W, {
     { value = "safe", text = L.stratSafe }, { value = "often", text = L.stratOften },
     { value = "strong", text = L.stratStrong },
   }, function() return stratText[Strategy()] end,
@@ -417,30 +517,39 @@ Build = function()
   end)
   c.Right(strat)
   c.Row(stLabel, PAD + 4, 28)
-  local desc = Label(col, "", "GameFontDisableSmall")
+  local desc = Label(col, "", "GameFontHighlightSmall")
+  desc:SetTextColor(0.74, 0.78, 0.88)
   desc:SetWidth(W - 2 * PAD - 8)
   c.Row(desc, PAD + 4, 44)
   registry[#registry + 1] = { Refresh = function() desc:SetText(stratDesc[Strategy()]) end }
+
+  -- groups are chained: a group with nothing to report keeps its status on the same
+  -- line and takes less room (see PlaceGroups); the first one sits at a fixed spot
+  local first = true
   for i, group in ipairs(ns.GROUPS) do
     if ns.ForMyClass(group) then
-      c.Row(Check(col, L["grp_" .. group.key], function() return db.enabled[group.key] end,
-        function(v) db.enabled[group.key] = v end), PAD, 20)
+      local cb = Check(col, L["grp_" .. group.key], function() return db.enabled[group.key] end,
+        function(v) db.enabled[group.key] = v end)
+      if first then cb:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y); first = false end
       local st = Label(col, "", "GameFontHighlightSmall")
-      st:SetWidth(W - 2 * PAD - 30)
       if st.SetWordWrap then st:SetWordWrap(false) end -- one line; long texts end in "..."
-      c.Row(st, PAD + 30, 22)
-      statusLabels[i] = st
+      groupRows[#groupRows + 1] = { cb = cb, st = st, i = i }
+      c.y = c.y - GROUP_FULL -- room for the worst case: every group with a status line
     end
   end
-  local margin = Stepper(col, L.optMargin .. ":", function() return db.runeMargin end,
-    function(v) db.runeMargin = v; ns.InvalidateCurves() end, 0.05, 0.10, 0.80,
-    function(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end)
-  c.Row(margin.label, PAD + 4, 30)
-
-  c.y = c.y - 6
+  local margin = Stepper(col, PAD + 4, L.optMargin, function() return db.runeMargin end,
+    function(v) db.runeMargin = v; ns.InvalidateCurves() end,
+    { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin,
+      fmt = function(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end })
+  groupTail = { frame = margin.label, dx = 4 }
+  if #groupRows == 0 then margin.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 4, c.y) end
+  c.y = c.y - 36
   local items = Button(col, L.optItems, 180, 24)
-  c.Row(items, PAD, 34)
+  items:SetPoint("TOPLEFT", margin.label, "TOPLEFT", -4, -36)
   items:SetScript("OnClick", function() ns.ToggleLibrary(true) end)
+  Tip(items, L.optItems, L.tipItems)
+  c.y = c.y - 34
+  PlaceGroups(true)
 
   win:SetWidth(2 * W)
   win:SetHeight(math.max(-left.y, -right.y) + 8)
@@ -455,11 +564,12 @@ end
 ------------------------------------------------------------------------
 -- refresh
 ------------------------------------------------------------------------
+-- text, compact (nothing to report: fits next to the group name)
 local function StatusText(i, group)
   local db = ns.db
-  if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r" end
+  if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r", true end
   local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
-  if not item then return "|cff888888" .. L.stNone .. "|r" end
+  if not item then return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r", true end
   if not ready then
     return "|cffffaa33" .. L.stCooldown:format(ItemName(item.id), n, math.ceil(left)) .. "|r"
   end
@@ -477,13 +587,12 @@ end
 function ns.RefreshOptions()
   if not win or not win:IsShown() then return end
   for _, w in ipairs(widgets) do w.Refresh() end
-  for i, group in ipairs(ns.GROUPS) do
-    local st = statusLabels[i]
-    if st then
-      local text = StatusText(i, group)
-      if text ~= st.text then st.text = text; st:SetText(text) end
-    end
+  for _, r in ipairs(groupRows) do
+    local text, compact = StatusText(r.i, ns.GROUPS[r.i])
+    if text ~= r.st.text then r.st.text = text; r.st:SetText(text) end
+    r.compact = compact or false
   end
+  PlaceGroups()
 end
 
 function ns.ToggleOptions(forceShow)

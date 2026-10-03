@@ -12,10 +12,10 @@ for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDr
   "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
   "SetHighlightFontObject", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
   "SetMovable", "SetNormalFontObject", "SetNormalTexture", "SetNumeric", "SetOwner", "SetPushedTexture",
-  "SetRotation", "SetScrollChild", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
+  "SetRotation", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
   "SetTextInsets", "SetThumbTexture", "SetToAlpha", "SetToplevel", "SetValueStep", "SetVertexColor",
   "SetWordWrap", "StopMovingOrSizing", "StartMoving", "SetItemByID", "SetJustifyV", "SetMaxLines",
-  "SetObeyStepOnDrag", "SetHitRectInsets" }) do
+  "SetObeyStepOnDrag", "SetHitRectInsets", "SetDisabledFontObject" }) do
   methods[name] = M.noop
 end
 
@@ -63,6 +63,10 @@ function methods:GetFrameLevel() return 1 end
 function methods:GetChecked() return self.checked end
 function methods:SetChecked(v) self.checked = v end
 function methods:SetAlpha(a) self.alpha = a end
+function methods:SetEnabled(v) self.enabled = v and true or false end
+function methods:IsEnabled() return self.enabled ~= false end
+function methods:SetTextColor(r, g, b) self.color = { r, g, b } end
+function methods:AddLine(t) self.lines = self.lines or {}; self.lines[#self.lines + 1] = t end
 function methods:GetAlpha() return self.alpha end
 function methods:EnableMouse(v) self.mouse = v end
 function methods:IsMouseEnabled() return self.mouse end
@@ -81,7 +85,11 @@ end
 function methods:SetMinMaxValues(a, b) M.calls.SetMinMaxValues = (M.calls.SetMinMaxValues or 0) + 1; self.min, self.max = a, b end
 function methods:GetVerticalScroll() return self.vscroll or 0 end
 function methods:SetVerticalScroll(v) self.vscroll = v end
-function methods:GetVerticalScrollRange() return 0 end
+function methods:SetScrollChild(c) self.child = c end
+function methods:GetVerticalScrollRange()
+  if not self.child then return 0 end
+  return math.max(0, (self.child.h or 0) - (self.h or 0))
+end
 function methods:SetTexture(t) self.texture = t end
 function methods:GetTexture() return self.texture end
 function methods:RegisterEvent(e)
