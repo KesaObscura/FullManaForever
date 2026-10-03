@@ -156,3 +156,39 @@ test("options: settings explain themselves on hover", function()
   end
   ok(tips >= 6, "checkboxes with tooltips: " .. tips)
 end)
+
+test("item list keeps its place when the language changes", function()
+  local ns = M.load(nil)
+  ns.ToggleLibrary(true)
+  local lib = FullManaForeverItems
+  lib:ClearAllPoints()
+  lib:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", 123, 456)
+  ns.ToggleOptions(true)
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
+  end
+  ok(FullManaForeverItems ~= lib, "window not rebuilt")
+  local p = FullManaForeverItems.points[1]
+  eq(p[1], "TOPLEFT"); eq(p[4], 123, "x"); eq(p[5], 456, "y")
+  ok(FullManaForeverItems.shown, "window closed by the language change")
+end)
+
+test("item list: the owned column cannot run into the amount column", function()
+  local ns = M.load(nil)
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(ns.RebuildLibrary, "rows") or M.upvalue(M.upvalue(ns.RebuildLibrary, "BuildContent"), "rows")
+  local r = rows[1]
+  eq(#r.owned.points, 2, "owned text is not boxed between two anchors")
+  local amountEnd = r.amount.points[1][4] + r.amount.w
+  ok(r.owned.points[1][4] >= amountEnd, "owned column starts inside the amount column")
+end)
+
+test("options: empty gear group says nothing is equipped", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  for _, r in ipairs(M.upvalue(ns.RefreshOptions, "groupRows")) do
+    if ns.GROUPS[r.i].equipped then
+      ok(r.st.text:find(ns.L.stNoneGear, 1, true), "gear status: " .. tostring(r.st.text))
+    end
+  end
+end)

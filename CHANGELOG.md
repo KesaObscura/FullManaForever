@@ -12,6 +12,8 @@
   - tooltips on the settings; clicking a checkbox label toggles it
   - the "Drinking" explanation is easier to read
   - the settings window and the item list are no longer see-through
+- Item list: keeps its place when you change the language; wider, so "up to N" and "not in bags" no longer overlap in long languages
+- Trinkets & gear: says "nothing equipped" instead of "none in bags"
 
 **Full Mana Forever 0.6.8**
 

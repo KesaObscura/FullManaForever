@@ -9,9 +9,10 @@ local reg = {}          -- window widgets that need Refresh()
 local rowReg = {}       -- row checkboxes (one per pooled row)
 local rows = {}         -- pooled rows: frames are created once and reused
 local headers = {}      -- pooled category headers
-local W, H, PAD, ROW = 500, 600, 16, 30
+local W, H, PAD, ROW = 560, 600, 16, 30
 local CW = W - 2 * PAD - 22 -- list width, room for the scrollbar
-local AMOUNT_X = 305        -- x of the "up to N" column
+local NAME_W = 230          -- item name column (long names end in "...")
+local AMOUNT_X, AMOUNT_W = 295, 84 -- the "up to N" column
 
 local function OwnedText(it, group)
   if group.equipped then
@@ -58,14 +59,18 @@ local function NewRow()
 
   r.name = ui.Label(row, "", "GameFontHighlight")
   r.name:SetPoint("LEFT", r.icon, "RIGHT", 8, 0)
-  r.name:SetWidth(240)
+  r.name:SetWidth(NAME_W)
   if r.name.SetWordWrap then r.name:SetWordWrap(false) end
 
   r.amount = ui.Label(row, "", "GameFontHighlightSmall")
   r.amount:SetPoint("LEFT", row, "LEFT", AMOUNT_X, 0)
+  r.amount:SetWidth(AMOUNT_W)
+  if r.amount.SetWordWrap then r.amount:SetWordWrap(false) end
 
+  -- "not in bags" gets the rest of the row: it can never run into the amount
   r.owned = ui.Label(row, "", "GameFontHighlightSmall")
   r.owned:SetJustifyH("RIGHT")
+  if r.owned.SetWordWrap then r.owned:SetWordWrap(false) end
 
   r.del = ui.Button(row, "x", 20, 18)
   r.del:SetPoint("RIGHT", row, "RIGHT", -2, 0)
@@ -126,6 +131,7 @@ local function BuildContent()
         r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
         r.amount:SetText(L.libRestore:format(it.max))
         r.owned:ClearAllPoints()
+        r.owned:SetPoint("LEFT", r.frame, "LEFT", AMOUNT_X + AMOUNT_W + 4, 0)
         r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it.custom and -32 or -4, 0)
         r.del:SetShown(it.custom and true or false)
         r.frame:Show()
@@ -155,11 +161,15 @@ local function RefreshRows()
   for _, w in ipairs(reg) do w.Refresh() end
 end
 
-local function Build()
+local function Build(point)
   wipe(reg)
   lib = CreateFrame("Frame", "FullManaForeverItems", UIParent)
   lib:SetSize(W, H)
-  lib:SetPoint("CENTER", 40, 0)
+  if point and point[1] then
+    lib:SetPoint(point[1], UIParent, point[3], point[4], point[5])
+  else
+    lib:SetPoint("CENTER", 40, 0)
+  end
   lib:SetFrameStrata("DIALOG")
   lib:SetToplevel(true)
   lib:SetMovable(true)
@@ -296,9 +306,11 @@ end
 function ns.RebuildLibrary(full)
   if not lib then return end
   if full then -- new language: the window texts are rebuilt (only on a real change)
-    local shown = lib:IsShown()
+    -- the new window opens where the old one was moved to
+    local shown, point = lib:IsShown(), { lib:GetPoint() }
     lib:Hide()
     lib, scroll, content = nil, nil, nil
+    Build(point)
     if shown then ns.ToggleLibrary(true) end
     return
   end

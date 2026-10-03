@@ -566,7 +566,7 @@ local function StatusText(i, group)
   local db = ns.db
   if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r", true end
   local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
-  if not item then return "|cff888888" .. L.stNone .. "|r", true end
+  if not item then return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r", true end
   if not ready then
     return "|cffffaa33" .. L.stCooldown:format(ItemName(item.id), n, math.ceil(left)) .. "|r"
   end
