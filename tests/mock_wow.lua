@@ -170,6 +170,7 @@ function M.reset(opts)
   _G.UnitPowerPercent = function(unit, power, predicted, curve)
     count("UnitPowerPercent")
     if S.powerFails then error("API changed") end
+    if curve == M.SCALE100 then return M.secret(S.manaPct * 100) end
     return curve:Evaluate(S.manaPct)
   end
   _G.UnitHealthPercent = function(unit, predicted, curve)

@@ -118,6 +118,8 @@ local function HeaderText()
     ns.VERSION, Show(class), okL and Show(lvl) or "?", okM and Show(max) or "?",
     tostring(InCombatLockdown()), tostring(GetPowerRegen ~= nil),
     tostring(C_Spell ~= nil and C_Spell.GetSpellPowerCost ~= nil), tostring(C_UnitAuras ~= nil))
+    .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),
+      ns.ManaPercent and (ns.ManaPercent() ~= nil and "ok" or "nil") or "?")
 end
 
 ------------------------------------------------------------------------

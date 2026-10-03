@@ -434,3 +434,33 @@ test("the regen unit is plain text, never part of the formatted (maybe secret) n
   eq(bar(ns).regenUnit.text, "/с")
   noRegenApis()
 end)
+
+-- mana text like the game's "Status Text" ------------------------------------------------
+local function withScale100(fn)
+  M.SCALE100 = {}
+  _G.CurveConstants = { ScaleTo100 = M.SCALE100 }
+  fn()
+  _G.CurveConstants, M.SCALE100 = nil, nil
+end
+
+test("mana text: number, percentage, both and none", function()
+  withScale100(function()
+    local ns = M.load({ manaText = "percent" }, { bags = POT })
+    M.state.manaPct = 0.89; M.tick()
+    eq(bar(ns).text.text, "89%")
+    ns.db.manaText = "both"; ns.db.vertical = false; M.tick()
+    eq(bar(ns).text.text, "89%   890 / 1000")
+    ns.db.vertical = true; M.tick()
+    eq(bar(ns).text.text, "89%\n890 / 1000", "column: two lines")
+    ns.db.manaText = "none"; M.tick()
+    eq(bar(ns).text.text, "")
+    ns.db.manaText = "number"; M.tick()
+    eq(bar(ns).text.text, "890 / 1000")
+  end)
+end)
+
+test("mana text: without the game's percent curve the number is shown", function()
+  local ns = M.load({ manaText = "percent" }, { bags = POT })
+  M.state.manaPct = 0.89; M.tick()
+  eq(bar(ns).text.text, "890 / 1000")
+end)

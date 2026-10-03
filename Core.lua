@@ -31,6 +31,7 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,    -- current mana regen next to the mana bar
+  manaText   = "number", -- mana numbers on the bar: "number" / "percent" / "both" / "none"
   fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
   regenScale = 1,       -- text size of the regen number
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
@@ -661,10 +662,37 @@ local function PaintBar()
 end
 
 -- "412 / 664" (vertical: two lines): the secret current value goes straight into the text
+-- mana in percent, 0..100. The value is secret, and x100 is not allowed on it; the game's
+-- own curve CurveConstants.ScaleTo100 does the scaling inside the engine. Without it the
+-- percentage cannot be shown (nil).
+local function ManaPercent()
+  local curve = CurveConstants and CurveConstants.ScaleTo100
+  if not curve then return nil end
+  for _, v in ipairs({ powerVariant or 1, (powerVariant == 2) and 1 or 2 }) do
+    local ok, r = TryPower(v, curve)
+    if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
+  end
+end
+ns.ManaPercent = ManaPercent
+
+-- mana numbers like the game's "Status Text": number / percentage / both / none.
+-- Secret values only go into string.format, never into arithmetic or comparisons.
 local textFails = 0
 local function SetBarText(maxMana)
   if textFails > 20 then return end -- given up until the next loading screen
-  local ok, text = pcall(string.format, "%d / %d", UnitPower("player", MANA), maxMana)
+  local mode = db.manaText or "number"
+  if mode == "none" then bar.text:SetText("") return end
+  local pct = (mode == "percent" or mode == "both") and ManaPercent() or nil
+  local ok, text
+  if mode == "percent" and pct ~= nil then
+    ok, text = pcall(string.format, "%.0f%%", pct)
+  elseif mode == "both" and pct ~= nil then
+    -- the column has little room beside the bar: two lines there
+    ok, text = pcall(string.format, db.vertical and "%.0f%%\n%d / %d" or "%.0f%%   %d / %d",
+      pct, UnitPower("player", MANA), maxMana)
+  else
+    ok, text = pcall(string.format, "%d / %d", UnitPower("player", MANA), maxMana)
+  end
   if ok then
     textFails = 0
     bar.text:SetText(text)

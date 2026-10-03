@@ -449,6 +449,17 @@ Build = function()
   c.Right(colDD)
   c.Row(colLabel, PAD + 30, 30)
 
+  -- mana numbers, the same four choices as the game's "Status Text"
+  local mtText = { number = L.mtNumber, percent = L.mtPercent, both = L.mtBoth, none = L.mtNone }
+  local mtLabel = Label(col, L.optManaText .. ":")
+  local mtDD = Dropdown(col, DD_W, {
+    { value = "number", text = L.mtNumber }, { value = "percent", text = L.mtPercent },
+    { value = "both", text = L.mtBoth }, { value = "none", text = L.mtNone },
+  }, function() return mtText[db.manaText or "number"] end,
+  function(v) db.manaText = v; ns.RefreshOptions() end)
+  c.Right(mtDD)
+  c.Row(mtLabel, PAD + 30, 30)
+
   local thick = Stepper(col, PAD + 30, L.optBarThick, function() return db.barThickness end,
     function(v) db.barThickness = v; ns.Layout(true) end, { step = 2, lo = 6, hi = 40, fmt = num })
   c.Row(thick.label, PAD + 30, 28)
@@ -486,7 +497,7 @@ Build = function()
     function(v) db.regenText = v end, L.tipRegen)
   c.Row(regenCb, PAD + 26, 30)
   local regenSize = SizeStepper(regenCb, "regenScale")
-  BarOnly(bpLabel, bp, colLabel, colDD, thick.label, thick.value, thick.minus, thick.plus,
+  BarOnly(bpLabel, bp, colLabel, colDD, mtLabel, mtDD, thick.label, thick.value, thick.minus, thick.plus,
     blen.label, blen.value, blen.minus, blen.plus, fsrCb, fsrCb.label, regenCb, regenCb.label,
     fsrSize.value, fsrSize.minus, fsrSize.plus, regenSize.value, regenSize.minus, regenSize.plus)
   local resetSize = Button(col, L.optResetSize, 150)

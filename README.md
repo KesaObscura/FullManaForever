@@ -33,6 +33,9 @@ when the icon lights up.
 - **Mana bar with markers**: a long marker where an icon lights up, short ones where a
   stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.
+- **Five-second rule and mana regen** on the bar: a gold strip and the seconds after a spell
+  that costs mana, and the regen running right now ("14.8/s"), also in combat.
+- **Mana text** like the game's status text: number, percentage, both or none.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
 - **Item list** (`/fmf items`): every supported item, on/off per item, add your own.
 - 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português,
@@ -64,6 +67,7 @@ otherwise the game does not load it.
 | `/fmf item <id> <amount> [potion\|rune\|gem\|herb\|gear]` | add your own item |
 | `/fmf item clear` | remove all own items |
 | `/fmf probe` | print API status for bug reports |
+| `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen) for a bug report; `/fmf log clear` empties it |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
 | `/fmf reset` | reset the position |
@@ -73,6 +77,11 @@ otherwise the game does not load it.
 
 Please open an [issue](https://github.com/KesaObscura/FullManaForever/issues) with the output of `/fmf probe`, your class and level, what you
 did and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
+
+For problems with the five-second rule or the regen display: `/fmf log on`, play until it
+happens, `/fmf log off`, `/reload`, then attach
+`WTF\Account\<account>\SavedVariables\FullManaForever.lua`. The log holds class, level,
+casts, mana costs and regen values, nothing personal.
 
 ## Development
 
