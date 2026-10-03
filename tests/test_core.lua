@@ -220,12 +220,13 @@ test("known item added to another category stays in its own slot too", function(
 end)
 
 test("reset size restores icon and bar sizes, keeps position and other settings", function()
-  local ns = M.load({ iconSize = 80, iconGap = 20, barThickness = 30, barLength = 400,
+  local ns = M.load({ iconSize = 80, iconGap = 20, barThickness = 30, barLength = 400, fsrScale = 1.5,
     barColor = "teal", point = { "TOPLEFT", "UIParent", "BOTTOMLEFT", 100, 500 } }, { bags = POT })
   M.tick()
   SlashCmdList.FULLMANAFOREVER("reset size")
   M.tick()
   eq(ns.db.iconSize, 44); eq(ns.db.iconGap, 6); eq(ns.db.barThickness, 14); eq(ns.db.barLength, 0)
+  eq(ns.db.fsrScale, 1, "text size")
   eq(ns.db.barColor, "teal", "color")
   eq(ns.db.point[4], 100, "x"); eq(ns.db.point[5], 500, "y")
   eq(buttons(ns)[1].outer.w, 44, "icon width")

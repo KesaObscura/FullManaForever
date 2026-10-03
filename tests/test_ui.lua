@@ -236,3 +236,21 @@ test("text with letters keeps the game's font family (no boxes for other alphabe
   local unit = M.upvalue(ns.PositionBar, "bar").regenUnit
   eq(unit.font, nil, "the unit label was switched to a single font file")
 end)
+
+test("options: text size of the rule's seconds and of the regen can be changed", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local b = M.upvalue(ns.PositionBar, "bar")
+  eq(b.fsrBox.scale, 1); eq(b.regenBox.scale, 1)
+  local sizes = {}
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == "" then sizes[#sizes + 1] = w end
+  end
+  eq(#sizes, 2, "size steppers")
+  sizes[1].plus.scripts.OnClick(sizes[1].plus)
+  sizes[2].minus.scripts.OnClick(sizes[2].minus)
+  eq(ns.db.fsrScale, 1.1); eq(ns.db.regenScale, 0.9)
+  eq(b.fsrBox.scale, 1.1, "seconds not resized")
+  eq(b.regenBox.scale, 0.9, "regen not resized")
+  eq(sizes[1].value.text, "110%")
+end)

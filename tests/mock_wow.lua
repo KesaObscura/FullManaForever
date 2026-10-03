@@ -63,6 +63,8 @@ function methods:GetFrameLevel() return 1 end
 function methods:GetChecked() return self.checked end
 function methods:SetChecked(v) self.checked = v end
 function methods:SetAlpha(a) self.alpha = a end
+function methods:SetScale(v) self.scale = v end
+function methods:GetScale() return self.scale or 1 end
 function methods:SetEnabled(v) self.enabled = v and true or false end
 function methods:IsEnabled() return self.enabled ~= false end
 function methods:SetTextColor(r, g, b) self.color = { r, g, b } end

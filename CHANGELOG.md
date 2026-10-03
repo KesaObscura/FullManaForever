@@ -4,7 +4,7 @@
 
 - New: five-second rule on the mana bar. After a spell that costs mana, a thin gold strip and the seconds at the end of the bar count down the 5 seconds of reduced regen. Wands, potions and food do not start it.
 - New: the mana regen running right now, per second, under the mana numbers ("14.8/s"). During the five-second rule it turns gold and shows what still runs while you cast: 0 without talents, more with talents, Innervate or gear. It also works in combat.
-- Both can be switched off under "Mana bar with markers".
+- Both can be switched off under "Mana bar with markers", and both have their own text size (60–200 %). "Reset size" resets these text sizes too.
 
 **Full Mana Forever 0.6.10**
 

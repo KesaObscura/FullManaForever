@@ -31,6 +31,8 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,    -- current mana regen next to the mana bar
+  fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
+  regenScale = 1,       -- text size of the regen number
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
@@ -619,15 +621,22 @@ local function CreateBar()
   bar.fsr:SetStatusBarColor(1, 0.82, 0.2)
   bar.fsr:SetMinMaxValues(0, ns.FSR_SECONDS or 5)
   bar.fsr:Hide()
+  -- texts that can be resized live in their own small frames: scaling the frame changes
+  -- the text size and keeps the game's font family (a font file set by hand would lose
+  -- other alphabets)
+  bar.fsrBox = CreateFrame("Frame", nil, top)
+  bar.fsrBox:SetSize(1, 1)
+  bar.regenBox = CreateFrame("Frame", nil, top)
+  bar.regenBox:SetSize(1, 1)
   -- seconds left of the rule, small and gold at the end of the bar
-  bar.fsrText = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  bar.fsrText = bar.fsrBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.fsrText, "GameFontHighlightSmall")
   bar.fsrText:SetTextColor(1, 0.82, 0.2)
   bar.fsrText:Hide()
   -- current regen ("14.8/s"), under the mana numbers or right of the bar
-  bar.regen = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  bar.regen = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.regen, "GameFontHighlightSmall")
-  bar.regenUnit = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  bar.regenUnit = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.regenUnit, "GameFontHighlightSmall", true)
   bar.regenUnit:SetPoint("LEFT", bar.regen, "RIGHT", 1, 0)
   bar:Hide()
@@ -738,16 +747,20 @@ function ns.PositionBar()
     end
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+    bar.regenBox:ClearAllPoints()
+    bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
     bar.regen:ClearAllPoints()
     -- number ends at the middle, the unit starts there: the pair sits centered
-    bar.regen:SetPoint("TOPRIGHT", bar.text, "BOTTOM", 4, -2)
+    bar.regen:SetPoint("TOPRIGHT", bar.regenBox, "TOP", 4, 0)
     bar.fsr:ClearAllPoints()
     bar.fsr:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
     bar.fsr:SetWidth(3)
     bar.fsr:SetOrientation("VERTICAL")
+    bar.fsrBox:ClearAllPoints()
+    bar.fsrBox:SetPoint("BOTTOM", bar, "TOP", 0, 6)
     bar.fsrText:ClearAllPoints()
-    bar.fsrText:SetPoint("BOTTOM", bar, "TOP", 0, 3)
+    bar.fsrText:SetPoint("BOTTOM", bar.fsrBox, "BOTTOM", 0, 0)
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("BOTTOMLEFT")
     bar.gloss:SetWidth(math.max(1, (db.barThickness or 14) * 0.45))
@@ -760,19 +773,25 @@ function ns.PositionBar()
       anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     end
     bar.text:SetPoint("CENTER", bar, "CENTER", 0, 0)
+    bar.regenBox:ClearAllPoints()
+    bar.regenBox:SetPoint("LEFT", bar, "RIGHT", 6, 0)
     bar.regen:ClearAllPoints()
-    bar.regen:SetPoint("LEFT", bar, "RIGHT", 6, 0)
+    bar.regen:SetPoint("LEFT", bar.regenBox, "LEFT", 0, 0)
     bar.fsr:ClearAllPoints()
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
     bar.fsr:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
     bar.fsr:SetHeight(3)
     bar.fsr:SetOrientation("HORIZONTAL")
+    bar.fsrBox:ClearAllPoints()
+    bar.fsrBox:SetPoint("RIGHT", bar, "RIGHT", -3, 1)
     bar.fsrText:ClearAllPoints()
-    bar.fsrText:SetPoint("RIGHT", bar, "RIGHT", -3, 1)
+    bar.fsrText:SetPoint("RIGHT", bar.fsrBox, "RIGHT", 0, 0)
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
   end
+  bar.fsrBox:SetScale(db.fsrScale or 1)
+  bar.regenBox:SetScale(db.regenScale or 1)
   PaintBar()
 end
 
@@ -809,8 +828,8 @@ function ns.ResetPosition()
   PinTopLeft()
 end
 
--- icon size, spacing and bar thickness/length back to the defaults (position stays)
-local SIZE_KEYS = { "iconSize", "iconGap", "barThickness", "barLength" }
+-- icon size, spacing, bar thickness/length and bar text sizes back to the defaults (position stays)
+local SIZE_KEYS = { "iconSize", "iconGap", "barThickness", "barLength", "fsrScale", "regenScale" }
 function ns.ResetSize()
   for _, k in ipairs(SIZE_KEYS) do db[k] = DEFAULTS[k] end
   ns.Layout(true)

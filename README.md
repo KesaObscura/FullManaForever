@@ -67,7 +67,7 @@ otherwise the game does not load it.
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
 | `/fmf reset` | reset the position |
-| `/fmf reset size` | reset icon size, icon spacing, bar thickness and bar length |
+| `/fmf reset size` | reset icon size, icon spacing, bar thickness, bar length and the text sizes on the bar |
 
 ## Bug reports
 
