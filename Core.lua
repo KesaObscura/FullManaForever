@@ -278,6 +278,7 @@ CooldownState = function(id)
   local left = s + d - GetTime()
   return left <= 0.05, math.max(left, 0)
 end
+ns.CooldownState = function(id) return CooldownState(id) end
 
 -- restore used for thresholds: max ("No waste") or average ("More per fight")
 local function Restore(it)

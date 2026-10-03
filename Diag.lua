@@ -155,6 +155,34 @@ local function RecentCosts()
   return " costs " .. table.concat(out, ",")
 end
 
+-- max health: is it readable in combat? (the rune's HP check needs it)
+local function HealthText()
+  local ok, max = Call(UnitHealthMax, "player")
+  return " maxHP=" .. (ok and Show(max) or "?")
+end
+
+-- mana potions in the bags: the game's cooldown (start+duration, enable) and what the
+-- addon makes of it. Shows whether a potion drunk in combat can come back in the same fight.
+local function PotionText()
+  if not (ns.GROUPS and ns.FullList and C_Container and C_Container.GetItemCooldown) then return "" end
+  local gi
+  for i, g in ipairs(ns.GROUPS) do if g.key == "potion" then gi = i end end
+  if not gi then return "" end
+  local out = {}
+  for _, it in ipairs(ns.FullList(gi)) do
+    local okN, n = Call(C_Item.GetItemCount, it.id)
+    if okN and (IsSecret(n) or (n and n > 0)) then
+      local ok, s, d, en = Call(C_Container.GetItemCooldown, it.id)
+      local okR, ready = Call(ns.CooldownState, it.id)
+      out[#out + 1] = ("%d x%s cd=%s+%s en=%s ready=%s"):format(it.id, Show(n),
+        ok and Show(s) or "?", ok and Show(d) or "?", ok and Show(en) or "?",
+        okR and tostring(ready) or "?")
+    end
+  end
+  if #out == 0 then return " pots none" end
+  return " pots " .. table.concat(out, ", ")
+end
+
 local function HeaderText()
   local _, class = UnitClass("player")
   local okL, lvl = Call(UnitLevel, "player")
@@ -163,7 +191,7 @@ local function HeaderText()
     ns.VERSION, Show(class), okL and Show(lvl) or "?", okM and Show(max) or "?",
     tostring(InCombatLockdown()), tostring(GetPowerRegen ~= nil),
     tostring(C_Spell ~= nil and C_Spell.GetSpellPowerCost ~= nil), tostring(C_UnitAuras ~= nil))
-    .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),
+    .. HealthText() .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),
       ns.ManaPercent and (ns.ManaPercent() ~= nil and "ok" or "nil") or "?")
 end
 
@@ -226,7 +254,8 @@ local function OnEvent(_, event, unit, arg2, arg3)
     if text:find("type=0", 1, true) then NoteManaSpell(arg3) end
     Emit((event == "UNIT_SPELLCAST_SUCCEEDED" and "cast " or "channel ") .. text
       .. "  cd=" .. CooldownText(arg3)
-      .. "  combat=" .. tostring(InCombatLockdown()) .. "  " .. RegenText() .. WatchText())
+      .. "  combat=" .. tostring(InCombatLockdown()) .. "  " .. RegenText() .. WatchText()
+      .. HealthText() .. PotionText())
   end
 end
 
@@ -238,8 +267,9 @@ local function Sample(now)
       clock.power, regen))
   end
   if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
-    ToLog(("sample combat=%s mana events=%d %s%s%s fsr=%.1f%s"):format(tostring(InCombatLockdown()),
-      clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0, RecentCosts()))
+    ToLog(("sample combat=%s mana events=%d %s%s%s fsr=%.1f%s%s%s"):format(tostring(InCombatLockdown()),
+      clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0, RecentCosts(),
+      HealthText(), PotionText()))
     clock.lastRegen, clock.lastSample = regen, now
   end
 end

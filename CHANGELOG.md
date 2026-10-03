@@ -6,7 +6,7 @@
 - Icons in a row: the five-second seconds sit left of the bar, so they no longer cover the mana numbers at large text sizes
 - Icons in a column: with the frame unlocked, the "Full Mana Forever" label moves above the five-second seconds
 - Settings: "Lock frame" and "Test mode" are one switch now, "Unlock frame (test mode)": it makes the frame movable and shows everything that is switched on. `/fmf test` does the same as `/fmf unlock`
-- New for bug reports: `/fmf scan` writes your spells, talents and items with a "Use:" effect into the log; the log also records spell cooldowns and current mana costs
+- New for bug reports: `/fmf scan` writes your spells, talents and items with a "Use:" effect into the log; the log also records spell cooldowns, current mana costs, maximum health and the cooldowns of your mana potions
 - Safety: a rune is hidden when the game does not report your maximum health (no health check means no risk)
 - A potion drunk in combat whose cooldown only starts after the fight is no longer shown as ready
 - The regen text turns gold during the five-second rule even when the gold strip is switched off
