@@ -7,6 +7,7 @@
 - New: mana text like the game's "Status Text": numeric value, percentage, both or none.
 - New: `/fmf log on` / `off` records what the game reports (casts, mana costs, regen) for bug reports.
 - The five-second rule and the regen can be switched off under "Mana bar with markers", and both have their own text size (60–200 %). "Reset size" resets these text sizes too.
+- Test mode and an unlocked frame show the five-second rule too (it runs in a loop), so it can be seen and placed.
 - Mana bar markers stay inside the bar: the one where the icon lights up is thick and bright, the others thin (before, it stuck out at the sides).
 
 **Full Mana Forever 0.6.10**

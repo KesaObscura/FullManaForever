@@ -1030,7 +1030,14 @@ end
 -- new string each time) and at once when the rule starts or ends
 local regenNext, regenInRule = 0, nil
 local function UpdateRegen()
-  local left = db.fsr and ns.FsrLeft and ns.FsrLeft() or 0
+  local real = db.fsr and ns.FsrLeft and ns.FsrLeft() or 0
+  local left = real
+  -- test mode and unlocked frame preview everything that is switched on: the rule runs
+  -- in a loop so its strip and seconds can be seen and placed
+  if db.fsr and real == 0 and (db.test or not db.locked) then
+    local cycle = ns.FSR_SECONDS or 5
+    left = cycle - (GetTime() % cycle)
+  end
   if left > 0 then
     bar.fsr:SetValue(left)
     bar.fsrText:SetText(("%.1f"):format(left))
@@ -1039,7 +1046,7 @@ local function UpdateRegen()
     bar.fsr:Hide(); bar.fsrText:Hide()
   end
   if not db.regenText or not ns.RegenText then bar.regen:Hide() return end
-  local now, inRule = GetTime(), left > 0
+  local now, inRule = GetTime(), real > 0
   if now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
   local text = ns.RegenText()
