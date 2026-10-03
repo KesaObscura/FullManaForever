@@ -98,6 +98,7 @@ function methods:RegisterEvent(e)
   M.eventFrames[self] = true
 end
 function methods:UnregisterEvent(e) if self.events then self.events[e] = nil end end
+function methods:UnregisterAllEvents() self.events = {} end
 
 M.eventFrames = {}
 function M.Fire(e, ...)

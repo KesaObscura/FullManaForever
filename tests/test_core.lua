@@ -284,3 +284,29 @@ test("an item the game has not loaded yet is not hidden", function()
   local vis, l = slotVisible(ns, 1)
   ok(vis, "unknown item hidden"); eq(l.itemID, 3827)
 end)
+
+test("/fmf probe 5sr reports casts, costs and regen, then stops", function()
+  local ns = M.load(nil)
+  _G.GetPowerRegen = function() return M.secret(3), 1 end
+  _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 50 } } end,
+    GetSpellName = function() return "Heal" end }
+  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return { name = "Innervate", spellId = 29166 } end end }
+  SlashCmdList.FULLMANAFOREVER("probe 5sr")
+  local f = M.upvalue(M.upvalue(SlashCmdList.FULLMANAFOREVER, "Probe5SR"), "probeFrame")
+  ok(f and f.running, "probe not running")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
+  M.Fire("UNIT_POWER_UPDATE", "player", "MANA")
+  local all = table.concat(M.printed, "\n")
+  ok(all:find("spell=2050", 1, true), "cast not printed")
+  ok(all:find("cost=50", 1, true), "cost not printed")
+  ok(all:find("SECRET(3)", 1, true), "secret regen not marked")
+  ok(all:find("Innervate(29166)", 1, true), "buffs not printed")
+  local real = GetTime
+  _G.GetTime = function() return 131 end
+  f.scripts.OnUpdate(f)
+  _G.GetTime = real
+  ok(not f.running, "probe did not stop")
+  ok(table.concat(M.printed, "\n"):find("probe done", 1, true), "no done line")
+  eq(#M.warnings(), 0, "warnings")
+  _G.GetPowerRegen, _G.C_Spell, _G.C_UnitAuras = nil, nil, nil
+end)
