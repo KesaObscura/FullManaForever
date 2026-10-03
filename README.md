@@ -86,7 +86,7 @@ casts, mana costs and regen values, nothing personal.
 ## Development
 
 Plain Lua 5.1, no libraries, no Blizzard templates. Files load in TOC order:
-`Locale.lua` → `Data.lua` → `Core.lua` → `Options.lua` → `Library.lua`.
+`Locale.lua` → `Data.lua` → `Regen.lua` → `Core.lua` → `Options.lua` → `Library.lua` → `Diag.lua`.
 
 Tests run outside the game against a small mock of the WoW API:
 

@@ -1,7 +1,9 @@
 # Working on Full Mana Forever
 
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
-Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua → Library.lua.
+Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Core.lua → Options.lua →
+Library.lua → Diag.lua. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
+and `/fmf log` (kept in releases for bug reports).
 
 ## Rules
 
