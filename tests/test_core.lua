@@ -337,6 +337,7 @@ test("/fmf log records into the saved log, never secret contents", function()
   ok(all:find("log off", 1, true), "off not logged")
   ok(all:find("byID SpiritTap=yes Innervate=no", 1, true), "buffs by ID not logged")
   ok(all:find("text=ok", 1, true), "secret text test not logged")
+  ok(all:find("x5=no-api", 1, true), "mp5 check not logged")
   for _, l in ipairs(lines) do
     eq(type(l), "string", "non-string line")
     ok(not issecretvalue(l), "secret stored")

@@ -58,6 +58,35 @@ local function DisplayText()
   return okS and " text=ok" or " text=settext-error"
 end
 
+-- could a secret regen be turned into mp5? (x5 inside the game: a linear curve evaluated by
+-- the engine). Only logged; the bar shows per second.
+local x5curve
+local function X5Text()
+  if not GetPowerRegen then return "" end
+  local ok, base = pcall(GetPowerRegen)
+  if not ok or not IsSecret(base) then return "" end
+  if not (C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType
+    and Enum.LuaCurveType.Linear) then
+    return " x5=no-api"
+  end
+  if not x5curve then
+    local okC, c = pcall(function()
+      local curve = C_CurveUtil.CreateCurve()
+      curve:SetType(Enum.LuaCurveType.Linear)
+      curve:AddPoint(0, 0)
+      curve:AddPoint(10000, 50000)
+      return curve
+    end)
+    if not okC or not c then return " x5=create-error " .. tostring(c):sub(1, 60) end
+    x5curve = c
+  end
+  local okE, r = pcall(x5curve.Evaluate, x5curve, base)
+  if not okE then return " x5=eval-error " .. tostring(r):sub(1, 60) end
+  if r == nil then return " x5=nil" end
+  local okT = testText and pcall(testText.SetText, testText, (string.format("%.0f mp5", r)))
+  return " x5=ok" .. (okT and " text=ok" or "")
+end
+
 -- buffs that change regen, asked one by one (the full list was empty in combat)
 local WATCH = { { 15271, "SpiritTap" }, { 29166, "Innervate" }, { 14751, "InnerFocus" } }
 local function WatchText()
@@ -188,8 +217,8 @@ local function OnUpdate()
       clock.power, regen))
   end
   if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
-    ToLog(("sample combat=%s mana events=%d %s%s%s fsr=%.1f"):format(tostring(InCombatLockdown()),
-      clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0))
+    ToLog(("sample combat=%s mana events=%d %s%s%s%s fsr=%.1f"):format(tostring(InCombatLockdown()),
+      clock.power, regen, WatchText(), DisplayText(), X5Text(), ns.FsrLeft and ns.FsrLeft() or 0))
     clock.lastRegen, clock.lastSample = regen, now
   end
   clock.power = 0
