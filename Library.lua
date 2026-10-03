@@ -10,7 +10,8 @@ local rowReg = {}       -- row checkboxes (one per pooled row)
 local rows = {}         -- pooled rows: frames are created once and reused
 local headers = {}      -- pooled category headers
 local W, H, PAD, ROW = 560, 600, 16, 30
-local CW = W - 2 * PAD - 22 -- list width, room for the scrollbar
+local CW = W - 2 * PAD - 22 -- list width before the scroll area knows its real size
+local EDGE = 8              -- free space between the texts and the right edge of the list
 local NAME_W = 230          -- item name column (long names end in "...")
 local AMOUNT_X, AMOUNT_W = 295, 84 -- the "up to N" column
 
@@ -37,7 +38,7 @@ local function RowOnLeave() GameTooltip:Hide() end
 local function NewRow()
   local r = {}
   local row = CreateFrame("Frame", nil, content)
-  row:SetSize(CW, ROW - 2)
+  row:SetHeight(ROW - 2) -- the width follows the list (see BuildContent)
   row:EnableMouse(true)
   row:SetScript("OnEnter", RowOnEnter)
   row:SetScript("OnLeave", RowOnLeave)
@@ -73,7 +74,7 @@ local function NewRow()
   if r.owned.SetWordWrap then r.owned:SetWordWrap(false) end
 
   r.del = ui.Button(row, "x", 20, 18)
-  r.del:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+  r.del:SetPoint("RIGHT", row, "RIGHT", -EDGE, 0)
   r.del:SetScript("OnClick", function() ns.RemoveCustom(row.it.id) end)
 
   r.frame = row
@@ -128,11 +129,12 @@ local function BuildContent()
         r.it, r.group, r.frame.it = it, group, it
         r.frame:ClearAllPoints()
         r.frame:SetPoint("TOPLEFT", 0, y)
+        r.frame:SetPoint("RIGHT", content, "RIGHT", 0, 0)
         r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
         r.amount:SetText(L.libRestore:format(it.max))
         r.owned:ClearAllPoints()
         r.owned:SetPoint("LEFT", r.frame, "LEFT", AMOUNT_X + AMOUNT_W + 4, 0)
-        r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it.custom and -32 or -4, 0)
+        r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it.custom and -(28 + EDGE) or -EDGE, 0)
         r.del:SetShown(it.custom and true or false)
         r.frame:Show()
         y = y - ROW
@@ -291,6 +293,14 @@ local function Build(point)
 
   content = CreateFrame("Frame", nil, scroll)
   content:SetSize(CW, 10)
+  -- the list is exactly as wide as the visible scroll area, whatever the UI scale:
+  -- nothing can stick out under the scrollbar and get cut off
+  local function FitContent()
+    local w = scroll:GetWidth() or 0
+    if w > 0 then content:SetWidth(w) end
+  end
+  scroll:SetScript("OnSizeChanged", FitContent)
+  FitContent()
   scroll:SetScrollChild(content)
   wipe(rows); wipe(headers); wipe(rowReg)
   BuildContent()

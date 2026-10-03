@@ -192,3 +192,16 @@ test("options: empty gear group says nothing is equipped", function()
     end
   end
 end)
+
+test("item list: rows are as wide as the visible list, nothing sticks out", function()
+  local ns = M.load(nil)
+  ns.ToggleLibrary(true)
+  local scroll = M.upvalue(ns.ToggleLibrary, "scroll") or M.upvalue(M.upvalue(ns.ToggleLibrary, "Build"), "scroll")
+  local content = M.upvalue(ns.RebuildLibrary, "content")
+  scroll:SetWidth(480)
+  scroll.scripts.OnSizeChanged(scroll)
+  eq(content.w, 480, "list width")
+  local rows = M.upvalue(ns.RebuildLibrary, "rows") or M.upvalue(M.upvalue(ns.RebuildLibrary, "BuildContent"), "rows")
+  local p = rows[1].frame.points[2]
+  eq(p[1], "RIGHT"); eq(p[2], content, "row not tied to the list's right edge")
+end)
