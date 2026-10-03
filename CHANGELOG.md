@@ -1,5 +1,11 @@
 # Changelog
 
+**Full Mana Forever 0.7.1**
+
+- Icons in a row: the five-second seconds sit left of the bar, so they no longer cover the mana numbers at large text sizes
+- Icons in a column: with the frame unlocked, the "Full Mana Forever" label moves above the five-second seconds
+- New for bug reports: `/fmf scan` writes your spells, talents and items with a "Use:" effect into the log; the log also records spell cooldowns and current mana costs
+
 **Full Mana Forever 0.7.0**
 
 - New: five-second rule on the mana bar. After a spell that costs mana, a thin gold strip and the seconds at the end of the bar count down the 5 seconds of reduced regen. Wands, potions and food do not start it.

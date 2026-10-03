@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.0"
+ns.VERSION = "0.7.1"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -770,7 +770,9 @@ function ns.PositionBar()
     else
       bar:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -6, 0)
     end
-    anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
+    -- the rule's seconds sit above the bar: the frame label (unlocked) goes above them
+    local fsrRoom = db.fsr and (math.ceil(14 * (db.fsrScale or 1)) + 4) or 0
+    anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8 + fsrRoom)
     bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -4)
     bar.regenBox:ClearAllPoints()
     bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
@@ -806,8 +808,9 @@ function ns.PositionBar()
     bar.fsr:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
     bar.fsr:SetHeight(3)
     bar.fsr:SetOrientation("HORIZONTAL")
+    -- left of the bar, outside: inside it would cover the mana numbers at large sizes
     bar.fsrBox:ClearAllPoints()
-    bar.fsrBox:SetPoint("RIGHT", bar, "RIGHT", -3, 1)
+    bar.fsrBox:SetPoint("RIGHT", bar, "LEFT", -4, 0)
     bar.fsrText:ClearAllPoints()
     bar.fsrText:SetPoint("RIGHT", bar.fsrBox, "RIGHT", 0, 0)
     bar.gloss:SetPoint("TOPLEFT")

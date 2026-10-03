@@ -516,3 +516,15 @@ test("/fmf scan writes spells, talents and use items with the game's description
   ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
   _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
 end)
+
+test("five-second seconds never cover the mana numbers or the frame label", function()
+  local ns = M.load({ vertical = false, fsrScale = 2 }, { bags = POT })
+  local b = bar(ns)
+  local p = b.fsrBox.points[1]
+  eq(p[1], "RIGHT"); eq(p[3], "LEFT", "row: seconds not left of the bar")
+  ns.db.vertical = true; ns.Layout(true)
+  local label = M.upvalue(ns.ApplyLock, "anchor").label
+  ok(label.points[1][5] >= 8 + 28, "column: label not above the seconds: " .. tostring(label.points[1][5]))
+  ns.db.fsr = false; ns.Layout(true)
+  eq(label.points[1][5], 8, "label offset without the rule")
+end)

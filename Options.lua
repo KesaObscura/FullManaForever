@@ -490,7 +490,8 @@ Build = function()
     c.Row(st.label, PAD + 56, 28)
     return st
   end
-  local fsrCb = Check(col, L.optFsr, function() return db.fsr end, function(v) db.fsr = v end, L.tipFsr)
+  local fsrCb = Check(col, L.optFsr, function() return db.fsr end,
+    function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr)
   c.Row(fsrCb, PAD + 26, 26)
   local fsrSize = SizeStepper("fsrScale")
   local regenCb = Check(col, L.optRegen, function() return db.regenText end,
