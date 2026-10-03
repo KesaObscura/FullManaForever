@@ -12,6 +12,7 @@
 
 Locale.lua
 Data.lua
+Regen.lua
 Core.lua
 Options.lua
 Library.lua

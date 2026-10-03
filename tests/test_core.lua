@@ -359,3 +359,53 @@ test("/fmf log keeps running after a reload until switched off", function()
   SlashCmdList.FULLMANAFOREVER("log clear")
   eq(#FullManaForeverLog.lines, 0, "not cleared")
 end)
+
+-- five-second rule and regen on the mana bar (0.7.0) ----------------------------------
+local function regenApis(base, casting)
+  _G.GetPowerRegen = function() return base, casting end
+  _G.C_Spell = { GetSpellPowerCost = function(id)
+    if id == 5019 then return {} end                 -- wand: no cost
+    return { { type = 0, cost = 60 } }
+  end }
+end
+local function noRegenApis() _G.GetPowerRegen, _G.C_Spell = nil, nil end
+
+test("a spell that costs mana starts the five-second rule, a wand does not", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(14.75, 0)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 5019)
+  eq(ns.FsrLeft(), 0, "wand started the rule")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "target", "g", 598)
+  eq(ns.FsrLeft(), 0, "someone else's cast started the rule")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  eq(ns.FsrLeft(), 5, "smite did not start the rule")
+  M.tick()
+  ok(bar(ns).fsr.shown, "strip hidden during the rule")
+  eq(bar(ns).fsr.value, 5)
+  ok(bar(ns).regen.text:find("5.0s  0 mp5", 1, true), "text during the rule: " .. tostring(bar(ns).regen.text))
+  local real = GetTime
+  _G.GetTime = function() return 106 end
+  M.tick()
+  _G.GetTime = real
+  ok(not bar(ns).fsr.shown, "strip still shown after 5 s")
+  eq(bar(ns).regen.text, "74 mp5", "normal regen text")
+  noRegenApis()
+end)
+
+test("secret regen in combat is shown per second when x5 is not possible", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(M.secret(14.75), M.secret(0))
+  M.tick()
+  eq(bar(ns).regen.text, "14.8/s")
+  noRegenApis()
+end)
+
+test("five-second rule and regen text can be switched off", function()
+  local ns = M.load({ fsr = false, regenText = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  ok(not bar(ns).fsr.shown, "strip shown while off")
+  ok(not bar(ns).regen.shown, "regen text shown while off")
+  noRegenApis()
+end)

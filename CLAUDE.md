@@ -46,3 +46,9 @@ Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua �
   cost reductions (Eureka); wand Shoot, food and potions report no cost. The aura list
   (`GetAuraDataByIndex`) is empty in combat. `UNIT_POWER_UPDATE` for mana fires only a few
   times per 10 s.
+- Second log: in combat `GetAuraDataByIndex` errors and `GetPlayerAuraBySpellID` returns nil
+  even while Spirit Tap is active (it was active in combat in both logs; regen right after
+  combat is 23.25). Buffs are invisible to addons in combat. A secret regen value can be
+  formatted with `string.format` and put into a FontString (`text=ok`). `GetManaRegen` is the
+  same as `GetPowerRegen` (secret in combat). Mana potions show up as casts without cost
+  (Restore Mana 438), so they never start the five-second rule.

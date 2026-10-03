@@ -470,8 +470,14 @@ Build = function()
       end,
     })
   c.Row(blen.label, PAD + 30, 32)
+  -- five-second rule and regen live on the mana bar, so they sit with its settings
+  local fsrCb = Check(col, L.optFsr, function() return db.fsr end, function(v) db.fsr = v end, L.tipFsr)
+  c.Row(fsrCb, PAD + 26, 26)
+  local regenCb = Check(col, L.optRegen, function() return db.regenText end,
+    function(v) db.regenText = v end, L.tipRegen)
+  c.Row(regenCb, PAD + 26, 30)
   BarOnly(bpLabel, bp, colLabel, colDD, thick.label, thick.value, thick.minus, thick.plus,
-    blen.label, blen.value, blen.minus, blen.plus)
+    blen.label, blen.value, blen.minus, blen.plus, fsrCb, fsrCb.label, regenCb, regenCb.label)
   local resetSize = Button(col, L.optResetSize, 150)
   c.Row(resetSize, PAD + 4, 34)
   resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)

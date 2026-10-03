@@ -1,5 +1,11 @@
 # Changelog
 
+**Full Mana Forever 0.7.0**
+
+- New: five-second rule on the mana bar. After a spell that costs mana, a thin gold strip and a countdown show the 5 seconds of reduced regen. Wands, potions and food do not start it.
+- New: current mana regen next to the mana bar ("74 mp5"). During the five-second rule it shows what keeps running while you cast, so talents like Spirit Tap and Innervate are included. In combat the game only lets addons show this number; if it cannot be converted to mp5 there, it is shown per second.
+- Both can be switched off under "Mana bar with markers".
+
 **Full Mana Forever 0.6.10**
 
 - Fixed: items above your level (for example Mana Potion before level 22) are no longer suggested; the strongest potion you can actually drink is shown instead

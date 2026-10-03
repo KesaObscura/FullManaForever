@@ -29,6 +29,8 @@ local DEFAULTS = {
   pickMode   = "fit",   -- "fit": strongest item that does not overflow / "strongest": always the best
   thresholdMode = "max", -- "max": no waste / "avg": more drinks per fight
   showBar    = true,
+  fsr        = true,    -- five-second rule countdown on the mana bar
+  regenText  = true,    -- current mana regen next to the mana bar
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
@@ -604,6 +606,15 @@ local function CreateBar()
   end
   bar.text = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.text)
+  -- five-second rule: a thin gold strip along the bar that runs out in 5 s
+  bar.fsr = CreateFrame("StatusBar", nil, top)
+  bar.fsr:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+  bar.fsr:SetStatusBarColor(1, 0.82, 0.2)
+  bar.fsr:SetMinMaxValues(0, ns.FSR_SECONDS or 5)
+  bar.fsr:Hide()
+  -- current regen ("74 mp5"), outside the bar
+  bar.regen = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.regen)
   bar:Hide()
 end
 
@@ -712,6 +723,13 @@ function ns.PositionBar()
     end
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+    bar.regen:ClearAllPoints()
+    bar.regen:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
+    bar.fsr:ClearAllPoints()
+    bar.fsr:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+    bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+    bar.fsr:SetWidth(3)
+    bar.fsr:SetOrientation("VERTICAL")
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("BOTTOMLEFT")
     bar.gloss:SetWidth(math.max(1, (db.barThickness or 14) * 0.45))
@@ -724,6 +742,13 @@ function ns.PositionBar()
       anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     end
     bar.text:SetPoint("CENTER", bar, "CENTER", 0, 0)
+    bar.regen:ClearAllPoints()
+    bar.regen:SetPoint("LEFT", bar, "RIGHT", 6, 0)
+    bar.fsr:ClearAllPoints()
+    bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+    bar.fsr:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
+    bar.fsr:SetHeight(3)
+    bar.fsr:SetOrientation("HORIZONTAL")
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
@@ -935,6 +960,32 @@ local function HideTick(t)
   if t.front:IsShown() then t.front:Hide(); t.back:Hide() end
 end
 
+-- five-second rule strip (every tick, no garbage) and regen text (twice a second: it builds
+-- a new string each time)
+local regenNext = 0
+local function UpdateRegen()
+  local left = db.fsr and ns.FsrLeft and ns.FsrLeft() or 0
+  if left > 0 then
+    bar.fsr:SetValue(left)
+    if not bar.fsr:IsShown() then bar.fsr:Show() end
+  elseif bar.fsr:IsShown() then
+    bar.fsr:Hide()
+  end
+  if not (db.regenText or db.fsr) or not ns.RegenText then bar.regen:Hide() return end
+  local now = GetTime()
+  if now < regenNext and not (left > 0) then return end
+  regenNext = now + 0.5
+  local text, inRule = ns.RegenText(db.regenText, db.fsr)
+  if text then
+    bar.regen:SetText(text)
+    -- reduced regen during the rule: gold like the strip; normal regen: light blue
+    if inRule then bar.regen:SetTextColor(1, 0.82, 0.2) else bar.regen:SetTextColor(0.6, 0.85, 1) end
+    bar.regen:Show()
+  else
+    bar.regen:Hide()
+  end
+end
+
 local function UpdateBar(maxMana)
   if not bar then return end
   if not BarVisible() then bar:Hide() return end
@@ -948,6 +999,7 @@ local function UpdateBar(maxMana)
     WarnOnce("barvalue", L.warnPower)
   end
   SetBarText(maxMana)
+  UpdateRegen()
   local vertical = db.vertical and true or false
   local len = (vertical and bar:GetHeight() or bar:GetWidth()) or 0
   local thick = db.barThickness or 14
