@@ -4,7 +4,7 @@
 ## Version: 0.7.0
 ## IconTexture: Interface\Icons\INV_Potion_76
 ## AddonCompartmentFunc: FullManaForever_OnCompartmentClick
-## SavedVariables: FullManaForeverDB
+## SavedVariables: FullManaForeverDB, FullManaForeverLog
 ## Author: KesaObscura
 ## X-License: MIT
 ## X-Website: https://github.com/KesaObscura/FullManaForever
@@ -15,3 +15,4 @@ Data.lua
 Core.lua
 Options.lua
 Library.lua
+Diag.lua

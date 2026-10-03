@@ -226,6 +226,7 @@ function M.reset(opts)
   _G.SettingsPanel = nil
   _G.Settings = nil
   _G.FullManaForeverDB = nil
+  _G.FullManaForeverLog = nil
   _G.FullManaForeverOptions = nil
   _G.FullManaForeverItems = nil
   _G.FullManaForeverAnchor = nil

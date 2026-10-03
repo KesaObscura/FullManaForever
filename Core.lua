@@ -1060,97 +1060,6 @@ local function Probe()
     tostring(db.onlyCombat), #db.custom)
 end
 
--- /fmf probe 5sr: 30 seconds of facts for the five-second-rule / regen feature (0.7.0).
--- Prints what the game hands an addon when you cast and while mana comes back,
--- and whether each value is secret. Output stays English on purpose (bug reports).
-local probeFrame
-local function Show(v)
-  if v == nil then return "nil" end
-  local ok, txt = pcall(string.format, "%s", v)
-  txt = ok and txt or "?"
-  if IsSecret(v) then return "SECRET(" .. txt .. ")" end
-  return txt
-end
-
-local function RegenLine()
-  if not GetPowerRegen then return "GetPowerRegen=missing" end
-  local ok, base, casting = pcall(GetPowerRegen)
-  if not ok then return "GetPowerRegen error" end
-  return ("regen/s base=%s casting=%s"):format(Show(base), Show(casting))
-end
-
-local function AuraLine()
-  if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return "auras: API missing" end
-  local names, secret = {}, 0
-  for i = 1, 40 do
-    local ok, a = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
-    if not ok or not a then break end
-    if IsSecret(a.name) or IsSecret(a.spellId) then secret = secret + 1
-    else names[#names + 1] = ("%s(%s)"):format(tostring(a.name), tostring(a.spellId)) end
-  end
-  return ("buffs: %s%s"):format(table.concat(names, ", "), secret > 0 and (" +" .. secret .. " secret") or "")
-end
-
-local function Probe5SR()
-  if probeFrame and probeFrame.running then Print("5sr probe already running") return end
-  probeFrame = probeFrame or CreateFrame("Frame")
-  local f = probeFrame
-  f.running, f.start, f.power, f.next, f.lastAura = true, GetTime(), 0, 0, nil
-  Print("5sr probe: 30 s. Cast a few spells (in and out of combat), use a potion, wait for full mana.")
-  Print("combat=%s  %s", tostring(InCombatLockdown()), RegenLine())
-  Print("API: C_Spell.GetSpellPowerCost=%s GetSpellPowerCost=%s GetManaRegen=%s",
-    tostring(C_Spell and C_Spell.GetSpellPowerCost ~= nil), tostring(GetSpellPowerCost ~= nil),
-    tostring(GetManaRegen ~= nil))
-  Print(AuraLine())
-  for _, e in ipairs({ "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_CHANNEL_START", "UNIT_POWER_UPDATE",
-    "UNIT_AURA", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do
-    pcall(f.RegisterEvent, f, e)
-  end
-  f:SetScript("OnEvent", function(_, event, unit, arg2, arg3)
-    local t = ("%.1f"):format(GetTime() - f.start)
-    if event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
-      Print("%s %s  %s", t, event == "PLAYER_REGEN_DISABLED" and "combat start" or "combat end", RegenLine())
-    elseif unit ~= "player" then
-      return
-    elseif event == "UNIT_POWER_UPDATE" then
-      if arg2 == "MANA" then f.power = f.power + 1 end
-    elseif event == "UNIT_AURA" then
-      local line = AuraLine()
-      if line ~= f.lastAura then f.lastAura = line; Print("%s %s", t, line) end
-    else
-      local id = arg3
-      local name = C_Spell and C_Spell.GetSpellName and select(2, pcall(C_Spell.GetSpellName, id))
-      local costs = {}
-      local getCost = (C_Spell and C_Spell.GetSpellPowerCost) or GetSpellPowerCost
-      local ok, list = false, nil
-      if getCost then ok, list = pcall(getCost, id) end
-      if ok and type(list) == "table" then
-        for _, c in ipairs(list) do
-          costs[#costs + 1] = ("type=%s cost=%s"):format(Show(c.type), Show(c.cost))
-        end
-      end
-      Print("%s %s spell=%s %s  cost: %s", t, event == "UNIT_SPELLCAST_SUCCEEDED" and "cast" or "channel",
-        Show(id), Show(name), ok and (#costs > 0 and table.concat(costs, "; ") or "none") or "error")
-    end
-  end)
-  f:SetScript("OnUpdate", function()
-    local now = GetTime()
-    if now < f.next then return end
-    f.next = now + 2
-    local t = now - f.start
-    if t > 1 then
-      Print("%.0f s  combat=%s  mana events=%d  %s", t, tostring(InCombatLockdown()), f.power, RegenLine())
-      f.power = 0
-    end
-    if t >= 30 then
-      f:UnregisterAllEvents()
-      f:SetScript("OnUpdate", nil)
-      f.running = false
-      Print("5sr probe done. Please copy the chat lines above.")
-    end
-  end)
-end
-
 ------------------------------------------------------------------------
 -- slash commands
 ------------------------------------------------------------------------
@@ -1180,7 +1089,9 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     if not args[2] or not args[3] then Print(L.itemUsage) return end
     ns.AddCustom(args[2], args[3], args[4])
   elseif cmd == "probe" and args[2] == "5sr" then
-    Probe5SR()
+    if ns.Probe5SR then ns.Probe5SR() end
+  elseif cmd == "log" then
+    if ns.LogCommand then ns.LogCommand(args[2]) end
   elseif cmd == "probe" then
     Probe()
   elseif cmd == "debug" then

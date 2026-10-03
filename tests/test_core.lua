@@ -285,28 +285,72 @@ test("an item the game has not loaded yet is not hidden", function()
   ok(vis, "unknown item hidden"); eq(l.itemID, 3827)
 end)
 
-test("/fmf probe 5sr reports casts, costs and regen, then stops", function()
-  local ns = M.load(nil)
+local function diagApis()
   _G.GetPowerRegen = function() return M.secret(3), 1 end
   _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 50 } } end,
     GetSpellName = function() return "Heal" end }
   _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return { name = "Innervate", spellId = 29166 } end end }
+end
+local function noDiagApis() _G.GetPowerRegen, _G.C_Spell, _G.C_UnitAuras = nil, nil, nil end
+local function diagFrame(ns) return M.upvalue(M.upvalue(ns.Probe5SR, "Start"), "frame") end
+
+test("/fmf probe 5sr reports casts, costs and regen, then stops", function()
+  local ns = M.load(nil)
+  diagApis()
   SlashCmdList.FULLMANAFOREVER("probe 5sr")
-  local f = M.upvalue(M.upvalue(SlashCmdList.FULLMANAFOREVER, "Probe5SR"), "probeFrame")
-  ok(f and f.running, "probe not running")
+  local probe = M.upvalue(ns.Probe5SR, "probe")
+  ok(probe.running, "probe not running")
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
-  M.Fire("UNIT_POWER_UPDATE", "player", "MANA")
   local all = table.concat(M.printed, "\n")
-  ok(all:find("spell=2050", 1, true), "cast not printed")
+  ok(all:find("spell=2050 Heal", 1, true), "cast not printed")
   ok(all:find("cost=50", 1, true), "cost not printed")
-  ok(all:find("SECRET(3)", 1, true), "secret regen not marked")
+  ok(all:find("base=SECRET casting=1", 1, true), "secret regen not marked")
   ok(all:find("Innervate(29166)", 1, true), "buffs not printed")
   local real = GetTime
   _G.GetTime = function() return 131 end
+  local f = diagFrame(ns)
   f.scripts.OnUpdate(f)
   _G.GetTime = real
-  ok(not f.running, "probe did not stop")
+  ok(not probe.running, "probe did not stop")
+  ok(not f.scripts.OnUpdate, "collector still running")
   ok(table.concat(M.printed, "\n"):find("probe done", 1, true), "no done line")
   eq(#M.warnings(), 0, "warnings")
-  _G.GetPowerRegen, _G.C_Spell, _G.C_UnitAuras = nil, nil, nil
+  noDiagApis()
+end)
+
+test("/fmf log records into the saved log, never secret contents", function()
+  local ns = M.load(nil)
+  diagApis()
+  SlashCmdList.FULLMANAFOREVER("log on")
+  M.Fire("PLAYER_REGEN_DISABLED")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
+  M.Fire("UNIT_AURA", "player")
+  SlashCmdList.FULLMANAFOREVER("log off")
+  local lines = FullManaForeverLog.lines
+  local all = table.concat(lines, "\n")
+  ok(all:find("---- session", 1, true), "no session header")
+  ok(all:find("combat start", 1, true), "combat not logged")
+  ok(all:find("spell=2050 Heal cost: type=0 cost=50", 1, true), "cast not logged")
+  ok(all:find("log off", 1, true), "off not logged")
+  for _, l in ipairs(lines) do
+    eq(type(l), "string", "non-string line")
+    ok(not issecretvalue(l), "secret stored")
+  end
+  ok(not FullManaForeverLog.on, "still on")
+  noDiagApis()
+end)
+
+test("/fmf log keeps running after a reload until switched off", function()
+  M.reset()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("log on")
+  local saved = FullManaForeverLog
+  -- reload: same saved table comes back
+  ns = M.load(nil)
+  _G.FullManaForeverLog = saved
+  M.Fire("PLAYER_LOGIN")
+  ok(FullManaForeverLog.on, "log not on after reload")
+  ok(diagFrame(ns).scripts.OnUpdate, "collector not running after reload")
+  SlashCmdList.FULLMANAFOREVER("log clear")
+  eq(#FullManaForeverLog.lines, 0, "not cleared")
 end)
