@@ -60,6 +60,6 @@ Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua �
   combat (x5 to mp5 is impossible on secret values); the rule's seconds sit at the end of the
   bar. The x5 curve attempt was removed.
 - Fourth log: `Curve:Evaluate` refuses a secret argument ("Usage: local y = self:Evaluate(x)"),
-  so mp5 in combat is impossible; per second stays, no mp5 option. A string built by
-  `string.format` from a secret value mangles multibyte letters ("/с" showed as a box):
-  format only the number, put localized units in a separate plain FontString.
+  so mp5 in combat is impossible; per second stays, no mp5 option. "/с" showed as a box: the
+  cause was `OutlineFont` setting a single font file (Latin only) instead of the game's font
+  family. Text with letters must use the game's "...Outline" font objects or stay as is.

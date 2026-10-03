@@ -230,3 +230,9 @@ test("item list says which level an item needs", function()
   end
   ok(found and found:find(ns.L.libLevel:format(22), 1, true), "level text: " .. tostring(found))
 end)
+
+test("text with letters keeps the game's font family (no boxes for other alphabets)", function()
+  local ns = M.load(nil)
+  local unit = M.upvalue(ns.PositionBar, "bar").regenUnit
+  eq(unit.font, nil, "the unit label was switched to a single font file")
+end)

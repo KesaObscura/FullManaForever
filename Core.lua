@@ -510,10 +510,17 @@ local function Border(owner, region, layer, r, g, b, a, out)
   return t
 end
 
-local function OutlineFont(fs, size)
+-- outlined text. The game's own "...Outline" font objects keep the whole font family
+-- (Latin, Cyrillic, Korean, Chinese). Setting a font file by hand keeps only that one file:
+-- fine for digits, but letters of other alphabets turn into boxes, so text with letters
+-- (lettersToo) is never switched to a single file.
+local function OutlineFont(fs, template, lettersToo)
+  local obj = template and _G[template .. "Outline"]
+  if obj then fs:SetFontObject(obj) return end
+  if lettersToo then return end
   pcall(function()
     local file, cur = fs:GetFont()
-    if file then fs:SetFont(file, size or cur, "OUTLINE") end
+    if file then fs:SetFont(file, cur, "OUTLINE") end
   end)
 end
 
@@ -539,7 +546,7 @@ local function CreateLayer(parent)
   l.inner = Border(l, l, "OVERLAY", 1, 1, 1, 0.12, 0)
   l.count = l:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
   l.count:SetPoint("BOTTOMRIGHT", -2, 2)
-  OutlineFont(l.count)
+  OutlineFont(l.count, "NumberFontNormal")
   l.glow = l:CreateTexture(nil, "OVERLAY")
   l.glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
   l.glow:SetBlendMode("ADD")
@@ -605,7 +612,7 @@ local function CreateBar()
     end
   end
   bar.text = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  OutlineFont(bar.text)
+  OutlineFont(bar.text, "GameFontHighlightSmall")
   -- five-second rule: a thin gold strip along the bar that runs out in 5 s
   bar.fsr = CreateFrame("StatusBar", nil, top)
   bar.fsr:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
@@ -614,15 +621,15 @@ local function CreateBar()
   bar.fsr:Hide()
   -- seconds left of the rule, small and gold at the end of the bar
   bar.fsrText = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  OutlineFont(bar.fsrText)
+  OutlineFont(bar.fsrText, "GameFontHighlightSmall")
   bar.fsrText:SetTextColor(1, 0.82, 0.2)
   bar.fsrText:Hide()
   -- current regen ("14.8/s"), under the mana numbers or right of the bar
   bar.regen = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  OutlineFont(bar.regen)
+  OutlineFont(bar.regen, "GameFontHighlightSmall")
   bar.regenUnit = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  OutlineFont(bar.regenUnit)
-  bar.regenUnit:SetPoint("LEFT", bar.regen, "RIGHT", 0, 0)
+  OutlineFont(bar.regenUnit, "GameFontHighlightSmall", true)
+  bar.regenUnit:SetPoint("LEFT", bar.regen, "RIGHT", 1, 0)
   bar:Hide()
 end
 
