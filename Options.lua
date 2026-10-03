@@ -139,8 +139,11 @@ local function Stepper(parent, x, text, get, set, o)
     local v = get()
     s.value:SetText(o.fmt(v))
     -- a button that would not change anything is greyed out
-    s.minus:SetEnabled(step(v, -1) ~= v)
-    s.plus:SetEnabled(step(v, 1) ~= v)
+    for _, b in ipairs({ { s.minus, -1 }, { s.plus, 1 } }) do
+      local on = step(v, b[2]) ~= v
+      b[1]:SetEnabled(on)
+      b[1]:SetAlpha(on and 1 or 0.3) -- a grey "-" alone is too small to notice
+    end
   end
   registry[#registry + 1] = s
   return s

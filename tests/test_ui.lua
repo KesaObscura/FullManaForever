@@ -127,6 +127,8 @@ test("options: -/+ are greyed out at the limits", function()
   ns.ToggleOptions(true)
   local s = steppers(ns)[ns.L.optSize .. ":"]
   ok(not s.plus:IsEnabled(), "plus active at max")
+  ok(s.plus.alpha < 0.5, "inactive plus is not faded")
+  eq(s.minus.alpha, 1, "active minus is faded")
   ok(s.minus:IsEnabled(), "minus inactive below max")
 end)
 
