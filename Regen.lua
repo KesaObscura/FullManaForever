@@ -34,7 +34,12 @@ function ns.FsrLeft()
 end
 
 local frame = CreateFrame("Frame")
-frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+-- only the player's casts: in a raid every unit's casts would wake the handler
+if frame.RegisterUnitEvent then
+  frame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
+else
+  frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+end
 frame:SetScript("OnEvent", function(_, _, unit, _, spellID)
   if unit == "player" and CostsMana(spellID) then fsrUntil = GetTime() + FSR end
 end)

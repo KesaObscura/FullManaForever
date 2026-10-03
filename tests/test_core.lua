@@ -531,7 +531,7 @@ end)
 
 test("/fmf test is the same switch as unlocking; an old test mode is switched off", function()
   local ns = M.load({ test = true, dbVersion = 5 })
-  eq(ns.db.test, false, "old test mode left on")
+  eq(ns.db.test, nil, "old test mode left on")
   eq(ns.db.locked, true)
   SlashCmdList.FULLMANAFOREVER("test")
   eq(ns.db.locked, false, "/fmf test did not unlock")
@@ -548,4 +548,128 @@ test("row: mana numbers outside the bar, on the side away from the icons", funct
   eq(p[1], "BOTTOM"); eq(p[3], "TOP", "bar above the icons: numbers not above it")
   local label = M.upvalue(ns.ApplyLock, "anchor").label
   eq(label.points[1][2], bar(ns).text, "frame label not above the numbers")
+end)
+
+-- 0.7.1 review ---------------------------------------------------------------------
+test("rune stays hidden when max HP cannot be read (no HP check, no risk)", function()
+  local ns = M.load(nil, { bags = { [12662] = 1 } })
+  M.state.maxMana, M.state.manaPct = 5000, 0.05 -- the rune (up to 1500) fits
+  M.tick()
+  ok(slotVisible(ns, 2), "rune hidden although HP is readable and full")
+  M.state.maxHP = M.secret(2000)
+  M.tick()
+  ok(not slotVisible(ns, 2), "rune shown without an HP check")
+end)
+
+test("a cooldown waiting for the end of combat counts as not ready", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 0, 0, 0 } -- drunk in combat: enable 0 until combat ends
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion shown while its cooldown waits")
+  M.state.cooldowns[3385] = nil
+  M.tick()
+  ok(buttons(ns)[1].outer.shown, "potion not back when ready")
+end)
+
+test("regen text turns gold during the rule even with the strip switched off", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "normal colour")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  eq(bar(ns).regen.text, "0.0/s", "casting rate not shown at once")
+  eq(bar(ns).regen.color[1], 1, "casting rate not gold")
+  ok(not bar(ns).fsr.shown, "strip shown although switched off")
+  noRegenApis()
+end)
+
+test("a new install has nothing to migrate and looks for no old macros", function()
+  local ns = M.load(nil)
+  eq(ns.db.dbVersion, 6)
+  eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
+end)
+
+test("switching the mana text off clears it even after format failures", function()
+  local ns = M.load(nil, { bags = POT })
+  _G.UnitPower = function() return {} end -- "%d" cannot format a table
+  for _ = 1, 25 do M.tick() end
+  ns.db.manaText = "none"
+  bar(ns).text.text = "stale"
+  M.tick()
+  eq(bar(ns).text.text, "", "mana text not cleared")
+end)
+
+test("item ids out of range are rejected", function()
+  local ns = M.load(nil)
+  for _, id in ipairs({ "inf", "1e300", "0", "1.5" }) do
+    ok(not ns.AddCustom(id, 300, "potion"), id .. " accepted")
+  end
+  ok(ns.AddCustom(4242, 300, "potion"), "valid id rejected")
+end)
+
+test("only the player's unit events are heard (no raid-wide handler calls)", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("log on")
+  local n = 0
+  for f in pairs(M.eventFrames) do
+    for e in pairs(f.events or {}) do
+      if e:find("^UNIT_") then
+        n = n + 1
+        ok(f.unitFilter and f.unitFilter[e] and f.unitFilter[e].player, e .. " registered for every unit")
+      end
+    end
+  end
+  ok(n >= 2, "unit events found: " .. n)
+  SlashCmdList.FULLMANAFOREVER("log off")
+end)
+
+test("/fmf log on with a full log says so instead of claiming it runs", function()
+  local ns = M.load(nil)
+  FullManaForeverLog.lines = {}
+  for i = 1, 6000 do FullManaForeverLog.lines[i] = "x" end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("log on")
+  ok(not FullManaForeverLog.on, "log on although full")
+  eq(#FullManaForeverLog.lines, 6000, "lines added past the limit")
+  local all = table.concat(M.printed, "\n")
+  ok(all:find("log full", 1, true), "no full message")
+  ok(not all:find("log ON", 1, true), "claims the log runs")
+  SlashCmdList.FULLMANAFOREVER("scan")
+  eq(#FullManaForeverLog.lines, 6000, "scan wrote past the limit")
+  ok(table.concat(M.printed, "\n"):find("scan lines dropped", 1, true), "scan does not say lines were dropped")
+end)
+
+test("a failing sample does not keep the probe running", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("probe 5sr")
+  local fsr = ns.FsrLeft
+  ns.FsrLeft = function() error("surprise") end
+  local f = diagFrame(ns)
+  local real = GetTime
+  _G.GetTime = function() return 115 end
+  f.scripts.OnUpdate(f)
+  _G.GetTime = function() return 131 end
+  f.scripts.OnUpdate(f)
+  _G.GetTime = real
+  ns.FsrLeft = fsr
+  ok(not M.upvalue(ns.Probe5SR, "probe").running, "probe still running")
+  ok(not f.scripts.OnUpdate, "collector still running")
+end)
+
+test("a probe started during a log counts its seconds from its own start", function()
+  local ns = M.load(nil)
+  diagApis()
+  SlashCmdList.FULLMANAFOREVER("log on")
+  local real = GetTime
+  _G.GetTime = function() return 500 end
+  SlashCmdList.FULLMANAFOREVER("probe 5sr")
+  M.printed = {}
+  _G.GetTime = function() return 503 end
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
+  _G.GetTime = real
+  ok(M.printed[1] and M.printed[1]:find("[^%d%.]3%.0 cast"), "chat stamp: " .. tostring(M.printed[1]))
+  SlashCmdList.FULLMANAFOREVER("log off")
+  noDiagApis()
 end)

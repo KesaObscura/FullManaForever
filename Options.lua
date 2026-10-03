@@ -172,6 +172,7 @@ local function Dropdown(parent, width, entries, getText, onPick)
   local list = CreateFrame("Frame", nil, dd)
   list:SetFrameStrata("FULLSCREEN_DIALOG")
   list:SetPoint("TOPRIGHT", dd, "BOTTOMRIGHT", 0, -2)
+  list:SetClampedToScreen(true) -- near the bottom of the screen the list moves up
   list:EnableMouse(true)
   local lbg = list:CreateTexture(nil, "BACKGROUND")
   lbg:SetAllPoints()
@@ -445,7 +446,7 @@ Build = function()
     colorEntries[#colorEntries + 1] = { value = bc.key, text = L["col_" .. bc.key] }
   end
   local colLabel = Label(col, L.optBarColor .. ":")
-  local colDD = Dropdown(col, DD_W, colorEntries, function() return L["col_" .. (db.barColor or "blue")] end,
+  local colDD = Dropdown(col, DD_W, colorEntries, function() return L["col_" .. (db.barColor or "blue")] or L.col_blue end,
     function(v) db.barColor = v; ns.Layout(true); ns.RefreshOptions() end)
   c.Right(colDD)
   c.Row(colLabel, PAD + 30, 30)
@@ -456,7 +457,7 @@ Build = function()
   local mtDD = Dropdown(col, DD_W, {
     { value = "number", text = L.mtNumber }, { value = "percent", text = L.mtPercent },
     { value = "both", text = L.mtBoth }, { value = "none", text = L.mtNone },
-  }, function() return mtText[db.manaText or "number"] end,
+  }, function() return mtText[db.manaText or "number"] or L.mtNumber end,
   function(v) db.manaText = v; ns.RefreshOptions() end)
   c.Right(mtDD)
   c.Row(mtLabel, PAD + 30, 30)
@@ -477,8 +478,10 @@ Build = function()
           return math.min(LEN_MAX, math.ceil(ns.AutoBarLength() / LEN_STEP) * LEN_STEP)
         end
         local nv = math.min(LEN_MAX, v + dir * LEN_STEP)
-        if nv < db.iconSize then return 0 end
-        return nv
+        if nv >= db.iconSize then return nv end
+        if dir < 0 then return 0 end
+        -- "+" never jumps to auto: it grows to the first step that is not below one icon
+        return math.min(LEN_MAX, math.ceil(db.iconSize / LEN_STEP) * LEN_STEP)
       end,
     })
   c.Row(blen.label, PAD + 30, 32)

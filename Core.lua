@@ -18,7 +18,6 @@ local MAX_RESTORE = 99999 -- sanity limit for own items
 local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
   locked     = true,
-  test       = false,
   debug      = false,
   scale100   = false,
   onlyCombat = false,
@@ -234,6 +233,7 @@ local function IsEquipped(id)
   if C_Item.IsEquippedItem then return C_Item.IsEquippedItem(id) end
   return IsEquippedItem and IsEquippedItem(id)
 end
+ns.IsEquipped = IsEquipped
 
 local function OwnedItem(i)
   if ns.GROUPS[i].equipped then
@@ -267,11 +267,13 @@ end
 
 -- returns ready, secondsLeft
 CooldownState = function(id)
-  local s, d = C_Container.GetItemCooldown(id)
-  if IsSecret(s) or IsSecret(d) then
+  local s, d, enable = C_Container.GetItemCooldown(id)
+  if IsSecret(s) or IsSecret(d) or IsSecret(enable) then
     Debug("cdsecret", "item cooldown is secret - treating as ready")
     return true, 0
   end
+  -- enable 0: the cooldown waits for something (e.g. the end of combat) before it runs
+  if enable == 0 or enable == false then return false, (d and d > 0) and d or 0 end
   if not s or not d or d == 0 then return true, 0 end
   local left = s + d - GetTime()
   return left <= 0.05, math.max(left, 0)
@@ -676,9 +678,9 @@ ns.ManaPercent = ManaPercent
 -- Secret values only go into string.format, never into arithmetic or comparisons.
 local textFails = 0
 local function SetBarText(maxMana)
-  if textFails > 20 then return end -- given up until the next loading screen
   local mode = db.manaText or "number"
   if mode == "none" then bar.text:SetText("") return end
+  if textFails > 20 then return end -- given up until the next loading screen
   local pct = (mode == "percent" or mode == "both") and ManaPercent() or nil
   local ok, text
   if mode == "percent" and pct ~= nil then
@@ -934,13 +936,16 @@ local function ShowPreview(i, b, item, n)
 end
 
 local function ApplyHpGate(b, hpCost, maxHP)
-  if hpCost and not db.test and not IsSecret(maxHP) and maxHP and maxHP > 0 then
-    local t = hpCost / maxHP + db.runeMargin
-    if b.hpT ~= t then b.hpCurve, b.hpT = HealthCurve(t), t end
-    ApplyAlpha(b.hp, HealthColor(b.hpCurve), 0) -- no HP check -> never risk it
-  else
-    b.hp:SetAlpha(1)
+  if not hpCost then b.hp:SetAlpha(1) return end
+  -- max HP unknown: no HP check is possible -> never risk it
+  if IsSecret(maxHP) or not maxHP or maxHP <= 0 then
+    Debug("hpmax", "max health unreadable - rune hidden")
+    b.hp:SetAlpha(0)
+    return
   end
+  local t = hpCost / maxHP + db.runeMargin
+  if b.hpT ~= t then b.hpCurve, b.hpT = HealthCurve(t), t end
+  ApplyAlpha(b.hp, HealthColor(b.hpCurve), 0) -- no HP check -> never risk it
 end
 
 -- curves are rebuilt only when a threshold changes (lo = nil: band starts at 0%)
@@ -960,16 +965,15 @@ local function UpdateButton(i, b, maxMana, maxHP)
   if not db.enabled[group.key] or not ns.ForMyClass(group) then b.outer:Hide() return end
   if not db.locked then ShowPreview(i, b, OwnedItem(i)) return end  -- positioning preview
 
-  if db.onlyCombat and not db.test and not InCombatLockdown() then b.outer:Hide() return end
-  if not db.test and not groupOK then b.outer:Hide() return end
+  if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
+  if not groupOK then b.outer:Hide() return end
 
   -- which items go into the slot, and their mana bands
   local cands
-  if db.pickMode == "fit" and CanBand(group) and not db.test then
+  if db.pickMode == "fit" and CanBand(group) then
     cands = BandCandidates(i)
   else
     local item, n = OwnedItem(i)
-    if not item and db.test then ShowPreview(i, b, nil, nil) return end  -- test: grey placeholder
     if item and CooldownState(item.id) then
       local single = b.single or { {} }
       b.single = single
@@ -985,14 +989,9 @@ local function UpdateButton(i, b, maxMana, maxHP)
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
-    if db.test then
-      l:SetAlpha(1)
-      l.hi = nil
-    else
-      -- strongest first: band (threshold of the stronger item, own threshold]
-      local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
-      ApplyBand(l, lo, Threshold(c.it, maxMana))
-    end
+    -- strongest first: band (threshold of the stronger item, own threshold]
+    local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
+    ApplyBand(l, lo, Threshold(c.it, maxMana))
     l:Show()
     if c.it.hpCost then hpCost = math.max(hpCost or 0, c.it.hpCost) end
   end
@@ -1003,7 +1002,7 @@ end
 
 local function BarVisible()
   if not db.showBar then return false end
-  if not db.locked or db.test then return true end
+  if not db.locked then return true end
   if not groupOK then return false end
   return not db.onlyCombat or InCombatLockdown()
 end
@@ -1040,7 +1039,7 @@ local function UpdateRegen()
   local left = real
   -- test mode and unlocked frame preview everything that is switched on: the rule runs
   -- in a loop so its strip and seconds can be seen and placed
-  if db.fsr and real == 0 and (db.test or not db.locked) then
+  if db.fsr and real == 0 and not db.locked then
     local cycle = ns.FSR_SECONDS or 5
     left = cycle - (GetTime() % cycle)
   end
@@ -1052,10 +1051,12 @@ local function UpdateRegen()
     bar.fsr:Hide(); bar.fsrText:Hide()
   end
   if not db.regenText or not ns.RegenText then bar.regen:Hide() return end
-  local now, inRule = GetTime(), real > 0
+  -- the text shows the casting rate during the rule even when the strip is switched off
+  local now, inRule = GetTime(), (ns.FsrLeft and ns.FsrLeft() or 0) > 0
   if now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
-  local text = ns.RegenText()
+  local text
+  text, inRule = ns.RegenText()
   if text then
     bar.regen:SetText(text)
     -- reduced regen during the rule: gold like the strip; normal regen: light blue
@@ -1188,7 +1189,7 @@ local function Probe()
     Print("UnitPowerPercent+curve: %s (variant %s)", r and "ok" or "FAILED", tostring(powerVariant))
   end)
   if not ok then Print("curve probe error: %s", tostring(err)) end
-  Print("scale100=%s test=%s onlyCombat=%s custom=%d", tostring(db.scale100), tostring(db.test),
+  Print("scale100=%s locked=%s onlyCombat=%s custom=%d", tostring(db.scale100), tostring(db.locked),
     tostring(db.onlyCombat), #db.custom)
 end
 
@@ -1271,7 +1272,10 @@ end
 
 function ns.AddCustom(id, amount, group)
   id = tonumber(id)
-  if not id or id < 1 or id ~= math.floor(id) then Print("|cffff4444" .. L.errId .. "|r") return false end
+  if not id or id < 1 or id > 2147483647 or id ~= math.floor(id) then
+    Print("|cffff4444" .. L.errId .. "|r")
+    return false
+  end
   amount = ValidAmount(amount)
   if not amount then Print("|cffff4444" .. L.errAmount:format(MAX_RESTORE) .. "|r") return false end
   local ok, err = ValidateItem(id)
@@ -1309,8 +1313,11 @@ end
 ------------------------------------------------------------------------
 -- boot
 ------------------------------------------------------------------------
+local DB_VERSION = 6 -- the last migration below
+
 local function InitDB()
-  FullManaForeverDB = FullManaForeverDB or {}
+  -- a new install has nothing to migrate (no old macros to look for)
+  FullManaForeverDB = FullManaForeverDB or { dbVersion = DB_VERSION }
   db = FullManaForeverDB
   CopyDefaults(DEFAULTS, db)
   if (db.dbVersion or 0) < 2 then
@@ -1335,7 +1342,7 @@ local function InitDB()
   if db.dbVersion < 6 then
     -- 0.7.1: the separate test mode is gone (the unlocked frame shows everything); a test
     -- mode left on would have no switch to turn it off
-    db.test = false
+    db.test = nil
     db.dbVersion = 6
   end
   ns.SetLanguage(db.language)

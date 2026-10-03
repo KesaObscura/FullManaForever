@@ -99,13 +99,27 @@ function methods:RegisterEvent(e)
   self.events[e] = true
   M.eventFrames[self] = true
 end
-function methods:UnregisterEvent(e) if self.events then self.events[e] = nil end end
-function methods:UnregisterAllEvents() self.events = {} end
+-- like the real API: the frame only hears these units
+function methods:RegisterUnitEvent(e, ...)
+  self:RegisterEvent(e)
+  self.unitFilter = self.unitFilter or {}
+  local units = {}
+  for i = 1, select("#", ...) do units[select(i, ...)] = true end
+  self.unitFilter[e] = units
+end
+function methods:UnregisterEvent(e)
+  if self.events then self.events[e] = nil end
+  if self.unitFilter then self.unitFilter[e] = nil end
+end
+function methods:UnregisterAllEvents() self.events, self.unitFilter = {}, nil end
 
 M.eventFrames = {}
 function M.Fire(e, ...)
   for f in pairs(M.eventFrames) do
-    if f.events and f.events[e] and f.scripts.OnEvent then f.scripts.OnEvent(f, e, ...) end
+    local units = f.unitFilter and f.unitFilter[e]
+    if f.events and f.events[e] and f.scripts.OnEvent and (not units or units[(...)]) then
+      f.scripts.OnEvent(f, e, ...)
+    end
   end
 end
 
@@ -198,8 +212,8 @@ function M.reset(opts)
   _G.C_Container = { GetItemCooldown = function(id)
     count("GetItemCooldown")
     local cd = S.cooldowns[id]
-    if cd then return cd[1], cd[2] end
-    return 0, 0
+    if cd then return cd[1], cd[2], cd[3] == nil and 1 or cd[3] end
+    return 0, 0, 1
   end }
   _G.GetTime = function() return 100 end
   _G.InCombatLockdown = function() return S.combat end

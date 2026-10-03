@@ -254,3 +254,37 @@ test("options: text size of the rule's seconds and of the regen can be changed",
   eq(b.regenBox.scale, 0.9, "regen not resized")
   eq(sizes[1].value.text, "110%")
 end)
+
+test("options: + on a bar shorter than an icon grows it instead of going to auto", function()
+  local ns = M.load({ iconSize = 96, barLength = 60 })
+  ns.ToggleOptions(true)
+  local s = steppers(ns)[ns.L.optBarLen .. ":"]
+  s.plus.scripts.OnClick(s.plus)
+  eq(ns.db.barLength, 100, "+ from 60 with 96 px icons")
+end)
+
+test("options: an unknown saved colour or mana text still shows a choice", function()
+  local ns = M.load({ barColor = "gone", manaText = "gone" })
+  ns.ToggleOptions(true)
+  local texts = {}
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries then texts[w.entries[1].value] = w.text end
+  end
+  eq(texts.blue, ns.L.col_blue, "colour dropdown")
+  eq(texts.number, ns.L.mtNumber, "mana text dropdown")
+end)
+
+test("item list: equipped gear is recognised the same way as by the icons", function()
+  local ns = M.load(nil)
+  _G.C_Item.IsEquippedItem = nil
+  _G.IsEquippedItem = function() return true end
+  ns.ToggleLibrary(true)
+  ns.RebuildLibrary()
+  local rows = M.upvalue(ns.RebuildLibrary, "rows") or M.upvalue(M.upvalue(ns.RebuildLibrary, "BuildContent"), "rows")
+  local found
+  for _, r in ipairs(rows) do
+    if r.group and r.group.equipped and r.frame.shown then found = r.owned.text end
+  end
+  _G.IsEquippedItem = nil
+  eq(found, "|cff66ff66" .. ns.L.libEquipped .. "|r", "gear text")
+end)

@@ -17,7 +17,7 @@ local AMOUNT_X, AMOUNT_W = 295, 84 -- the "up to N" column
 
 local function OwnedText(it, group)
   if group.equipped then
-    local eq = C_Item.IsEquippedItem and C_Item.IsEquippedItem(it.id)
+    local eq = ns.IsEquipped(it.id)
     if eq then return "|cff66ff66" .. L.libEquipped .. "|r" end
     return "|cff888888" .. L.libNotEquipped .. "|r"
   end

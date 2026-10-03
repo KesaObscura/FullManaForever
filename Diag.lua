@@ -195,7 +195,10 @@ end
 
 local function Emit(text, chatToo)
   ToLog(text)
-  if probe.running and chatToo ~= false then ToChat(Stamp() .. " " .. text) end
+  -- chat lines count from the start of the probe, even when the log was already running
+  if probe.running and chatToo ~= false then
+    ToChat(("%.1f %s"):format(GetTime() - probe.start, text))
+  end
 end
 
 local EVENTS = { "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_CHANNEL_START", "UNIT_POWER_UPDATE",
@@ -227,14 +230,11 @@ local function OnEvent(_, event, unit, arg2, arg3)
   end
 end
 
-local function OnUpdate()
-  local now = GetTime()
-  if now < clock.next then return end
-  clock.next = now + 2
+local function Sample(now)
   local regen = RegenText()
   -- chat: every 2 s; log: on change, or every 10 s with the mana event count
-  if probe.running and now - clock.start > 1 then
-    ToChat(("%.0f s combat=%s mana events=%d %s"):format(now - clock.start, tostring(InCombatLockdown()),
+  if probe.running and now - probe.start > 1 then
+    ToChat(("%.0f s combat=%s mana events=%d %s"):format(now - probe.start, tostring(InCombatLockdown()),
       clock.power, regen))
   end
   if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
@@ -242,6 +242,14 @@ local function OnUpdate()
       clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0, RecentCosts()))
     clock.lastRegen, clock.lastSample = regen, now
   end
+end
+
+-- the sampling is guarded on its own: a surprise there must not keep the probe running
+local function OnUpdate()
+  local now = GetTime()
+  if now < clock.next then return end
+  clock.next = now + 2
+  pcall(Sample, now)
   clock.power = 0
   if probe.running and now - probe.start >= 30 then
     probe.running = false
@@ -257,11 +265,17 @@ local function Start()
   if frame:GetScript("OnUpdate") then return end
   clock.start, clock.next, clock.power, clock.lastRegen, clock.lastAura, clock.lastSample =
     GetTime(), 0, 0, nil, nil, GetTime()
-  for _, e in ipairs(EVENTS) do pcall(frame.RegisterEvent, frame, e) end
+  for _, e in ipairs(EVENTS) do
+    if e:find("^UNIT_") and frame.RegisterUnitEvent then
+      pcall(frame.RegisterUnitEvent, frame, e, "player")
+    else
+      pcall(frame.RegisterEvent, frame, e)
+    end
+  end
   -- a diagnostic must never break the game UI: any surprise (a secret where we expect a
   -- plain value) is swallowed
   frame:SetScript("OnEvent", function(...) pcall(OnEvent, ...) end)
-  frame:SetScript("OnUpdate", function(...) pcall(OnUpdate, ...) end)
+  frame:SetScript("OnUpdate", OnUpdate)
 end
 
 function ns.Probe5SR()
@@ -275,7 +289,9 @@ end
 
 local function BeginSession()
   Start()
-  log.lines[#log.lines + 1] = ("---- session %s ----"):format(date and date("%Y-%m-%d %H:%M") or "?")
+  if #log.lines < MAX_LINES then
+    log.lines[#log.lines + 1] = ("---- session %s ----"):format(date and date("%Y-%m-%d %H:%M") or "?")
+  end
   ToLog(HeaderText())
   ToLog(AuraText())
 end
@@ -400,16 +416,22 @@ function ns.Scan()
   if not log then ns.Print("log not ready yet") return end
   if InCombatLockdown() then ns.Print("scan: not in combat, please") return end
   local lines = log.lines
+  local dropped = 0
   local function add(text)
-    if #lines < MAX_LINES then lines[#lines + 1] = "scan " .. text end
+    if #lines < MAX_LINES then lines[#lines + 1] = "scan " .. text else dropped = dropped + 1 end
   end
-  lines[#lines + 1] = ("---- scan %s ----"):format(date and date("%Y-%m-%d %H:%M") or "?")
+  if #lines < MAX_LINES then
+    lines[#lines + 1] = ("---- scan %s ----"):format(date and date("%Y-%m-%d %H:%M") or "?")
+  end
   add(HeaderText())
   local counts = {}
   for _, part in ipairs({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems } }) do
     local ok, n = pcall(part[2], add)
     counts[#counts + 1] = part[1] .. "=" .. (ok and tostring(n) or ("error " .. tostring(n):sub(1, 80)))
     if not ok then add(part[1] .. " error: " .. tostring(n):sub(1, 200)) end
+  end
+  if dropped > 0 then
+    ns.Print(("log full: %d scan lines dropped. /fmf log clear, then /fmf scan again."):format(dropped))
   end
   ns.Print(("scan done: %s. /reload, then send WTF\\Account\\<account>\\SavedVariables\\FullManaForever.lua")
     :format(table.concat(counts, " ")))
@@ -418,6 +440,10 @@ end
 function ns.LogCommand(arg)
   if not log then ns.Print("log not ready yet") return end
   if arg == "on" then
+    if #log.lines >= MAX_LINES then
+      ns.Print(("log full (%d lines). /fmf log clear first."):format(#log.lines))
+      return
+    end
     if not log.on then log.on = true; BeginSession() end
     ns.Print("log ON. Play 10-20 minutes with fights, then /fmf log off and /reload."
       .. " File: WTF\\Account\\<account>\\SavedVariables\\FullManaForever.lua")

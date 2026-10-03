@@ -68,6 +68,8 @@ otherwise the game does not load it.
 | `/fmf item clear` | remove all own items |
 | `/fmf probe` | print API status for bug reports |
 | `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen) for a bug report; `/fmf log clear` empties it |
+| `/fmf probe 5sr` | 30 seconds of casts and regen in the chat, for bug reports |
+| `/fmf scan` | write your spells, talents and items with a "Use:" effect into the log, for bug reports |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
 | `/fmf reset` | reset the position |

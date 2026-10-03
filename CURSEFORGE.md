@@ -47,6 +47,7 @@ In Forever your current mana is a *secret value*: addons cannot read it. Full Ma
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
 | `/fmf probe` | print API status for bug reports |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
+| `/fmf scan` | write your spells, talents and use items into the log, for a bug report |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap.
 
