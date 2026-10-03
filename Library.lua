@@ -21,6 +21,9 @@ local function OwnedText(it, group)
     if eq then return "|cff66ff66" .. L.libEquipped .. "|r" end
     return "|cff888888" .. L.libNotEquipped .. "|r"
   end
+  -- too high for you: say why the addon never suggests it
+  local need = ns.LevelTooLow(it)
+  if need then return "|cffff5555" .. L.libLevel:format(need) .. "|r" end
   local n = C_Item.GetItemCount(it.id)
   if issecretvalue and issecretvalue(n) then return "" end
   if n and n > 0 then return ("|cff66ff66x%d|r"):format(n) end

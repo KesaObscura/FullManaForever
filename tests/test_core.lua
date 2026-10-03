@@ -244,3 +244,43 @@ test("options: reset size button resets the sizes", function()
   btn.scripts.OnClick(btn)
   eq(ns.db.iconSize, 44)
 end)
+
+-- level requirement -------------------------------------------------------------
+-- level 16: Lesser Mana Potion (14) is fine, Mana Potion (22) and Greater (31) are not
+local LOW = { level = 16, minLevel = { [3385] = 14, [3827] = 22, [6149] = 31 },
+  bags = { [3385] = 2, [3827] = 2, [6149] = 2 } }
+
+test("items above your level are never suggested", function()
+  local ns = M.load(nil, LOW)
+  M.state.manaPct = 0.05; M.tick()  -- low enough for any potion
+  local vis, l = slotVisible(ns, 1)
+  ok(vis, "no potion shown")
+  eq(l.itemID, 3385, "suggested item")
+  for _, layer in ipairs(buttons(ns)[1].layers) do
+    ok(not (layer.shown and (layer.itemID == 3827 or layer.itemID == 6149)), "too-high potion in a layer")
+  end
+end)
+
+test("strongest only also skips items above your level", function()
+  local ns = M.load({ pickMode = "strongest" }, LOW)
+  M.state.manaPct = 0.05; M.tick()
+  local vis, l = slotVisible(ns, 1)
+  ok(vis, "no potion shown"); eq(l.itemID, 3385)
+  local item = ns.GetStatus(1)
+  eq(item.id, 3385, "status names a potion you cannot drink")
+end)
+
+test("after a level-up the stronger potion comes back", function()
+  local ns = M.load(nil, LOW)
+  M.state.level = 31
+  M.state.manaPct = 0.05; M.tick()
+  local _, l = slotVisible(ns, 1)
+  eq(l.itemID, 6149)
+end)
+
+test("an item the game has not loaded yet is not hidden", function()
+  local ns = M.load(nil, { level = 16, uncached = { [3827] = true }, bags = { [3827] = 2 } })
+  M.state.manaPct = 0.05; M.tick()
+  local vis, l = slotVisible(ns, 1)
+  ok(vis, "unknown item hidden"); eq(l.itemID, 3827)
+end)

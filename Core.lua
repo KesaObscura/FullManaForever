@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.6.9"
+ns.VERSION = "0.6.10"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -179,6 +179,48 @@ local function InBattleground()
 end
 
 ------------------------------------------------------------------------
+-- level requirement: an item you cannot use yet is never suggested.
+-- The required level comes from the game's item data (the "Requires Level" line);
+-- while the game has not loaded an item yet, it is not hidden.
+------------------------------------------------------------------------
+local reqLevel, reqAsked = {}, {} -- [itemID] = required level (0 = none) / load requested
+local playerLevel                 -- read once per tick; nil = unknown -> no level filter
+
+function ns.RequiredLevel(id)
+  local v = reqLevel[id]
+  if v ~= nil then return v end
+  local info = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+  if not info then reqLevel[id] = 0 return 0 end
+  local ok, name, _, _, _, minLevel = pcall(info, id)
+  if ok and name and type(minLevel) == "number" and not IsSecret(minLevel) then
+    reqLevel[id] = minLevel
+    return minLevel
+  end
+  if not reqAsked[id] and C_Item and C_Item.RequestLoadItemDataByID then
+    reqAsked[id] = true
+    pcall(C_Item.RequestLoadItemDataByID, id)
+  end
+end
+
+local function ReadPlayerLevel()
+  local ok, lvl = pcall(UnitLevel, "player")
+  if ok and type(lvl) == "number" and not IsSecret(lvl) and lvl > 0 then return lvl end
+end
+
+-- the level this item still needs, or nil when you can use it (or nothing is known)
+function ns.LevelTooLow(it)
+  local lvl = playerLevel or ReadPlayerLevel()
+  if not lvl then return nil end
+  local need = ns.RequiredLevel(it.id)
+  if need and need > lvl then return need end
+end
+
+-- skipped everywhere: battleground-only items outside battlegrounds, items above your level
+local function Usable(it, bg)
+  return (bg or not it.pvp) and not ns.LevelTooLow(it)
+end
+
+------------------------------------------------------------------------
 -- item state (readable in combat, verified in the beta)
 ------------------------------------------------------------------------
 local CooldownState
@@ -203,7 +245,7 @@ local function OwnedItem(i)
   local bg = InBattleground()
   local preferReady, fallback, fallbackN = ns.GROUPS[i].preferReady
   for _, it in ipairs(lists[i]) do
-    if bg or not it.pvp then -- battleground-only items are skipped everywhere else
+    if Usable(it, bg) then
       local n = C_Item.GetItemCount(it.id)
       if IsSecret(n) then
         -- never seen in Forever; assume the item is there rather than hide the group
@@ -274,7 +316,7 @@ local function BandCandidates(i)
   wipe(res); wipe(all); wipe(seen)
   local bg = InBattleground()
   for idx, it in ipairs(lists[i]) do
-    if bg or not it.pvp then
+    if Usable(it, bg) then
       local n = C_Item.GetItemCount(it.id)
       if not IsSecret(n) and n and n > 0 and CooldownState(it.id) then
         local e = pool[#all + 1] or {}
@@ -950,6 +992,7 @@ local function Update()
   end
   local maxHP = UnitHealthMax("player")
   groupOK = GroupAllowed()
+  playerLevel = ReadPlayerLevel()
   -- one broken group (odd item, API change) must not blank the others
   for i, b in ipairs(buttons) do
     local ok, err = pcall(UpdateButton, i, b, maxMana, maxHP)

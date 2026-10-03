@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.6.10**
+
+- Fixed: items above your level (for example Mana Potion before level 22) are no longer suggested; the strongest potion you can actually drink is shown instead
+- Item list: items above your level say which level they need
+
 **Full Mana Forever 0.6.9**
 
 - New: "Reset size" button (under the size settings) and `/fmf reset size`: icon size, icon spacing, bar thickness and bar length go back to the defaults (position, colors and layout stay)
