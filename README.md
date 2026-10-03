@@ -63,7 +63,7 @@ otherwise the game does not load it.
 | `/fmf items` | open the item list |
 | `/fmf hold` | hold / release potion suggestions |
 | `/fmf unlock` / `/fmf lock` | move the icons |
-| `/fmf test` | show icons whenever an item is ready, ignoring mana |
+| `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |
 | `/fmf item <id> <amount> [potion\|rune\|gem\|herb\|gear]` | add your own item |
 | `/fmf item clear` | remove all own items |
 | `/fmf probe` | print API status for bug reports |

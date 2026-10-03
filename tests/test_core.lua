@@ -58,7 +58,7 @@ end)
 test("auto bar length does not depend on lit icons or switched-off groups", function()
   local ns = M.load({ vertical = true, iconSize = 48 }, { bags = POT })
   M.tick(); local h1 = bar(ns).h
-  ns.db.enabled.rune = false; ns.db.test = true; M.tick()
+  ns.db.enabled.rune = false; ns.db.locked = false; M.tick()
   eq(bar(ns).h, h1)
 end)
 
@@ -473,17 +473,17 @@ test("bar markers stay inside the bar; the main one is thicker", function()
   eq(ticks[2].front.h, 14); eq(ticks[2].front.w, 2)
 end)
 
-test("test mode shows the five-second rule without casting", function()
-  local ns = M.load({ test = true }, { bags = POT })
+test("the unlocked frame (test mode) shows the five-second rule without casting", function()
+  local ns = M.load({ locked = false }, { bags = POT })
   regenApis(14.75, 0)
   M.tick()
   ok(bar(ns).fsr.shown, "strip hidden in test mode")
   ok(bar(ns).fsrText.shown, "seconds hidden in test mode")
   eq(bar(ns).regen.text, "14.8/s", "regen shows the real rate")
-  ns.db.test, ns.db.fsr = false, true
+  ns.db.locked, ns.db.fsr = true, true
   M.tick()
-  ok(not bar(ns).fsr.shown, "strip still shown after test mode")
-  ns.db.test, ns.db.fsr = true, false
+  ok(not bar(ns).fsr.shown, "strip still shown after locking")
+  ns.db.locked, ns.db.fsr = false, false
   M.tick()
   ok(not bar(ns).fsr.shown, "strip shown although switched off")
   noRegenApis()
@@ -527,4 +527,14 @@ test("five-second seconds never cover the mana numbers or the frame label", func
   ok(label.points[1][5] >= 8 + 28, "column: label not above the seconds: " .. tostring(label.points[1][5]))
   ns.db.fsr = false; ns.Layout(true)
   eq(label.points[1][5], 8, "label offset without the rule")
+end)
+
+test("/fmf test is the same switch as unlocking; an old test mode is switched off", function()
+  local ns = M.load({ test = true, dbVersion = 5 })
+  eq(ns.db.test, false, "old test mode left on")
+  eq(ns.db.locked, true)
+  SlashCmdList.FULLMANAFOREVER("test")
+  eq(ns.db.locked, false, "/fmf test did not unlock")
+  SlashCmdList.FULLMANAFOREVER("test")
+  eq(ns.db.locked, true)
 end)

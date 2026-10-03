@@ -42,7 +42,7 @@ In Forever your current mana is a *secret value*: addons cannot read it. Full Ma
 | `/fmf items` | open the item list |
 | `/fmf hold` | hold / release potion suggestions |
 | `/fmf unlock` / `/fmf lock` | move the icons |
-| `/fmf test` | show icons whenever an item is ready (ignores mana) |
+| `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |
 | `/fmf reset` | move the icons back to the default position |
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
 | `/fmf probe` | print API status for bug reports |

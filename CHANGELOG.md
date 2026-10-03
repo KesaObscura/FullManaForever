@@ -4,6 +4,7 @@
 
 - Icons in a row: the five-second seconds sit left of the bar, so they no longer cover the mana numbers at large text sizes
 - Icons in a column: with the frame unlocked, the "Full Mana Forever" label moves above the five-second seconds
+- Settings: "Lock frame" and "Test mode" are one switch now, "Unlock frame (test mode)": it makes the frame movable and shows everything that is switched on. `/fmf test` does the same as `/fmf unlock`
 - New for bug reports: `/fmf scan` writes your spells, talents and items with a "Use:" effect into the log; the log also records spell cooldowns and current mana costs
 
 **Full Mana Forever 0.7.0**

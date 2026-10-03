@@ -1211,7 +1211,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
   elseif cmd == "lock" then
     db.locked = true; ns.ApplyLock(); Print(L.locked)
   elseif cmd == "test" then
-    db.test = not db.test; Print(db.test and L.testOn or L.testOff)
+    -- test mode and the unlocked frame are one thing now
+    db.locked = not db.locked; ns.ApplyLock(); Print(db.locked and L.locked or L.unlocked)
   elseif cmd == "item" and args[2] == "clear" then
     wipe(db.custom); ns.RebuildLists(); RefreshLibrary(); Print(L.itemClear)
   elseif cmd == "item" then
@@ -1327,6 +1328,12 @@ local function InitDB()
     db.cleanMacros = true
     db.showAdvanced = nil
     db.dbVersion = 5
+  end
+  if db.dbVersion < 6 then
+    -- 0.7.1: the separate test mode is gone (the unlocked frame shows everything); a test
+    -- mode left on would have no switch to turn it off
+    db.test = false
+    db.dbVersion = 6
   end
   ns.SetLanguage(db.language)
   ns.db = db

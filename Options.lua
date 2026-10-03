@@ -376,9 +376,9 @@ Build = function()
   local c = left
   local col = c.frame
   c.Row(Header(col, L.optDisplay), PAD, 24)
-  c.Row(Check(col, L.optLock, function() return db.locked end, function(v) db.locked = v; ns.ApplyLock() end,
-    L.tipLock))
-  c.Row(Check(col, L.optTest, function() return db.test end, function(v) db.test = v end, L.tipTest))
+  -- one switch for placing: unlocked = movable and showing everything that is switched on
+  c.Row(Check(col, L.optUnlock, function() return not db.locked end,
+    function(v) db.locked = not v; ns.ApplyLock() end, L.tipUnlock))
   local langLabel = Label(col, L.optLang .. ":")
   local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
   for _, l in ipairs(ns.LANGUAGES) do entries[#entries + 1] = { value = l.code, text = l.name } end
