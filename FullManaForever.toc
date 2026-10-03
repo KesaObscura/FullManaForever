@@ -1,10 +1,10 @@
 ## Interface: 16001
 ## Title: Full Mana Forever
 ## Notes: Shows a mana potion, rune or mana item when it is ready and your missing mana is big enough (by default: nothing is wasted).
-## Version: 0.6.10
+## Version: 0.7.0
 ## IconTexture: Interface\Icons\INV_Potion_76
 ## AddonCompartmentFunc: FullManaForever_OnCompartmentClick
-## SavedVariables: FullManaForeverDB
+## SavedVariables: FullManaForeverDB, FullManaForeverLog
 ## Author: KesaObscura
 ## X-License: MIT
 ## X-Website: https://github.com/KesaObscura/FullManaForever
@@ -12,6 +12,8 @@
 
 Locale.lua
 Data.lua
+Regen.lua
 Core.lua
 Options.lua
 Library.lua
+Diag.lua

@@ -1,5 +1,15 @@
 # Changelog
 
+**Full Mana Forever 0.7.0**
+
+- New: five-second rule on the mana bar. After a spell that costs mana, a thin gold strip and the seconds at the end of the bar count down the 5 seconds of reduced regen. Wands, potions and food do not start it.
+- New: the mana regen running right now, per second, under the mana numbers ("14.8/s"). During the five-second rule it turns gold and shows what still runs while you cast: 0 without talents, more with talents, Innervate or gear. It also works in combat.
+- New: mana text like the game's "Status Text": numeric value, percentage, both or none.
+- New: `/fmf log on` / `off` records what the game reports (casts, mana costs, regen) for bug reports.
+- The five-second rule and the regen can be switched off under "Mana bar with markers", and both have their own text size (60–200 %). "Reset size" resets these text sizes too.
+- Test mode and an unlocked frame show the five-second rule too (it runs in a loop), so it can be seen and placed.
+- Mana bar markers stay inside the bar: the one where the icon lights up is thick and bright, the others thin (before, it stuck out at the sides).
+
 **Full Mana Forever 0.6.10**
 
 - Fixed: items above your level (for example Mana Potion before level 22) are no longer suggested; the strongest potion you can actually drink is shown instead

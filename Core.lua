@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.6.10"
+ns.VERSION = "0.7.0"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -29,6 +29,11 @@ local DEFAULTS = {
   pickMode   = "fit",   -- "fit": strongest item that does not overflow / "strongest": always the best
   thresholdMode = "max", -- "max": no waste / "avg": more drinks per fight
   showBar    = true,
+  fsr        = true,    -- five-second rule countdown on the mana bar
+  regenText  = true,    -- current mana regen next to the mana bar
+  manaText   = "number", -- mana numbers on the bar: "number" / "percent" / "both" / "none"
+  fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
+  regenScale = 1,       -- text size of the regen number
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
@@ -508,10 +513,17 @@ local function Border(owner, region, layer, r, g, b, a, out)
   return t
 end
 
-local function OutlineFont(fs, size)
+-- outlined text. The game's own "...Outline" font objects keep the whole font family
+-- (Latin, Cyrillic, Korean, Chinese). Setting a font file by hand keeps only that one file:
+-- fine for digits, but letters of other alphabets turn into boxes, so text with letters
+-- (lettersToo) is never switched to a single file.
+local function OutlineFont(fs, template, lettersToo)
+  local obj = template and _G[template .. "Outline"]
+  if obj then fs:SetFontObject(obj) return end
+  if lettersToo then return end
   pcall(function()
     local file, cur = fs:GetFont()
-    if file then fs:SetFont(file, size or cur, "OUTLINE") end
+    if file then fs:SetFont(file, cur, "OUTLINE") end
   end)
 end
 
@@ -537,7 +549,7 @@ local function CreateLayer(parent)
   l.inner = Border(l, l, "OVERLAY", 1, 1, 1, 0.12, 0)
   l.count = l:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
   l.count:SetPoint("BOTTOMRIGHT", -2, 2)
-  OutlineFont(l.count)
+  OutlineFont(l.count, "NumberFontNormal")
   l.glow = l:CreateTexture(nil, "OVERLAY")
   l.glow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
   l.glow:SetBlendMode("ADD")
@@ -603,7 +615,28 @@ local function CreateBar()
     end
   end
   bar.text = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  OutlineFont(bar.text)
+  OutlineFont(bar.text, "GameFontHighlightSmall")
+  -- five-second rule: a thin gold strip along the bar that runs out in 5 s
+  bar.fsr = CreateFrame("StatusBar", nil, top)
+  bar.fsr:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+  bar.fsr:SetStatusBarColor(1, 0.82, 0.2)
+  bar.fsr:SetMinMaxValues(0, ns.FSR_SECONDS or 5)
+  bar.fsr:Hide()
+  -- texts that can be resized live in their own small frames: scaling the frame changes
+  -- the text size and keeps the game's font family (a font file set by hand would lose
+  -- other alphabets)
+  bar.fsrBox = CreateFrame("Frame", nil, top)
+  bar.fsrBox:SetSize(1, 1)
+  bar.regenBox = CreateFrame("Frame", nil, top)
+  bar.regenBox:SetSize(1, 1)
+  -- seconds left of the rule, small and gold at the end of the bar
+  bar.fsrText = bar.fsrBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.fsrText, "GameFontHighlightSmall")
+  bar.fsrText:SetTextColor(1, 0.82, 0.2)
+  bar.fsrText:Hide()
+  -- current regen ("14.8/s"), under the mana numbers or right of the bar
+  bar.regen = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.regen, "GameFontHighlightSmall", true) -- has letters ("/с", "/秒")
   bar:Hide()
 end
 
@@ -626,10 +659,37 @@ local function PaintBar()
 end
 
 -- "412 / 664" (vertical: two lines): the secret current value goes straight into the text
+-- mana in percent, 0..100. The value is secret, and x100 is not allowed on it; the game's
+-- own curve CurveConstants.ScaleTo100 does the scaling inside the engine. Without it the
+-- percentage cannot be shown (nil).
+local function ManaPercent()
+  local curve = CurveConstants and CurveConstants.ScaleTo100
+  if not curve then return nil end
+  for _, v in ipairs({ powerVariant or 1, (powerVariant == 2) and 1 or 2 }) do
+    local ok, r = TryPower(v, curve)
+    if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
+  end
+end
+ns.ManaPercent = ManaPercent
+
+-- mana numbers like the game's "Status Text": number / percentage / both / none.
+-- Secret values only go into string.format, never into arithmetic or comparisons.
 local textFails = 0
 local function SetBarText(maxMana)
   if textFails > 20 then return end -- given up until the next loading screen
-  local ok, text = pcall(string.format, "%d / %d", UnitPower("player", MANA), maxMana)
+  local mode = db.manaText or "number"
+  if mode == "none" then bar.text:SetText("") return end
+  local pct = (mode == "percent" or mode == "both") and ManaPercent() or nil
+  local ok, text
+  if mode == "percent" and pct ~= nil then
+    ok, text = pcall(string.format, "%.0f%%", pct)
+  elseif mode == "both" and pct ~= nil then
+    -- the column has little room beside the bar: two lines there
+    ok, text = pcall(string.format, db.vertical and "%.0f%%\n%d / %d" or "%.0f%%   %d / %d",
+      pct, UnitPower("player", MANA), maxMana)
+  else
+    ok, text = pcall(string.format, "%d / %d", UnitPower("player", MANA), maxMana)
+  end
   if ok then
     textFails = 0
     bar.text:SetText(text)
@@ -712,6 +772,19 @@ function ns.PositionBar()
     end
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+    bar.regenBox:ClearAllPoints()
+    bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
+    bar.regen:ClearAllPoints()
+    bar.regen:SetPoint("TOP", bar.regenBox, "TOP", 0, 0)
+    bar.fsr:ClearAllPoints()
+    bar.fsr:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+    bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+    bar.fsr:SetWidth(3)
+    bar.fsr:SetOrientation("VERTICAL")
+    bar.fsrBox:ClearAllPoints()
+    bar.fsrBox:SetPoint("BOTTOM", bar, "TOP", 0, 6)
+    bar.fsrText:ClearAllPoints()
+    bar.fsrText:SetPoint("BOTTOM", bar.fsrBox, "BOTTOM", 0, 0)
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("BOTTOMLEFT")
     bar.gloss:SetWidth(math.max(1, (db.barThickness or 14) * 0.45))
@@ -724,10 +797,25 @@ function ns.PositionBar()
       anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     end
     bar.text:SetPoint("CENTER", bar, "CENTER", 0, 0)
+    bar.regenBox:ClearAllPoints()
+    bar.regenBox:SetPoint("LEFT", bar, "RIGHT", 6, 0)
+    bar.regen:ClearAllPoints()
+    bar.regen:SetPoint("LEFT", bar.regenBox, "LEFT", 0, 0)
+    bar.fsr:ClearAllPoints()
+    bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+    bar.fsr:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
+    bar.fsr:SetHeight(3)
+    bar.fsr:SetOrientation("HORIZONTAL")
+    bar.fsrBox:ClearAllPoints()
+    bar.fsrBox:SetPoint("RIGHT", bar, "RIGHT", -3, 1)
+    bar.fsrText:ClearAllPoints()
+    bar.fsrText:SetPoint("RIGHT", bar.fsrBox, "RIGHT", 0, 0)
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
   end
+  bar.fsrBox:SetScale(db.fsrScale or 1)
+  bar.regenBox:SetScale(db.regenScale or 1)
   PaintBar()
 end
 
@@ -764,8 +852,8 @@ function ns.ResetPosition()
   PinTopLeft()
 end
 
--- icon size, spacing and bar thickness/length back to the defaults (position stays)
-local SIZE_KEYS = { "iconSize", "iconGap", "barThickness", "barLength" }
+-- icon size, spacing, bar thickness/length and bar text sizes back to the defaults (position stays)
+local SIZE_KEYS = { "iconSize", "iconGap", "barThickness", "barLength", "fsrScale", "regenScale" }
 function ns.ResetSize()
   for _, k in ipairs(SIZE_KEYS) do db[k] = DEFAULTS[k] end
   ns.Layout(true)
@@ -918,21 +1006,58 @@ end
 local function PlaceTick(t, thr, len, thick, long, vertical)
   if t.thr ~= thr or t.len ~= len or t.long ~= long or t.vertical ~= vertical or t.thick ~= thick then
     t.thr, t.len, t.long, t.vertical, t.thick = thr, len, long, vertical, thick
-    local size = long and thick + 6 or thick
+    -- every mark stays inside the bar (nothing sticks out past the five-second strip);
+    -- the mark where the icon lights up is thicker and fully bright, the others thin and dimmer
+    local line = long and 3 or 2
     t.front:ClearAllPoints()
     if vertical then
-      t.front:SetSize(size, 2)
+      t.front:SetSize(thick, line)
       t.front:SetPoint("CENTER", bar, "BOTTOM", 0, len * thr)
     else
-      t.front:SetSize(2, size)
+      t.front:SetSize(line, thick)
       t.front:SetPoint("CENTER", bar, "LEFT", len * thr, 0)
     end
+    t.front:SetAlpha(long and 1 or 0.65)
   end
   if not t.front:IsShown() then t.front:Show(); t.back:Show() end
 end
 
 local function HideTick(t)
   if t.front:IsShown() then t.front:Hide(); t.back:Hide() end
+end
+
+-- five-second rule: strip and seconds every tick; regen text twice a second (it builds a
+-- new string each time) and at once when the rule starts or ends
+local regenNext, regenInRule = 0, nil
+local function UpdateRegen()
+  local real = db.fsr and ns.FsrLeft and ns.FsrLeft() or 0
+  local left = real
+  -- test mode and unlocked frame preview everything that is switched on: the rule runs
+  -- in a loop so its strip and seconds can be seen and placed
+  if db.fsr and real == 0 and (db.test or not db.locked) then
+    local cycle = ns.FSR_SECONDS or 5
+    left = cycle - (GetTime() % cycle)
+  end
+  if left > 0 then
+    bar.fsr:SetValue(left)
+    bar.fsrText:SetText(("%.1f"):format(left))
+    if not bar.fsr:IsShown() then bar.fsr:Show(); bar.fsrText:Show() end
+  elseif bar.fsr:IsShown() then
+    bar.fsr:Hide(); bar.fsrText:Hide()
+  end
+  if not db.regenText or not ns.RegenText then bar.regen:Hide() return end
+  local now, inRule = GetTime(), real > 0
+  if now < regenNext and inRule == regenInRule then return end
+  regenNext, regenInRule = now + 0.5, inRule
+  local text = ns.RegenText()
+  if text then
+    bar.regen:SetText(text)
+    -- reduced regen during the rule: gold like the strip; normal regen: light blue
+    if inRule then bar.regen:SetTextColor(1, 0.82, 0.2) else bar.regen:SetTextColor(0.6, 0.85, 1) end
+    bar.regen:Show()
+  else
+    bar.regen:Hide()
+  end
 end
 
 local function UpdateBar(maxMana)
@@ -948,6 +1073,7 @@ local function UpdateBar(maxMana)
     WarnOnce("barvalue", L.warnPower)
   end
   SetBarText(maxMana)
+  UpdateRegen()
   local vertical = db.vertical and true or false
   local len = (vertical and bar:GetHeight() or bar:GetWidth()) or 0
   local thick = db.barThickness or 14
@@ -956,7 +1082,7 @@ local function UpdateBar(maxMana)
     local used = 0
     if db.enabled[group.key] and ns.ForMyClass(group) then
       if db.pickMode == "fit" and CanBand(group) then
-        -- weakest first: long mark where the icon lights up, short marks where a
+        -- weakest first: thick mark where the icon lights up, thin marks where a
         -- stronger item becomes the best fit
         local c = BandCandidates(i)
         for k = #c, 1, -1 do
@@ -1088,6 +1214,10 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
   elseif cmd == "item" then
     if not args[2] or not args[3] then Print(L.itemUsage) return end
     ns.AddCustom(args[2], args[3], args[4])
+  elseif cmd == "probe" and args[2] == "5sr" then
+    if ns.Probe5SR then ns.Probe5SR() end
+  elseif cmd == "log" then
+    if ns.LogCommand then ns.LogCommand(args[2]) end
   elseif cmd == "probe" then
     Probe()
   elseif cmd == "debug" then

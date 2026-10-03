@@ -32,7 +32,7 @@ test("every key used in the code exists, and every key is used", function()
   local _, strings = loadStrings()
   local en = strings.enUS
   local code = ""
-  for _, f in ipairs({ "Core.lua", "Options.lua", "Library.lua" }) do
+  for _, f in ipairs({ "Core.lua", "Options.lua", "Library.lua", "Regen.lua", "Diag.lua" }) do
     local h = assert(io.open(M.ROOT .. f)); code = code .. h:read("*a"); h:close()
   end
   for k in code:gmatch("L%.([%a_][%w_]*)") do ok(en[k], "missing key " .. k) end

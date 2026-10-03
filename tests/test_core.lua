@@ -220,12 +220,13 @@ test("known item added to another category stays in its own slot too", function(
 end)
 
 test("reset size restores icon and bar sizes, keeps position and other settings", function()
-  local ns = M.load({ iconSize = 80, iconGap = 20, barThickness = 30, barLength = 400,
+  local ns = M.load({ iconSize = 80, iconGap = 20, barThickness = 30, barLength = 400, fsrScale = 1.5,
     barColor = "teal", point = { "TOPLEFT", "UIParent", "BOTTOMLEFT", 100, 500 } }, { bags = POT })
   M.tick()
   SlashCmdList.FULLMANAFOREVER("reset size")
   M.tick()
   eq(ns.db.iconSize, 44); eq(ns.db.iconGap, 6); eq(ns.db.barThickness, 14); eq(ns.db.barLength, 0)
+  eq(ns.db.fsrScale, 1, "text size")
   eq(ns.db.barColor, "teal", "color")
   eq(ns.db.point[4], 100, "x"); eq(ns.db.point[5], 500, "y")
   eq(buttons(ns)[1].outer.w, 44, "icon width")
@@ -283,4 +284,207 @@ test("an item the game has not loaded yet is not hidden", function()
   M.state.manaPct = 0.05; M.tick()
   local vis, l = slotVisible(ns, 1)
   ok(vis, "unknown item hidden"); eq(l.itemID, 3827)
+end)
+
+local function diagApis()
+  _G.GetPowerRegen = function() return M.secret(3), 1 end
+  _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 50 } } end,
+    GetSpellName = function() return "Heal" end }
+  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return { name = "Innervate", spellId = 29166 } end end,
+    GetPlayerAuraBySpellID = function(id) if id == 15271 then return { spellId = 15271 } end end }
+end
+local function noDiagApis() _G.GetPowerRegen, _G.C_Spell, _G.C_UnitAuras = nil, nil, nil end
+local function diagFrame(ns) return M.upvalue(M.upvalue(ns.Probe5SR, "Start"), "frame") end
+
+test("/fmf probe 5sr reports casts, costs and regen, then stops", function()
+  local ns = M.load(nil)
+  diagApis()
+  SlashCmdList.FULLMANAFOREVER("probe 5sr")
+  local probe = M.upvalue(ns.Probe5SR, "probe")
+  ok(probe.running, "probe not running")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
+  local all = table.concat(M.printed, "\n")
+  ok(all:find("spell=2050 Heal", 1, true), "cast not printed")
+  ok(all:find("cost=50", 1, true), "cost not printed")
+  ok(all:find("base=SECRET casting=1", 1, true), "secret regen not marked")
+  ok(all:find("Innervate(29166)", 1, true), "buffs not printed")
+  local real = GetTime
+  _G.GetTime = function() return 131 end
+  local f = diagFrame(ns)
+  f.scripts.OnUpdate(f)
+  _G.GetTime = real
+  ok(not probe.running, "probe did not stop")
+  ok(not f.scripts.OnUpdate, "collector still running")
+  ok(table.concat(M.printed, "\n"):find("probe done", 1, true), "no done line")
+  eq(#M.warnings(), 0, "warnings")
+  noDiagApis()
+end)
+
+test("/fmf log records into the saved log, never secret contents", function()
+  local ns = M.load(nil)
+  diagApis()
+  SlashCmdList.FULLMANAFOREVER("log on")
+  M.Fire("PLAYER_REGEN_DISABLED")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
+  M.Fire("UNIT_AURA", "player")
+  local f = diagFrame(ns)
+  f.scripts.OnUpdate(f) -- one sample
+  SlashCmdList.FULLMANAFOREVER("log off")
+  local lines = FullManaForeverLog.lines
+  local all = table.concat(lines, "\n")
+  ok(all:find("---- session", 1, true), "no session header")
+  ok(all:find("combat start", 1, true), "combat not logged")
+  ok(all:find("spell=2050 Heal cost: type=0 cost=50", 1, true), "cast not logged")
+  ok(all:find("log off", 1, true), "off not logged")
+  ok(all:find("byID SpiritTap=yes Innervate=no", 1, true), "buffs by ID not logged")
+  ok(all:find("text=ok", 1, true), "secret text test not logged")
+  for _, l in ipairs(lines) do
+    eq(type(l), "string", "non-string line")
+    ok(not issecretvalue(l), "secret stored")
+  end
+  ok(not FullManaForeverLog.on, "still on")
+  noDiagApis()
+end)
+
+test("/fmf log keeps running after a reload until switched off", function()
+  M.reset()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("log on")
+  local saved = FullManaForeverLog
+  -- reload: same saved table comes back
+  ns = M.load(nil)
+  _G.FullManaForeverLog = saved
+  M.Fire("PLAYER_LOGIN")
+  ok(FullManaForeverLog.on, "log not on after reload")
+  ok(diagFrame(ns).scripts.OnUpdate, "collector not running after reload")
+  SlashCmdList.FULLMANAFOREVER("log clear")
+  eq(#FullManaForeverLog.lines, 0, "not cleared")
+end)
+
+-- five-second rule and regen on the mana bar (0.7.0) ----------------------------------
+local function regenApis(base, casting)
+  _G.GetPowerRegen = function() return base, casting end
+  _G.C_Spell = { GetSpellPowerCost = function(id)
+    if id == 5019 then return {} end                 -- wand: no cost
+    return { { type = 0, cost = 60 } }
+  end }
+end
+local function noRegenApis() _G.GetPowerRegen, _G.C_Spell = nil, nil end
+
+test("a spell that costs mana starts the five-second rule, a wand does not", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(14.75, 0)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 5019)
+  eq(ns.FsrLeft(), 0, "wand started the rule")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "target", "g", 598)
+  eq(ns.FsrLeft(), 0, "someone else's cast started the rule")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  eq(ns.FsrLeft(), 5, "smite did not start the rule")
+  M.tick()
+  ok(bar(ns).fsr.shown, "strip hidden during the rule")
+  eq(bar(ns).fsr.value, 5)
+  eq(bar(ns).regen.text, "0.0/s", "regen during the rule")
+  eq(bar(ns).fsrText.text, "5.0", "seconds at the end of the bar")
+  ok(bar(ns).fsrText.shown, "seconds hidden")
+  local real = GetTime
+  _G.GetTime = function() return 106 end
+  M.tick()
+  _G.GetTime = real
+  ok(not bar(ns).fsr.shown, "strip still shown after 5 s")
+  ok(not bar(ns).fsrText.shown, "seconds still shown after 5 s")
+  eq(bar(ns).regen.text, "14.8/s", "normal regen text")
+  noRegenApis()
+end)
+
+test("secret regen in combat is shown as text, per second", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(M.secret(14.75), M.secret(0))
+  M.tick()
+  eq(bar(ns).regen.text, "14.8/s")
+  noRegenApis()
+end)
+
+test("five-second rule and regen text can be switched off", function()
+  local ns = M.load({ fsr = false, regenText = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  ok(not bar(ns).fsr.shown, "strip shown while off")
+  ok(not bar(ns).regen.shown, "regen text shown while off")
+  noRegenApis()
+end)
+
+test("during the rule in combat the secret casting rate is shown", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(M.secret(23.25), M.secret(11.63))
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  eq(bar(ns).regen.text, "11.6/s")
+  noRegenApis()
+end)
+
+
+test("the regen unit is translated and sits right after the number", function()
+  local ns = M.load({ language = "ruRU" }, { bags = POT, locale = "ruRU" })
+  regenApis(M.secret(14.75), M.secret(0))
+  M.tick()
+  eq(bar(ns).regen.text, "14.8/с")
+  noRegenApis()
+end)
+
+-- mana text like the game's "Status Text" ------------------------------------------------
+local function withScale100(fn)
+  M.SCALE100 = {}
+  _G.CurveConstants = { ScaleTo100 = M.SCALE100 }
+  fn()
+  _G.CurveConstants, M.SCALE100 = nil, nil
+end
+
+test("mana text: number, percentage, both and none", function()
+  withScale100(function()
+    local ns = M.load({ manaText = "percent" }, { bags = POT })
+    M.state.manaPct = 0.89; M.tick()
+    eq(bar(ns).text.text, "89%")
+    ns.db.manaText = "both"; ns.db.vertical = false; M.tick()
+    eq(bar(ns).text.text, "89%   890 / 1000")
+    ns.db.vertical = true; M.tick()
+    eq(bar(ns).text.text, "89%\n890 / 1000", "column: two lines")
+    ns.db.manaText = "none"; M.tick()
+    eq(bar(ns).text.text, "")
+    ns.db.manaText = "number"; M.tick()
+    eq(bar(ns).text.text, "890 / 1000")
+  end)
+end)
+
+test("mana text: without the game's percent curve the number is shown", function()
+  local ns = M.load({ manaText = "percent" }, { bags = POT })
+  M.state.manaPct = 0.89; M.tick()
+  eq(bar(ns).text.text, "890 / 1000")
+end)
+
+test("bar markers stay inside the bar; the main one is thicker", function()
+  local ns = M.load({ vertical = false }, { bags = { [3385] = 2, [2455] = 2 } })
+  M.state.manaPct = 0.95; M.tick()
+  local ticks = bar(ns).ticks[1]
+  eq(ticks[1].front.h, 14, "main marker sticks out")
+  eq(ticks[1].front.w, 3, "main marker not thicker")
+  eq(ticks[1].front.alpha, 1)
+  ok(ticks[2].front.shown, "second marker missing")
+  eq(ticks[2].front.h, 14); eq(ticks[2].front.w, 2)
+end)
+
+test("test mode shows the five-second rule without casting", function()
+  local ns = M.load({ test = true }, { bags = POT })
+  regenApis(14.75, 0)
+  M.tick()
+  ok(bar(ns).fsr.shown, "strip hidden in test mode")
+  ok(bar(ns).fsrText.shown, "seconds hidden in test mode")
+  eq(bar(ns).regen.text, "14.8/s", "regen shows the real rate")
+  ns.db.test, ns.db.fsr = false, true
+  M.tick()
+  ok(not bar(ns).fsr.shown, "strip still shown after test mode")
+  ns.db.test, ns.db.fsr = true, false
+  M.tick()
+  ok(not bar(ns).fsr.shown, "strip shown although switched off")
+  noRegenApis()
 end)

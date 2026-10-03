@@ -30,9 +30,12 @@ when the icon lights up.
   *Strongest only*.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
   (30 % by default).
-- **Mana bar with markers**: a long marker where an icon lights up, short ones where a
+- **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.
+- **Five-second rule and mana regen** on the bar: a gold strip and the seconds after a spell
+  that costs mana, and the regen running right now ("14.8/s"), also in combat.
+- **Mana text** like the game's status text: number, percentage, both or none.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
 - **Item list** (`/fmf items`): every supported item, on/off per item, add your own.
 - 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português,
@@ -64,20 +67,26 @@ otherwise the game does not load it.
 | `/fmf item <id> <amount> [potion\|rune\|gem\|herb\|gear]` | add your own item |
 | `/fmf item clear` | remove all own items |
 | `/fmf probe` | print API status for bug reports |
+| `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen) for a bug report; `/fmf log clear` empties it |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
 | `/fmf reset` | reset the position |
-| `/fmf reset size` | reset icon size, icon spacing, bar thickness and bar length |
+| `/fmf reset size` | reset icon size, icon spacing, bar thickness, bar length and the text sizes on the bar |
 
 ## Bug reports
 
 Please open an [issue](https://github.com/KesaObscura/FullManaForever/issues) with the output of `/fmf probe`, your class and level, what you
 did and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
+For problems with the five-second rule or the regen display: `/fmf log on`, play until it
+happens, `/fmf log off`, `/reload`, then attach
+`WTF\Account\<account>\SavedVariables\FullManaForever.lua`. The log holds class, level,
+casts, mana costs and regen values, nothing personal.
+
 ## Development
 
 Plain Lua 5.1, no libraries, no Blizzard templates. Files load in TOC order:
-`Locale.lua` → `Data.lua` → `Core.lua` → `Options.lua` → `Library.lua`.
+`Locale.lua` → `Data.lua` → `Regen.lua` → `Core.lua` → `Options.lua` → `Library.lua` → `Diag.lua`.
 
 Tests run outside the game against a small mock of the WoW API:
 
