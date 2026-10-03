@@ -41,12 +41,21 @@ end)
 
 -- x5 for a secret value can only happen inside the game: a linear curve evaluated by the
 -- engine. If that is not allowed, the regen is shown per second instead of per 5 s.
-local times5, times5Broken
+-- A failure is retried after a while (right after login values can be briefly secret);
+-- the last outcome is kept for the diagnostics log.
+local times5, times5State, times5Retry = nil, "untried", 0
+local RETRY = 10
+
+local function Short(err) return tostring(err):sub(1, 60) end
+
 local function Times5(v)
   if not IsSecret(v) then return v * 5 end
-  if times5Broken or not (C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType) then
+  if not (C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType) then
+    times5State = "no-api"
     return nil
   end
+  local now = GetTime()
+  if times5State ~= "ok" and times5State ~= "untried" and now < times5Retry then return nil end
   if not times5 then
     local ok, c = pcall(function()
       local curve = C_CurveUtil.CreateCurve()
@@ -55,11 +64,18 @@ local function Times5(v)
       curve:AddPoint(10000, 50000)
       return curve
     end)
-    if not ok or not c then times5Broken = true return nil end
+    if not ok or not c then
+      times5State, times5Retry = "create-error " .. Short(c), now + RETRY
+      return nil
+    end
     times5 = c
   end
   local ok, r = pcall(times5.Evaluate, times5, v)
-  if not ok or r == nil then times5Broken = true return nil end
+  if not ok or r == nil then
+    times5State, times5Retry = "eval-error " .. Short(r), now + RETRY
+    return nil
+  end
+  times5State = "ok"
   return r
 end
 
@@ -96,10 +112,7 @@ function ns.RegenText(withRegen, withFsr)
 end
 
 -- for the diagnostics log: did x5 on a secret value work in this session?
-function ns.Times5State()
-  if times5Broken then return "broken" end
-  return times5 and "ok" or "untried"
-end
+function ns.Times5State() return times5State end
 
 -- for tests and the bar strip
 ns.FSR_SECONDS = FSR

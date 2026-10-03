@@ -52,3 +52,7 @@ Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua �
   formatted with `string.format` and put into a FontString (`text=ok`). `GetManaRegen` is the
   same as `GetPowerRegen` (secret in combat). Mana potions show up as casts without cost
   (Restore Mana 438), so they never start the five-second rule.
+- Third log (0.7.0 first version): the five-second countdown matches the casts exactly; wand
+  and procs (Eureka!) do not start it. x5 of a secret regen through a linear curve reported
+  "broken" from the first sample, possibly because the very first try right after login hit
+  a briefly secret value; since then it is retried every 10 s and the reason is logged.

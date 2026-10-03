@@ -418,3 +418,25 @@ test("during the rule in combat both secret rates are shown per second", functio
   eq(bar(ns).regen.text, "5.0s  11.6 / 23.2/s")
   noRegenApis()
 end)
+
+test("x5 on a secret value: a failure is retried later, the reason is kept", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(M.secret(14.75), M.secret(0))
+  _G.C_CurveUtil.CreateCurve = function()
+    return { SetType = M.noop, AddPoint = M.noop, Evaluate = function() error("secret not allowed") end }
+  end
+  _G.Enum.LuaCurveType.Linear = 2
+  M.tick()
+  eq(bar(ns).regen.text, "14.8/s")
+  ok(ns.Times5State():find("eval-error", 1, true), "state: " .. ns.Times5State())
+  -- later the game accepts it: per 5 s again
+  local curve = M.upvalue(M.upvalue(ns.RegenText, "Times5"), "times5")
+  curve.Evaluate = function(_, v) return M.secret(v.v * 5) end
+  local real = GetTime
+  _G.GetTime = function() return 200 end
+  M.tick()
+  _G.GetTime = real
+  eq(bar(ns).regen.text, "74 mp5")
+  eq(ns.Times5State(), "ok")
+  noRegenApis()
+end)
