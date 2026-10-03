@@ -538,3 +538,14 @@ test("/fmf test is the same switch as unlocking; an old test mode is switched of
   SlashCmdList.FULLMANAFOREVER("test")
   eq(ns.db.locked, true)
 end)
+
+test("row: mana numbers outside the bar, on the side away from the icons", function()
+  local ns = M.load({ vertical = false, barPosition = "below" }, { bags = POT })
+  local p = bar(ns).text.points[1]
+  eq(p[1], "TOP"); eq(p[3], "BOTTOM", "bar under the icons: numbers not below it")
+  ns.db.barPosition = "above"; ns.Layout(true)
+  p = bar(ns).text.points[1]
+  eq(p[1], "BOTTOM"); eq(p[3], "TOP", "bar above the icons: numbers not above it")
+  local label = M.upvalue(ns.ApplyLock, "anchor").label
+  eq(label.points[1][2], bar(ns).text, "frame label not above the numbers")
+end)

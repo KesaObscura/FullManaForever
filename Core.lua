@@ -791,14 +791,17 @@ function ns.PositionBar()
     bar.gloss:SetPoint("BOTTOMLEFT")
     bar.gloss:SetWidth(math.max(1, (db.barThickness or 14) * 0.45))
   else
+    -- the mana numbers sit outside the bar, on the side away from the icons: inside, the
+    -- markers and the five-second strip made them hard to read
     if db.barPosition == "above" then
       bar:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", 0, 6)
-      anchor.label:SetPoint("BOTTOM", bar, "TOP", 0, 8)
+      bar.text:SetPoint("BOTTOM", bar, "TOP", 0, 3)
+      anchor.label:SetPoint("BOTTOM", bar.text, "TOP", 0, 6)
     else
       bar:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -6)
+      bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -3)
       anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     end
-    bar.text:SetPoint("CENTER", bar, "CENTER", 0, 0)
     bar.regenBox:ClearAllPoints()
     bar.regenBox:SetPoint("LEFT", bar, "RIGHT", 6, 0)
     bar.regen:ClearAllPoints()
