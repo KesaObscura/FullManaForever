@@ -188,9 +188,8 @@ local function OnUpdate()
       clock.power, regen))
   end
   if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
-    ToLog(("sample combat=%s mana events=%d %s%s%s x5=%s fsr=%.1f"):format(tostring(InCombatLockdown()),
-      clock.power, regen, WatchText(), DisplayText(), ns.Times5State and ns.Times5State() or "?",
-      ns.FsrLeft and ns.FsrLeft() or 0))
+    ToLog(("sample combat=%s mana events=%d %s%s%s fsr=%.1f"):format(tostring(InCombatLockdown()),
+      clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0))
     clock.lastRegen, clock.lastSample = regen, now
   end
   clock.power = 0

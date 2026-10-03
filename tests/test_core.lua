@@ -382,17 +382,20 @@ test("a spell that costs mana starts the five-second rule, a wand does not", fun
   M.tick()
   ok(bar(ns).fsr.shown, "strip hidden during the rule")
   eq(bar(ns).fsr.value, 5)
-  ok(bar(ns).regen.text:find("5.0s  0 -> 74 mp5", 1, true), "text during the rule: " .. tostring(bar(ns).regen.text))
+  eq(bar(ns).regen.text, "0.0/s", "regen during the rule")
+  eq(bar(ns).fsrText.text, "5.0", "seconds at the end of the bar")
+  ok(bar(ns).fsrText.shown, "seconds hidden")
   local real = GetTime
   _G.GetTime = function() return 106 end
   M.tick()
   _G.GetTime = real
   ok(not bar(ns).fsr.shown, "strip still shown after 5 s")
-  eq(bar(ns).regen.text, "74 mp5", "normal regen text")
+  ok(not bar(ns).fsrText.shown, "seconds still shown after 5 s")
+  eq(bar(ns).regen.text, "14.8/s", "normal regen text")
   noRegenApis()
 end)
 
-test("secret regen in combat is shown per second when x5 is not possible", function()
+test("secret regen in combat is shown as text, per second", function()
   local ns = M.load(nil, { bags = POT })
   regenApis(M.secret(14.75), M.secret(0))
   M.tick()
@@ -410,33 +413,12 @@ test("five-second rule and regen text can be switched off", function()
   noRegenApis()
 end)
 
-test("during the rule in combat both secret rates are shown per second", function()
+test("during the rule in combat the secret casting rate is shown", function()
   local ns = M.load(nil, { bags = POT })
   regenApis(M.secret(23.25), M.secret(11.63))
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
   M.tick()
-  eq(bar(ns).regen.text, "5.0s  11.6 -> 23.2/s")
+  eq(bar(ns).regen.text, "11.6/s")
   noRegenApis()
 end)
 
-test("x5 on a secret value: a failure is retried later, the reason is kept", function()
-  local ns = M.load(nil, { bags = POT })
-  regenApis(M.secret(14.75), M.secret(0))
-  _G.C_CurveUtil.CreateCurve = function()
-    return { SetType = M.noop, AddPoint = M.noop, Evaluate = function() error("secret not allowed") end }
-  end
-  _G.Enum.LuaCurveType.Linear = 2
-  M.tick()
-  eq(bar(ns).regen.text, "14.8/s")
-  ok(ns.Times5State():find("eval-error", 1, true), "state: " .. ns.Times5State())
-  -- later the game accepts it: per 5 s again
-  local curve = M.upvalue(M.upvalue(ns.RegenText, "Times5"), "times5")
-  curve.Evaluate = function(_, v) return M.secret(v.v * 5) end
-  local real = GetTime
-  _G.GetTime = function() return 200 end
-  M.tick()
-  _G.GetTime = real
-  eq(bar(ns).regen.text, "74 mp5")
-  eq(ns.Times5State(), "ok")
-  noRegenApis()
-end)

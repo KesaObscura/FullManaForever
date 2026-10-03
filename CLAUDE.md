@@ -56,3 +56,6 @@ Files load in TOC order: Locale.lua → Data.lua → Core.lua → Options.lua �
   and procs (Eureka!) do not start it. x5 of a secret regen through a linear curve reported
   "broken" from the first sample, possibly because the very first try right after login hit
   a briefly secret value; since then it is retried every 10 s and the reason is logged.
+- Decision (owner): the bar shows only the regen running right now, per second, in and out of
+  combat (x5 to mp5 is impossible on secret values); the rule's seconds sit at the end of the
+  bar. The x5 curve attempt was removed.

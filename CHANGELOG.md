@@ -2,8 +2,8 @@
 
 **Full Mana Forever 0.7.0**
 
-- New: five-second rule on the mana bar. After a spell that costs mana, a thin gold strip and a countdown show the 5 seconds of reduced regen. Wands, potions and food do not start it.
-- New: mana regen next to the mana bar ("74 mp5"). During the five-second rule "3.5s  0 -> 74 mp5": the regen now, while it is reduced (more than 0 with Spirit Tap or Innervate), and the normal regen it returns to. In combat the game only lets addons show these numbers, so they are per second there ("14.8/s").
+- New: five-second rule on the mana bar. After a spell that costs mana, a thin gold strip and the seconds at the end of the bar count down the 5 seconds of reduced regen. Wands, potions and food do not start it.
+- New: the mana regen running right now, per second, under the mana numbers ("14.8/s"). During the five-second rule it turns gold and shows what still runs while you cast: 0 without talents, more with talents, Innervate or gear. It also works in combat.
 - Both can be switched off under "Mana bar with markers".
 
 **Full Mana Forever 0.6.10**

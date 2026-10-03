@@ -612,7 +612,12 @@ local function CreateBar()
   bar.fsr:SetStatusBarColor(1, 0.82, 0.2)
   bar.fsr:SetMinMaxValues(0, ns.FSR_SECONDS or 5)
   bar.fsr:Hide()
-  -- current regen ("74 mp5"), outside the bar
+  -- seconds left of the rule, small and gold at the end of the bar
+  bar.fsrText = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.fsrText)
+  bar.fsrText:SetTextColor(1, 0.82, 0.2)
+  bar.fsrText:Hide()
+  -- current regen ("14.8/s"), under the mana numbers or right of the bar
   bar.regen = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.regen)
   bar:Hide()
@@ -730,6 +735,8 @@ function ns.PositionBar()
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
     bar.fsr:SetWidth(3)
     bar.fsr:SetOrientation("VERTICAL")
+    bar.fsrText:ClearAllPoints()
+    bar.fsrText:SetPoint("BOTTOM", bar, "TOP", 0, 3)
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("BOTTOMLEFT")
     bar.gloss:SetWidth(math.max(1, (db.barThickness or 14) * 0.45))
@@ -749,6 +756,8 @@ function ns.PositionBar()
     bar.fsr:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
     bar.fsr:SetHeight(3)
     bar.fsr:SetOrientation("HORIZONTAL")
+    bar.fsrText:ClearAllPoints()
+    bar.fsrText:SetPoint("RIGHT", bar, "RIGHT", -3, 1)
     bar.gloss:SetPoint("TOPLEFT")
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
@@ -960,22 +969,23 @@ local function HideTick(t)
   if t.front:IsShown() then t.front:Hide(); t.back:Hide() end
 end
 
--- five-second rule strip (every tick, no garbage) and regen text (twice a second: it builds
--- a new string each time)
-local regenNext = 0
+-- five-second rule: strip and seconds every tick; regen text twice a second (it builds a
+-- new string each time) and at once when the rule starts or ends
+local regenNext, regenInRule = 0, nil
 local function UpdateRegen()
   local left = db.fsr and ns.FsrLeft and ns.FsrLeft() or 0
   if left > 0 then
     bar.fsr:SetValue(left)
-    if not bar.fsr:IsShown() then bar.fsr:Show() end
+    bar.fsrText:SetText(("%.1f"):format(left))
+    if not bar.fsr:IsShown() then bar.fsr:Show(); bar.fsrText:Show() end
   elseif bar.fsr:IsShown() then
-    bar.fsr:Hide()
+    bar.fsr:Hide(); bar.fsrText:Hide()
   end
-  if not (db.regenText or db.fsr) or not ns.RegenText then bar.regen:Hide() return end
-  local now = GetTime()
-  if now < regenNext and not (left > 0) then return end
-  regenNext = now + 0.5
-  local text, inRule = ns.RegenText(db.regenText, db.fsr)
+  if not db.regenText or not ns.RegenText then bar.regen:Hide() return end
+  local now, inRule = GetTime(), left > 0
+  if now < regenNext and inRule == regenInRule then return end
+  regenNext, regenInRule = now + 0.5, inRule
+  local text = ns.RegenText()
   if text then
     bar.regen:SetText(text)
     -- reduced regen during the rule: gold like the strip; normal regen: light blue
