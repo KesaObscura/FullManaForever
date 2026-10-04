@@ -41,8 +41,9 @@ local DEFAULTS = {
   barColor   = "blue",
   iconGap    = 6,
   iconSize   = 44,
-  runeMargin = 0.30, -- health% that must remain AFTER the rune hit
-  enabled    = { potion = true, rune = true, gem = true, herb = true, gear = true },
+  runeMargin = 0.30, -- health% that must remain AFTER the rune hit (also Life Tap)
+  spellThreshold = 0.50, -- own mana spells (Evocation, Innervate, ...) light up at or below this mana%
+  enabled    = { potion = true, rune = true, gem = true, herb = true, gear = true, spell = true },
   custom     = {},    -- { {id=, max=, group=}, ... } own items, highest priority in their group
   disabled   = {},    -- [itemID] = true: never suggest this item
 }
@@ -345,6 +346,10 @@ end
 -- the mana% at which the group's first icon appears (for status + bar ticks)
 local function FirstThreshold(i, maxMana)
   local group = ns.GROUPS[i]
+  if group.spells then
+    local sp = ns.Spells.FirstKnown()
+    return sp and ns.Spells.Threshold(sp, maxMana)
+  end
   if db.pickMode == "fit" and CanBand(group) then
     local c = BandCandidates(i)
     if #c > 0 then return Threshold(c[#c].it, maxMana) end
@@ -475,6 +480,7 @@ local PLACEHOLDER = {
   gem    = "Interface\\Icons\\INV_Misc_Gem_Ruby_01",
   herb   = "Interface\\Icons\\INV_Misc_QuestionMark",
   gear   = "Interface\\Icons\\INV_Jewelry_Talisman_07",
+  spell  = "Interface\\Icons\\Spell_Nature_Purge",
 }
 local TICK_COLOR = {
   potion = { 0.45, 0.75, 1 },
@@ -482,6 +488,7 @@ local TICK_COLOR = {
   gem    = { 1, 0.35, 0.35 },
   herb   = { 0.4, 1, 0.5 },
   gear   = { 1, 0.8, 0.3 },
+  spell  = { 0.3, 1, 1 },
 }
 ns.BAR_COLORS = {
   { key = "blue",   top = { 0.30, 0.62, 1.00 }, bottom = { 0.06, 0.28, 0.78 } },
@@ -713,7 +720,7 @@ function ns.AutoBarLength()
   local size, gap = db.iconSize, db.iconGap or 6
   local slots = 0
   for _, g in ipairs(ns.GROUPS) do
-    if ns.ForMyClass(g) then slots = slots + 1 end
+    if ns.ForMyClass(g) and (not g.spells or ns.Spells.AnyKnown()) then slots = slots + 1 end
   end
   slots = math.max(slots, 3)
   return size * slots + gap * (slots - 1)
@@ -961,9 +968,37 @@ end
 local groupOK = true -- solo/party/raid filter, evaluated once per tick
 local NONE = {}
 
+-- own spells: one slot, the first ready spell; the same mana and health gates as items.
+-- Layer IDs of spells are negative so they never match an item ID.
+local function UpdateSpellButton(b, maxMana, maxHP)
+  local S = ns.Spells
+  if not S.AnyKnown() then b.outer:Hide() return end
+  local l = b.layers[1]
+  if not db.locked then -- positioning preview
+    local _, id = S.FirstKnown()
+    SetLayer(l, -id, nil, S.Texture(id))
+    l:SetAlpha(1); l.hi = nil; l:Show()
+    HideLayers(b, 2)
+    b.hp:SetAlpha(1)
+    b.outer:Show()
+    return
+  end
+  if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
+  if not groupOK then b.outer:Hide() return end
+  local sp, id = S.Candidate()
+  if not sp then b.outer:Hide() return end
+  SetLayer(l, -id, nil, S.Texture(id))
+  ApplyBand(l, nil, S.Threshold(sp, maxMana))
+  l:Show()
+  HideLayers(b, 2)
+  ApplyHpGate(b, S.HpCost(sp), maxHP)
+  b.outer:Show()
+end
+
 local function UpdateButton(i, b, maxMana, maxHP)
   local group = ns.GROUPS[i]
   if not db.enabled[group.key] or not ns.ForMyClass(group) then b.outer:Hide() return end
+  if group.spells then return UpdateSpellButton(b, maxMana, maxHP) end
   if not db.locked then ShowPreview(i, b, OwnedItem(i)) return end  -- positioning preview
 
   if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
@@ -1283,7 +1318,7 @@ function ns.AddCustom(id, amount, group)
   if not ok then Print("|cffff4444" .. err .. "|r") return false end
   local valid, home = false, nil
   for _, g in ipairs(ns.GROUPS) do
-    if g.key == group then valid = true end
+    if g.key == group and not g.spells then valid = true end
     for _, it in ipairs(g.items) do if it.id == id then home = g.key end end
   end
   -- no (valid) category given: a known item stays in its own group, others are potions
@@ -1367,6 +1402,7 @@ boot:SetScript("OnEvent", function(self, event, arg1)
   elseif event == "PLAYER_LOGIN" then
     if not db then InitDB() end -- saved variables not delivered (old beta builds)
     ns.RebuildLists() -- player class is known now
+    ns.Spells.Rebuild()
     CreateAnchor()
     if ns.InitOptions then
       local ok, err = pcall(ns.InitOptions)

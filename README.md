@@ -30,6 +30,9 @@ when the icon lights up.
   *Strongest only*.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
   (30 % by default).
+- **Own mana spells**: Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the
+  racials Eureka! (gnome) and Ley Line reading (Skyborne) light up when ready and your mana
+  is at or below a set share (50 % by default); Life Tap when its mana fits.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.

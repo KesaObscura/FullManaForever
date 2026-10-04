@@ -765,3 +765,121 @@ test("/fmf log records group members' casts and the chat test", function()
   ok(all:find("chat test combat=false whisper=sent prefix=true addon=sent", 1, true), "chat test line")
   ok(all:find("addon msg text=test channel=WHISPER sender=Me", 1, true), "addon message not logged")
 end)
+
+-- own mana spells (0.8.0) ------------------------------------------------------------
+local SPELL_SLOT = 6
+-- a spell book with the given spells (name = "Spell<id>"), cooldowns from cds[id] = { start, dur }
+local function spellApis(book, opts)
+  opts = opts or {}
+  local cds = opts.cds or {}
+  _G.Enum.SpellBookSpellBank = { Player = 0 }
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { name = "Class", itemIndexOffset = 0, numSpellBookItems = #book } end,
+    GetSpellBookItemInfo = function(i) return { spellID = book[i], name = opts.names and opts.names[book[i]] or ("Spell" .. book[i]) } end,
+  }
+  _G.C_Spell = {
+    GetSpellName = function(id) return opts.names and opts.names[id] or ("Spell" .. id) end,
+    GetSpellTexture = function(id) return "tex" .. id end,
+    GetSpellDescription = function(id) return opts.desc and opts.desc[id] or "" end,
+    GetSpellCooldown = function(id)
+      if opts.secretCd then return M.secret({}) end
+      local c = cds[id] or { 0, 0 }
+      return { startTime = c[1], duration = c[2] }
+    end,
+  }
+  _G.GetSpellBaseCooldown = function(id) return (opts.base and opts.base[id] or 0) * 1000, 1500 end
+  return cds
+end
+local function noSpellApis() _G.C_SpellBook, _G.C_Spell, _G.GetSpellBaseCooldown = nil, nil, nil end
+local function spellSlot(ns) return slotVisible(ns, SPELL_SLOT) end
+
+test("Evocation lights up when ready and mana is at or below the setting", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.6; M.tick()
+  ok(not spellSlot(ns), "shown above 50%")
+  M.state.manaPct = 0.4; M.tick()
+  local vis, l = spellSlot(ns)
+  ok(vis, "hidden at 40%")
+  eq(l.icon.texture, "tex12051")
+  noSpellApis()
+end)
+
+test("own spell on cooldown: exact out of combat, counted from the cast in combat", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local cds = spellApis({ 12051 }, { base = { [12051] = 480 } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2
+  cds[12051] = { 99, 1.5 } -- only the global cooldown
+  M.tick()
+  ok(spellSlot(ns), "global cooldown hides the spell")
+  cds[12051] = { 90, 480 }
+  M.tick()
+  ok(not spellSlot(ns), "spell on cooldown shown out of combat")
+  -- in combat the game's cooldown is secret: our own count from the cast decides
+  cds[12051] = nil
+  M.tick()
+  ok(spellSlot(ns), "not ready again after its cooldown")
+  spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
+  M.state.combat = true
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051)
+  M.tick()
+  ok(not spellSlot(ns), "shown in combat right after the cast")
+  local real = GetTime
+  _G.GetTime = function() return 100 + 479 end
+  M.tick()
+  ok(not spellSlot(ns), "shown before 480 s")
+  _G.GetTime = function() return 100 + 481 end
+  M.tick()
+  _G.GetTime = real
+  ok(spellSlot(ns), "not shown after 480 s")
+  noSpellApis()
+end)
+
+test("Life Tap lights up when its mana fits, with the rune health check", function()
+  local ns = M.load(nil, { class = "WARLOCK" })
+  spellApis({ 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana for you." } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.8; M.tick() -- deficit 200 < 300
+  ok(not spellSlot(ns), "shown although 300 mana do not fit")
+  M.state.manaPct = 0.6; M.tick() -- deficit 400
+  ok(spellSlot(ns), "hidden although 300 mana fit")
+  M.state.healthPct = 0.4; M.tick() -- 300/2000 + 30% = 45% needed
+  ok(not spellSlot(ns), "shown with too little health")
+  noSpellApis()
+end)
+
+test("no mana spells: no slot, no room on the bar; spells are not items", function()
+  local ns = M.load(nil, { class = "PRIEST" })
+  local before = ns.AutoBarLength()
+  spellApis({ 585 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.1; M.tick()
+  ok(not buttons(ns)[SPELL_SLOT].outer.shown, "slot without spells")
+  eq(ns.AutoBarLength(), before, "bar room for a missing spell slot")
+  spellApis({ 14751 })
+  ns.Spells.Rebuild()
+  ok(ns.AutoBarLength() > before, "no bar room for Inner Focus")
+  ns.AddCustom(4242, 300, "spell")
+  for _, c in ipairs(ns.db.custom) do eq(c.group, "potion", "own item went into the spell slot") end
+  noSpellApis()
+end)
+
+test("unlocked frame previews the own spell; options show its status", function()
+  local ns = M.load({ locked = false }, { class = "PRIEST" })
+  spellApis({ 14751 }, { names = { [14751] = "Inner Focus" } })
+  ns.Spells.Rebuild()
+  M.tick()
+  local vis, l = spellSlot(ns)
+  ok(vis, "no preview"); eq(l.icon.texture, "tex14751")
+  ns.db.locked = true
+  ns.ToggleOptions(true)
+  local found
+  for _, r in ipairs(M.upvalue(ns.RefreshOptions, "groupRows")) do
+    if ns.GROUPS[r.i].spells then found = r.st.text end
+  end
+  ok(found and found:find(ns.L.stSpellReady:format("Inner Focus", 50), 1, true), "status: " .. tostring(found))
+  noSpellApis()
+end)
