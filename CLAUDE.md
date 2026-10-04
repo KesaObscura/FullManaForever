@@ -73,3 +73,20 @@ and `/fmf log` (kept in releases for bug reports).
   again in the same fight. Spell cooldowns (`C_Spell.GetSpellCooldown`) are SECRET in combat
   and readable out of combat — for 0.8.0, spell readiness cannot be read in combat. The
   potion cast in this log was Restore Mana 437 (no cost).
+- Scans for 0.8.0 (`/fmf scan`, `/fmf scan trainer` with TrainerSpells installed): the spell book
+  does not list spells of later levels. `GetSpellBaseCooldown` works for any spell ID, also
+  unlearned ones. Talents: the old talent API is gone; `C_ClassTalents.GetActiveConfigID` +
+  `C_Traits` read the talent tree with ranks (priest: 54 talents). TrainerSpells is "All Rights
+  Reserved": never copy its data or code into this repo; it is read only at run time.
+- Mana spells in Forever (ID, level, base cooldown s): Innervate 29166 (druid 40, 360; +400 %
+  regen, 100 % while casting, 20 s), Evocation 12051 (mage 20, 480; +1500 % for 8 s, channeled),
+  Mana Tide Totem 16190/17359 (shaman, 300; group, every 3 s for 12 s), Life Tap 1454/11689
+  (warlock, no cd, health to mana), Mana Spring Totem 5675/10497, Blessing of Wisdom 19742/19854
+  and Greater 25894/25918, Seal of Wisdom 20166/20357, Lay on Hands 10310 (paladin, 1200, gives
+  550 mana), Mage Armor 6117/22783 (50 % regen while casting), Totemic Recall 36936 (25 % of
+  totem mana back), Drain Mana 11704, Viper Sting 14280. Talents/procs: Inner Focus 14751 (180,
+  next spell free), Omen of Clarity 16864, Meditation 14521, Spirit Tap 15270.
+  Racials: Gnome Eureka! 1259823 (120; next 3 spells 10 % cheaper), Expansive Mind 20591 (+5 %
+  max mana); Skyborne (new race) Ley Line reading 1259705 (+100 % health and mana regen, 15 s or
+  15 min near a ley line); Human Spirit 20598 (+5 % spirit). Racial priest spells (Desperate
+  Prayer, Starshards, Feedback, ...) have nothing to do with mana.
