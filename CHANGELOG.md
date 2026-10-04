@@ -8,7 +8,7 @@
 - Settings: "Lock frame" and "Test mode" are one switch now, "Unlock frame (test mode)": it makes the frame movable and shows everything that is switched on. `/fmf test` does the same as `/fmf unlock`
 - New for bug reports: `/fmf scan` writes your spells, talents and items with a "Use:" effect into the log; the log also records spell cooldowns, current mana costs, maximum health and the cooldowns of your mana potions
 - Safety: a rune is hidden when the game does not report your maximum health (no health check means no risk)
-- A potion drunk in combat whose cooldown only starts after the fight is no longer shown as ready
+- Safety: an item whose cooldown has not started yet is never shown as ready (in Forever potion cooldowns start at once, so a potion comes back after 2 minutes, also in the same fight)
 - The regen text turns gold during the five-second rule even when the gold strip is switched off
 - Settings: "+" on a bar length shorter than one icon makes the bar longer instead of switching to auto
 - Settings: dropdowns near the bottom of the screen open upwards instead of off screen
