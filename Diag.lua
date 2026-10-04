@@ -412,8 +412,34 @@ local function ScanSpells(add)
   return n
 end
 
+-- talents through the newer trait API (C_ClassTalents + C_Traits)
+local function ScanTraits(add)
+  local cid = C_ClassTalents.GetActiveConfigID and C_ClassTalents.GetActiveConfigID()
+  if not cid then add("talents: no active talent config") return 0 end
+  local info = C_Traits.GetConfigInfo(cid)
+  local n = 0
+  for _, tree in ipairs(info and info.treeIDs or {}) do
+    for _, node in ipairs(C_Traits.GetTreeNodes(tree) or {}) do
+      local ni = C_Traits.GetNodeInfo(cid, node)
+      for _, entry in ipairs(ni and ni.entryIDs or {}) do
+        local ei = C_Traits.GetEntryInfo(cid, entry)
+        local di = ei and ei.definitionID and C_Traits.GetDefinitionInfo(ei.definitionID)
+        local id = di and (di.spellID or di.overriddenSpellID)
+        if id then
+          n = n + 1
+          local okN, name = pcall(C_Spell.GetSpellName, id)
+          add(("talent tree=%s node=%s %s %s %s/%s : %s"):format(Show(tree), Show(node), Show(id),
+            okN and OneLine(name) or "?", Show(ni.currentRank), Show(ni.maxRanks), Describe(id)))
+        end
+      end
+    end
+  end
+  return n
+end
+
 local function ScanTalents(add)
   if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then
+    if C_ClassTalents and C_Traits then return ScanTraits(add) end
     add(("talents: old API missing. GetNumTalentTabs=%s GetTalentInfo=%s C_ClassTalents=%s C_Traits=%s"
       .. " C_SpecializationInfo=%s C_Talent=%s GetTalentTabInfo=%s"):format(tostring(GetNumTalentTabs ~= nil),
       tostring(GetTalentInfo ~= nil), tostring(C_ClassTalents ~= nil), tostring(C_Traits ~= nil),
@@ -468,6 +494,47 @@ local function ScanKnown(add)
   return n
 end
 
+-- every spell a class trainer teaches in Forever, as the addon TrainerSpells lists it (its
+-- table is read at run time on the player's own client; nothing of it ships with this addon)
+local TRAINER_CLASSES = { "PRIEST", "MAGE", "DRUID", "SHAMAN", "PALADIN", "WARLOCK", "HUNTER" }
+
+local function SortedKeys(t)
+  local keys = {}
+  for k in pairs(t) do if type(k) == "number" then keys[#keys + 1] = k end end
+  table.sort(keys)
+  return keys
+end
+
+local function TrainerList(fn)
+  local data = _G.TrainerSpellsBuiltin
+  if type(data) ~= "table" then return false end
+  for _, class in ipairs(TRAINER_CLASSES) do
+    local levels = data[class]
+    if type(levels) == "table" then
+      for _, lvl in ipairs(SortedKeys(levels)) do
+        for _, id in ipairs(SortedKeys(levels[lvl])) do fn(class, lvl, id, levels[lvl][id]) end
+      end
+    end
+  end
+  return true
+end
+
+local function ScanTrainer(add)
+  local n = 0
+  local ok = TrainerList(function(class, lvl, id, info)
+    n = n + 1
+    local race = type(info) == "table" and info.race or nil
+    if type(race) == "table" then race = table.concat(race, "/") end
+    local okN, name = pcall(C_Spell.GetSpellName, id)
+    add(("trainer %s L%d %d %s%s%s cost=%s base=%s : %s"):format(class, lvl, id,
+      okN and name ~= nil and OneLine(name) or "?",
+      type(info) == "table" and info.rank and (" r" .. tostring(info.rank)) or "",
+      race and (" race=" .. tostring(race)) or "", CostOf(id), BaseCd(id), Describe(id)))
+  end)
+  if not ok then add("trainer: TrainerSpells is not loaded") end
+  return n
+end
+
 local function ItemLine(where, id, add)
   if not id then return 0 end
   local spellName, spellID = C_Item.GetItemSpell(id)
@@ -495,9 +562,7 @@ local function ScanItems(add)
   return n
 end
 
-function ns.Scan()
-  if not log then ns.Print("log not ready yet") return end
-  if InCombatLockdown() then ns.Print("scan: not in combat, please") return end
+local function RunScan(parts)
   local lines = log.lines
   local dropped = 0
   local function add(text)
@@ -508,7 +573,7 @@ function ns.Scan()
   end
   add(HeaderText())
   local counts = {}
-  for _, part in ipairs({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems }, { "known", ScanKnown } }) do
+  for _, part in ipairs(parts) do
     local ok, n = pcall(part[2], add)
     counts[#counts + 1] = part[1] .. "=" .. (ok and tostring(n) or ("error " .. tostring(n):sub(1, 80)))
     if not ok then add(part[1] .. " error: " .. tostring(n):sub(1, 200)) end
@@ -518,6 +583,26 @@ function ns.Scan()
   end
   ns.Print(("scan done: %s. /reload, then send WTF\\Account\\<account>\\SavedVariables\\FullManaForever.lua")
     :format(table.concat(counts, " ")))
+end
+
+-- /fmf scan: own spells, talents, items, known mana spells. /fmf scan trainer: all trainer
+-- spells of the mana classes; the game loads their texts first, the list is written 3 s later.
+function ns.Scan(what)
+  if not log then ns.Print("log not ready yet") return end
+  if InCombatLockdown() then ns.Print("scan: not in combat, please") return end
+  if what == "trainer" then
+    if not TrainerList(function(_, _, id)
+      if C_Spell.RequestLoadSpellData then pcall(C_Spell.RequestLoadSpellData, id) end
+    end) then
+      ns.Print("scan trainer: the addon TrainerSpells is not loaded")
+      return
+    end
+    ns.Print("scan trainer: loading spell texts, 3 s ...")
+    local function write() RunScan({ { "trainer", ScanTrainer } }) end
+    if C_Timer and C_Timer.After then C_Timer.After(3, write) else write() end
+    return
+  end
+  RunScan({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems }, { "known", ScanKnown } })
 end
 
 function ns.LogCommand(arg)

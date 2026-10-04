@@ -698,3 +698,40 @@ test("/fmf log records max health and the potion cooldowns as the game reports t
   ok(select(2, all:gsub("pots 3385", "")) >= 2, "potions missing in cast or sample line")
   noDiagApis()
 end)
+
+test("/fmf scan trainer lists the trainer spells of TrainerSpells with the game's texts", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("scan trainer")
+  ok(table.concat(M.printed, "\n"):find("TrainerSpells is not loaded", 1, true), "missing addon not reported")
+  _G.TrainerSpellsBuiltin = { PRIEST = { [10] = { [13908] = { cost = 15, rank = 1, race = { "Dwarf", "Human" } },
+    [2006] = { cost = 285, rank = 1 } } }, WARRIOR = { [1] = { [100] = { cost = 10 } } } }
+  local requested = 0
+  _G.C_Spell = { GetSpellName = function(id) return "Spell" .. id end,
+    GetSpellDescription = function(id) return "Text " .. id end,
+    RequestLoadSpellData = function() requested = requested + 1 end }
+  SlashCmdList.FULLMANAFOREVER("scan trainer")
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  _G.TrainerSpellsBuiltin, _G.C_Spell = nil, nil
+  eq(requested, 2, "texts requested for the mana classes only")
+  ok(all:find("trainer PRIEST L10 2006 Spell2006 r1", 1, true), "trainer line: " .. all)
+  ok(all:find("13908 Spell13908 r1 race=Dwarf/Human", 1, true), "racial spell not marked")
+  ok(not all:find("WARRIOR", 1, true), "class without mana scanned")
+end)
+
+test("/fmf scan reads talents through the trait API", function()
+  local ns = M.load(nil)
+  _G.C_ClassTalents = { GetActiveConfigID = function() return 7 end }
+  _G.C_Traits = {
+    GetConfigInfo = function() return { treeIDs = { 1 } } end,
+    GetTreeNodes = function() return { 11 } end,
+    GetNodeInfo = function() return { entryIDs = { 21 }, currentRank = 5, maxRanks = 5 } end,
+    GetEntryInfo = function() return { definitionID = 31 } end,
+    GetDefinitionInfo = function() return { spellID = 15270 } end,
+  }
+  _G.C_Spell = { GetSpellName = function() return "Spirit Tap" end,
+    GetSpellDescription = function() return "50% while casting" end }
+  SlashCmdList.FULLMANAFOREVER("scan")
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  _G.C_ClassTalents, _G.C_Traits, _G.C_Spell = nil, nil, nil
+  ok(all:find("talent tree=1 node=11 15270 Spirit Tap 5/5 : 50% while casting", 1, true), "talent line: " .. all)
+end)

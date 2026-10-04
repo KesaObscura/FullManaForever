@@ -2,7 +2,7 @@
 
 **Full Mana Forever 0.8.0**
 
-- For bug reports and research: `/fmf scan` also lists mana spells learned above level 1 (Innervate, Evocation, Life Tap, mana totems, Blessing of Wisdom and others) with the game's own descriptions, and spells of later levels that the spell book already lists are marked "not learned yet"; each spell shows its base cooldown from the game data; the log header names your race
+- For bug reports and research: `/fmf scan` also lists mana spells learned above level 1 (Innervate, Evocation, Life Tap, mana totems, Blessing of Wisdom and others) with the game's own descriptions, and spells of later levels that the spell book already lists are marked "not learned yet"; each spell shows its base cooldown from the game data; talents are read through the newer talent API; `/fmf scan trainer` lists every trainer spell of the mana classes when the addon TrainerSpells is installed; the log header names your race
 
 **Full Mana Forever 0.7.1**
 
