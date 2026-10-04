@@ -90,3 +90,7 @@ and `/fmf log` (kept in releases for bug reports).
   max mana); Skyborne (new race) Ley Line reading 1259705 (+100 % health and mana regen, 15 s or
   15 min near a ley line); Human Spirit 20598 (+5 % spirit). Racial priest spells (Desperate
   Prayer, Starshards, Feedback, ...) have nothing to do with mana.
+- Decision (owner, 0.8.0): show which group members have Innervate / Mana Tide ready and who
+  they are (in raids people ask by voice). Whispering a request is only an option, off by
+  default. Waiting on a log: are group members' spell IDs readable in combat, and may an addon
+  whisper / send addon messages in combat (`/fmf log chat`).
