@@ -491,12 +491,13 @@ end)
 
 test("/fmf scan writes spells, talents and use items with the game's descriptions", function()
   local ns = M.load(nil)
+  _G.Enum.SpellBookItemType = { Spell = 1, FutureSpell = 3 }
   _G.C_SpellBook = {
     GetNumSpellBookSkillLines = function() return 1 end,
     GetSpellBookSkillLineInfo = function() return { name = "Holy", itemIndexOffset = 0, numSpellBookItems = 2 } end,
     GetSpellBookItemInfo = function(i)
       if i == 1 then return { spellID = 14751, name = "Inner Focus" } end
-      return { spellID = 14522, name = "Meditation", isPassive = true }
+      return { spellID = 14522, name = "Meditation", isPassive = true, itemType = 3 }
     end,
   }
   _G.C_Spell = {
@@ -512,7 +513,7 @@ test("/fmf scan writes spells, talents and use items with the game's description
   local all = table.concat(FullManaForeverLog.lines, "\n")
   ok(all:find("---- scan", 1, true), "no scan header")
   ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
-  ok(all:find("14522 Meditation (passive)", 1, true), "passive not marked")
+  ok(all:find("14522 Meditation (passive) (not learned yet)", 1, true), "passive or future spell not marked")
   ok(all:find("item slot13 23027", 1, true), "use item missing")
   ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
   ok(all:find("known 29166", 1, true), "spells above level 1 not asked for")

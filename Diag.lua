@@ -375,8 +375,11 @@ local function ScanSpells(add)
           local it = C_SpellBook.GetSpellBookItemInfo(j, bank)
           if it and it.spellID then
             n = n + 1
-            add(("spell [%s] %s %s%s cost=%s cd=%s : %s"):format(OneLine(line.name), Show(it.spellID),
-              OneLine(it.name), it.isPassive and " (passive)" or "", CostOf(it.spellID),
+            -- the book may also list spells for later levels ("future"): those count too
+            local future = Enum and Enum.SpellBookItemType and it.itemType == Enum.SpellBookItemType.FutureSpell
+            add(("spell [%s] %s %s%s%s cost=%s cd=%s : %s"):format(OneLine(line.name), Show(it.spellID),
+              OneLine(it.name), it.isPassive and " (passive)" or "", future and " (not learned yet)" or "",
+              CostOf(it.spellID),
               CooldownText(it.spellID), Describe(it.spellID)))
           end
         end
