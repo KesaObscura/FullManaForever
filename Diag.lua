@@ -185,10 +185,11 @@ end
 
 local function HeaderText()
   local _, class = UnitClass("player")
+  local race = UnitRace and select(2, UnitRace("player"))
   local okL, lvl = Call(UnitLevel, "player")
   local okM, max = Call(UnitPowerMax, "player", MANA)
-  return ("v%s %s level=%s maxMana=%s combat=%s API: GetPowerRegen=%s C_Spell.GetSpellPowerCost=%s C_UnitAuras=%s"):format(
-    ns.VERSION, Show(class), okL and Show(lvl) or "?", okM and Show(max) or "?",
+  return ("v%s %s %s level=%s maxMana=%s combat=%s API: GetPowerRegen=%s C_Spell.GetSpellPowerCost=%s C_UnitAuras=%s"):format(
+    ns.VERSION, Show(class), Show(race), okL and Show(lvl) or "?", okM and Show(max) or "?",
     tostring(InCombatLockdown()), tostring(GetPowerRegen ~= nil),
     tostring(C_Spell ~= nil and C_Spell.GetSpellPowerCost ~= nil), tostring(C_UnitAuras ~= nil))
     .. HealthText() .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),
@@ -415,6 +416,39 @@ local function ScanTalents(add)
   return n
 end
 
+-- spells that give or save mana, learned above level 1 (a new character cannot see them in
+-- its spell book). IDs from Classic; the scan prints the name Forever has for each ID, so a
+-- wrong or changed ID shows up as a different name. Talents and racials come from the
+-- talent and spell book scans.
+local KNOWN = {
+  29166, -- Innervate (druid)
+  12051, -- Evocation (mage)
+  6117, 1463, 1459, 23028, -- Mage Armor, Mana Shield, Arcane Intellect, Arcane Brilliance
+  759, 3552, 10053, 10054, -- Conjure Mana Agate, Jade, Citrine, Ruby
+  1454, 18220, -- Life Tap, Dark Pact (warlock)
+  5675, 16190, -- Mana Spring Totem, Mana Tide Totem (shaman)
+  19742, 25894, 20166, -- Blessing / Greater Blessing of Wisdom, Seal of Wisdom (paladin)
+  14751, 15270, -- Inner Focus, Spirit Tap (priest)
+}
+
+local function ScanKnown(add)
+  if not (C_Spell and C_Spell.GetSpellName) then return 0 end
+  local n = 0
+  for _, id in ipairs(KNOWN) do
+    if C_Spell.RequestLoadSpellData then pcall(C_Spell.RequestLoadSpellData, id) end
+    local ok, name = pcall(C_Spell.GetSpellName, id)
+    local d = Describe(id)
+    if not ok or name == nil then
+      add(("known %d ? (not loaded, /fmf scan again)"):format(id))
+    else
+      n = n + 1
+      add(("known %d %s cost=%s cd=%s : %s"):format(id, OneLine(name), CostOf(id), CooldownText(id),
+        d ~= "" and d or "(no description yet, /fmf scan again)"))
+    end
+  end
+  return n
+end
+
 local function ItemLine(where, id, add)
   if not id then return 0 end
   local spellName, spellID = C_Item.GetItemSpell(id)
@@ -455,7 +489,7 @@ function ns.Scan()
   end
   add(HeaderText())
   local counts = {}
-  for _, part in ipairs({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems } }) do
+  for _, part in ipairs({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems }, { "known", ScanKnown } }) do
     local ok, n = pcall(part[2], add)
     counts[#counts + 1] = part[1] .. "=" .. (ok and tostring(n) or ("error " .. tostring(n):sub(1, 80)))
     if not ok then add(part[1] .. " error: " .. tostring(n):sub(1, 200)) end

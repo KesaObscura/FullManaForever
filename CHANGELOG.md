@@ -1,5 +1,9 @@
 # Changelog
 
+**Full Mana Forever 0.8.0**
+
+- For bug reports and research: `/fmf scan` also lists mana spells learned above level 1 (Innervate, Evocation, Life Tap, mana totems, Blessing of Wisdom and others) with the game's own descriptions, and the log header names your race
+
 **Full Mana Forever 0.7.1**
 
 - Icons in a row: the mana numbers sit outside the bar, on the side away from the icons (below the bar when the icons are above it, and the other way round), so markers and the five-second strip no longer cover them

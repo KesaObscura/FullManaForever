@@ -503,6 +503,7 @@ test("/fmf scan writes spells, talents and use items with the game's description
     GetSpellDescription = function(id) return id == 14751 and "Your next spell\ncosts no mana." or "Regen while casting." end,
     GetSpellPowerCost = function() return { { type = 0, cost = 0 } } end,
     GetSpellCooldown = function() return { startTime = 0, duration = 0 } end,
+    GetSpellName = function(id) return "Spell" .. id end,
   }
   _G.GetInventoryItemID = function(_, slot) if slot == 13 then return 23027 end end
   _G.C_Item.GetItemSpell = function(id) if id == 23027 then return "Warmth", 29166 end end
@@ -514,6 +515,8 @@ test("/fmf scan writes spells, talents and use items with the game's description
   ok(all:find("14522 Meditation (passive)", 1, true), "passive not marked")
   ok(all:find("item slot13 23027", 1, true), "use item missing")
   ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
+  ok(all:find("known 29166", 1, true), "spells above level 1 not asked for")
+  ok(all:find("scan v", 1, true) and all:find("level=", 1, true), "no header")
   _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
 end)
 
