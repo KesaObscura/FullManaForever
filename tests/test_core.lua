@@ -623,7 +623,7 @@ test("only the player's unit events are heard (no raid-wide handler calls)", fun
   local n = 0
   for f in pairs(M.eventFrames) do
     for e in pairs(f.events or {}) do
-      if e:find("^UNIT_") then
+      if e:find("^UNIT_") and not f.allUnits then
         n = n + 1
         ok(f.unitFilter and f.unitFilter[e] and f.unitFilter[e].player, e .. " registered for every unit")
       end
@@ -734,4 +734,34 @@ test("/fmf scan reads talents through the trait API", function()
   local all = table.concat(FullManaForeverLog.lines, "\n")
   _G.C_ClassTalents, _G.C_Traits, _G.C_Spell = nil, nil, nil
   ok(all:find("talent tree=1 node=11 15270 Spirit Tap 5/5 : 50% while casting", 1, true), "talent line: " .. all)
+end)
+
+test("/fmf log records group members' casts and the chat test", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("log on")
+  _G.UnitClass = function(u) if u == "party1" then return "Druid", "DRUID" end return "Class", "PRIEST" end
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party1", "g", 29166)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party2", "g", M.secret(5185))
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "nameplate3", "g", 133)
+  local sent = {}
+  _G.UnitName = function() return "Me" end
+  _G.SendChatMessage = function(text, kind, _, to) sent[#sent + 1] = kind .. ":" .. to end
+  _G.C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end,
+    SendAddonMessage = function(p, text, kind, to) sent[#sent + 1] = "addon:" .. p .. ":" .. to; return 0 end }
+  SlashCmdList.FULLMANAFOREVER("log chat")
+  M.Fire("CHAT_MSG_ADDON", "FMF", "test", "WHISPER", "Me")
+  SlashCmdList.FULLMANAFOREVER("log off")
+  local f = diagFrame(ns)
+  f.scripts.OnUpdate(f)
+  for g in pairs(M.eventFrames) do
+    if g.allUnits then ok(not next(g.events), "group listener still registered after log off") end
+  end
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  _G.SendChatMessage, _G.C_ChatInfo, _G.UnitName = nil, nil, nil
+  ok(all:find("group cast party1 DRUID spell=29166 ? WATCH Innervate", 1, true), "innervate: " .. all)
+  ok(all:find("group cast party2 PRIEST spell=SECRET", 1, true), "secret group cast")
+  ok(not all:find("nameplate3", 1, true), "non-group unit logged")
+  eq(sent[1], "WHISPER:Me"); eq(sent[2], "addon:FMF:Me")
+  ok(all:find("chat test combat=false whisper=sent prefix=true addon=sent", 1, true), "chat test line")
+  ok(all:find("addon msg text=test channel=WHISPER sender=Me", 1, true), "addon message not logged")
 end)

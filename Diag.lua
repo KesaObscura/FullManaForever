@@ -200,6 +200,9 @@ end
 -- collector: one event frame, two outputs (chat probe, saved log)
 ------------------------------------------------------------------------
 local frame = CreateFrame("Frame")
+-- group casts need every unit (party1-4, raidN); it listens only while the log runs
+local groupFrame = CreateFrame("Frame")
+groupFrame.allUnits = true
 local probe = { running = false }
 local log -- FullManaForeverLog once the saved variables are loaded
 local clock = { start = 0, next = 0, power = 0, lastRegen = nil, lastAura = nil, lastSample = 0 }
@@ -287,13 +290,48 @@ local function OnUpdate()
     ToChat("5sr probe done. Please copy the chat lines above.")
   end
   if not Active() then
+    groupFrame:UnregisterAllEvents()
     frame:UnregisterAllEvents()
     frame:SetScript("OnUpdate", nil)
   end
 end
 
+-- group members' casts: is the spell ID readable (also in combat)? Innervate and Mana Tide
+-- always, other casts only the first 40 per session (enough to answer, small log)
+local GROUP_WATCH = { [29166] = "Innervate", [16190] = "ManaTide", [17354] = "ManaTide", [17359] = "ManaTide" }
+local groupCount = 0
+
+local function OnGroupEvent(_, event, a1, a2, a3, a4)
+  if event == "CHAT_MSG_ADDON" then
+    if a1 == "FMF" then
+      ToLog(("addon msg text=%s channel=%s sender=%s combat=%s"):format(Show(a2), Show(a3), Show(a4),
+        tostring(InCombatLockdown())))
+    end
+    return
+  end
+  local unit, id = a1, a3
+  if IsSecret(unit) or type(unit) ~= "string" or not (unit:match("^party%d$") or unit:match("^raid%d+$")) then
+    return
+  end
+  local watch = not IsSecret(id) and GROUP_WATCH[id]
+  if not watch and groupCount >= 40 then return end
+  groupCount = groupCount + 1
+  local _, class = UnitClass(unit)
+  local name = "?"
+  if not IsSecret(id) and C_Spell and C_Spell.GetSpellName then
+    local ok, n = pcall(C_Spell.GetSpellName, id)
+    if ok then name = Show(n) end
+  end
+  ToLog(("group cast %s %s spell=%s %s%s combat=%s"):format(unit, Show(class), Show(id), name,
+    watch and (" WATCH " .. watch) or "", tostring(InCombatLockdown())))
+end
+
 local function Start()
   if frame:GetScript("OnUpdate") then return end
+  groupCount = 0
+  pcall(groupFrame.RegisterEvent, groupFrame, "UNIT_SPELLCAST_SUCCEEDED")
+  pcall(groupFrame.RegisterEvent, groupFrame, "CHAT_MSG_ADDON")
+  groupFrame:SetScript("OnEvent", function(...) pcall(OnGroupEvent, ...) end)
   clock.start, clock.next, clock.power, clock.lastRegen, clock.lastAura, clock.lastSample =
     GetTime(), 0, 0, nil, nil, GetTime()
   for _, e in ipairs(EVENTS) do
@@ -618,6 +656,21 @@ function ns.LogCommand(arg)
   elseif arg == "off" then
     if log.on then ToLog("log off"); log.on = false end
     ns.Print(("log OFF, %d lines. /reload (or log out) so the game writes the file."):format(#log.lines))
+  elseif arg == "chat" then
+    -- may an addon send chat and addon messages (in combat too)? Whispers itself only.
+    local me = UnitName("player")
+    local okW, errW = pcall(SendChatMessage, "Full Mana Forever: chat test", "WHISPER", nil, me)
+    local okP = C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix
+      and pcall(C_ChatInfo.RegisterAddonMessagePrefix, "FMF")
+    local okA, resA = false, "API missing"
+    if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+      okA, resA = pcall(C_ChatInfo.SendAddonMessage, "FMF", "test", "WHISPER", me)
+    end
+    local text = ("chat test combat=%s whisper=%s prefix=%s addon=%s %s"):format(tostring(InCombatLockdown()),
+      okW and "sent" or ("error " .. tostring(errW):sub(1, 80)), tostring(okP),
+      okA and "sent" or "error", Show(resA))
+    ToLog(text)
+    ns.Print(text .. (log.on and "" or "  (/fmf log on first, to record the answer)"))
   elseif arg == "clear" then
     wipe(log.lines)
     ns.Print("log cleared")
