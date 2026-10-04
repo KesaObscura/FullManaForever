@@ -4,7 +4,7 @@
 
 Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules. Made for healers first, useful for every mana user.
 
-> **Tested so far:** works in combat; tested in Forever at low level (priest 16–17, also with Spirit Tap for the regen display). Level-60 items (runes, raid trinkets) and Innervate could not be tested yet. Please report anything odd — see *Bug reports* below.
+> **Tested so far:** works in combat; tested in Forever at low level (priest 16–17, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight). Level-60 items (runes, raid trinkets) and Innervate could not be tested yet. Please report anything odd — see *Bug reports* below.
 
 ## What it does
 
