@@ -1,5 +1,22 @@
 # Changelog
 
+**Full Mana Forever 0.7.1**
+
+- Icons in a row: the mana numbers sit outside the bar, on the side away from the icons (below the bar when the icons are above it, and the other way round), so markers and the five-second strip no longer cover them
+- Icons in a row: the five-second seconds sit left of the bar, so they no longer cover the mana numbers at large text sizes
+- Icons in a column: with the frame unlocked, the "Full Mana Forever" label moves above the five-second seconds
+- Settings: "Lock frame" and "Test mode" are one switch now, "Unlock frame (test mode)": it makes the frame movable and shows everything that is switched on. `/fmf test` does the same as `/fmf unlock`
+- New for bug reports: `/fmf scan` writes your spells, talents and items with a "Use:" effect into the log; the log also records spell cooldowns, current mana costs, maximum health and the cooldowns of your mana potions
+- Safety: a rune is hidden when the game does not report your maximum health (no health check means no risk)
+- Safety: an item whose cooldown has not started yet is never shown as ready (in Forever potion cooldowns start at once, so a potion comes back after 2 minutes, also in the same fight)
+- The regen text turns gold during the five-second rule even when the gold strip is switched off
+- Settings: "+" on a bar length shorter than one icon makes the bar longer instead of switching to auto
+- Settings: dropdowns near the bottom of the screen open upwards instead of off screen
+- Item list: equipped gear is recognised the same way as by the icons
+- Less work in raids: only your own casts are watched
+- `/fmf log on` with a full log says so instead of claiming to record; `/fmf scan` says when lines did not fit
+- In-game help lists `probe 5sr`, `log on|off|clear` and `scan`; Russian texts use one form of address
+
 **Full Mana Forever 0.7.0**
 
 - New: five-second rule on the mana bar. After a spell that costs mana, a thin gold strip and the seconds at the end of the bar count down the 5 seconds of reduced regen. Wands, potions and food do not start it.

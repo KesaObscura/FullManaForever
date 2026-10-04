@@ -110,6 +110,79 @@ local function SpellText(id)
   return ("spell=%s %s cost: %s"):format(Show(id), name, cost)
 end
 
+-- cooldown of a spell as the game reports it (readable or SECRET, in and out of combat)
+local function CooldownText(id)
+  if id == nil or IsSecret(id) then return "?" end
+  if C_Spell and C_Spell.GetSpellCooldown then
+    local ok, cd = pcall(C_Spell.GetSpellCooldown, id)
+    if not ok then return "error" end
+    if IsSecret(cd) then return "SECRET" end
+    if type(cd) == "table" then return ("%s+%s"):format(Show(cd.startTime), Show(cd.duration)) end
+    return Show(cd)
+  end
+  if GetSpellCooldown then
+    local ok, start, dur = pcall(GetSpellCooldown, id)
+    if ok then return ("%s+%s"):format(Show(start), Show(dur)) end
+    return "error"
+  end
+  return "API missing"
+end
+
+-- current mana cost of a spell (procs like Clearcasting or Inner Focus may show up as 0)
+local function CostOf(id)
+  local getCost = (C_Spell and C_Spell.GetSpellPowerCost) or GetSpellPowerCost
+  if not getCost then return "?" end
+  local ok, list = pcall(getCost, id)
+  if not ok or type(list) ~= "table" then return "?" end
+  for _, c in ipairs(list) do
+    if IsSecret(c.type) or c.type == MANA then return Show(c.cost) end
+  end
+  return "0"
+end
+
+local recent = {} -- the last mana spells cast: their cost is sampled again later
+local function NoteManaSpell(id)
+  if id == nil or IsSecret(id) then return end
+  for i = #recent, 1, -1 do if recent[i] == id then table.remove(recent, i) end end
+  table.insert(recent, 1, id)
+  recent[5] = nil
+end
+
+local function RecentCosts()
+  if #recent == 0 then return "" end
+  local out = {}
+  for _, id in ipairs(recent) do out[#out + 1] = id .. "=" .. CostOf(id) end
+  return " costs " .. table.concat(out, ",")
+end
+
+-- max health: is it readable in combat? (the rune's HP check needs it)
+local function HealthText()
+  local ok, max = Call(UnitHealthMax, "player")
+  return " maxHP=" .. (ok and Show(max) or "?")
+end
+
+-- mana potions in the bags: the game's cooldown (start+duration, enable) and what the
+-- addon makes of it. Shows whether a potion drunk in combat can come back in the same fight.
+local function PotionText()
+  if not (ns.GROUPS and ns.FullList and C_Container and C_Container.GetItemCooldown) then return "" end
+  local gi
+  for i, g in ipairs(ns.GROUPS) do if g.key == "potion" then gi = i end end
+  if not gi then return "" end
+  local out = {}
+  for _, it in ipairs(ns.FullList(gi)) do
+    local okN, n = Call(C_Item.GetItemCount, it.id)
+    if okN and (IsSecret(n) or (n and n > 0)) then
+      local ok, s, d, en = Call(C_Container.GetItemCooldown, it.id)
+      local okR, ready = Call(ns.CooldownState, it.id)
+      out[#out + 1] = ("%d x%s cd=%s+%s en=%s ready=%s"):format(it.id, Show(n),
+        ok and Show(s) or "?", ok and Show(d) or "?", ok and Show(en) or "?",
+        okR and tostring(ready) or "?")
+    end
+  end
+  if #out == 0 then return " pots none" end
+  return " pots " .. table.concat(out, ", ")
+end
+
 local function HeaderText()
   local _, class = UnitClass("player")
   local okL, lvl = Call(UnitLevel, "player")
@@ -118,7 +191,7 @@ local function HeaderText()
     ns.VERSION, Show(class), okL and Show(lvl) or "?", okM and Show(max) or "?",
     tostring(InCombatLockdown()), tostring(GetPowerRegen ~= nil),
     tostring(C_Spell ~= nil and C_Spell.GetSpellPowerCost ~= nil), tostring(C_UnitAuras ~= nil))
-    .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),
+    .. HealthText() .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),
       ns.ManaPercent and (ns.ManaPercent() ~= nil and "ok" or "nil") or "?")
 end
 
@@ -150,7 +223,10 @@ end
 
 local function Emit(text, chatToo)
   ToLog(text)
-  if probe.running and chatToo ~= false then ToChat(Stamp() .. " " .. text) end
+  -- chat lines count from the start of the probe, even when the log was already running
+  if probe.running and chatToo ~= false then
+    ToChat(("%.1f %s"):format(GetTime() - probe.start, text))
+  end
 end
 
 local EVENTS = { "UNIT_SPELLCAST_SUCCEEDED", "UNIT_SPELLCAST_CHANNEL_START", "UNIT_POWER_UPDATE",
@@ -174,26 +250,36 @@ local function OnEvent(_, event, unit, arg2, arg3)
     local text = AuraText()
     if text ~= clock.lastAura then clock.lastAura = text; Emit(text) end
   else
-    Emit((event == "UNIT_SPELLCAST_SUCCEEDED" and "cast " or "channel ") .. SpellText(arg3)
-      .. "  combat=" .. tostring(InCombatLockdown()) .. "  " .. RegenText() .. WatchText())
+    local text = SpellText(arg3)
+    if text:find("type=0", 1, true) then NoteManaSpell(arg3) end
+    Emit((event == "UNIT_SPELLCAST_SUCCEEDED" and "cast " or "channel ") .. text
+      .. "  cd=" .. CooldownText(arg3)
+      .. "  combat=" .. tostring(InCombatLockdown()) .. "  " .. RegenText() .. WatchText()
+      .. HealthText() .. PotionText())
   end
 end
 
+local function Sample(now)
+  local regen = RegenText()
+  -- chat: every 2 s; log: on change, or every 10 s with the mana event count
+  if probe.running and now - probe.start > 1 then
+    ToChat(("%.0f s combat=%s mana events=%d %s"):format(now - probe.start, tostring(InCombatLockdown()),
+      clock.power, regen))
+  end
+  if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
+    ToLog(("sample combat=%s mana events=%d %s%s%s fsr=%.1f%s%s%s"):format(tostring(InCombatLockdown()),
+      clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0, RecentCosts(),
+      HealthText(), PotionText()))
+    clock.lastRegen, clock.lastSample = regen, now
+  end
+end
+
+-- the sampling is guarded on its own: a surprise there must not keep the probe running
 local function OnUpdate()
   local now = GetTime()
   if now < clock.next then return end
   clock.next = now + 2
-  local regen = RegenText()
-  -- chat: every 2 s; log: on change, or every 10 s with the mana event count
-  if probe.running and now - clock.start > 1 then
-    ToChat(("%.0f s combat=%s mana events=%d %s"):format(now - clock.start, tostring(InCombatLockdown()),
-      clock.power, regen))
-  end
-  if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
-    ToLog(("sample combat=%s mana events=%d %s%s%s fsr=%.1f"):format(tostring(InCombatLockdown()),
-      clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0))
-    clock.lastRegen, clock.lastSample = regen, now
-  end
+  pcall(Sample, now)
   clock.power = 0
   if probe.running and now - probe.start >= 30 then
     probe.running = false
@@ -209,11 +295,17 @@ local function Start()
   if frame:GetScript("OnUpdate") then return end
   clock.start, clock.next, clock.power, clock.lastRegen, clock.lastAura, clock.lastSample =
     GetTime(), 0, 0, nil, nil, GetTime()
-  for _, e in ipairs(EVENTS) do pcall(frame.RegisterEvent, frame, e) end
+  for _, e in ipairs(EVENTS) do
+    if e:find("^UNIT_") and frame.RegisterUnitEvent then
+      pcall(frame.RegisterUnitEvent, frame, e, "player")
+    else
+      pcall(frame.RegisterEvent, frame, e)
+    end
+  end
   -- a diagnostic must never break the game UI: any surprise (a secret where we expect a
   -- plain value) is swallowed
   frame:SetScript("OnEvent", function(...) pcall(OnEvent, ...) end)
-  frame:SetScript("OnUpdate", function(...) pcall(OnUpdate, ...) end)
+  frame:SetScript("OnUpdate", OnUpdate)
 end
 
 function ns.Probe5SR()
@@ -227,14 +319,161 @@ end
 
 local function BeginSession()
   Start()
-  log.lines[#log.lines + 1] = ("---- session %s ----"):format(date and date("%Y-%m-%d %H:%M") or "?")
+  if #log.lines < MAX_LINES then
+    log.lines[#log.lines + 1] = ("---- session %s ----"):format(date and date("%Y-%m-%d %H:%M") or "?")
+  end
   ToLog(HeaderText())
   ToLog(AuraText())
+end
+
+------------------------------------------------------------------------
+-- /fmf scan: every spell in the spell book, talents and every item with a "Use:" effect,
+-- with the game's own descriptions (Forever numbers, not guides) -> into the saved log
+------------------------------------------------------------------------
+local function OneLine(text)
+  if text == nil then return "" end
+  if IsSecret(text) then return "SECRET" end
+  return (tostring(text):gsub("[\r\n]+", " | "))
+end
+
+local function Describe(id)
+  local get = (C_Spell and C_Spell.GetSpellDescription) or GetSpellDescription
+  if not get or id == nil then return "" end
+  local ok, d = pcall(get, id)
+  return ok and OneLine(d) or "error"
+end
+
+local scanTip
+local function TooltipLines(setter, ...)
+  if not scanTip then
+    local ok, tip = pcall(CreateFrame, "GameTooltip", "FullManaForeverScanTip", nil, "GameTooltipTemplate")
+    if not ok or not tip then return "" end
+    scanTip = tip
+  end
+  scanTip:SetOwner(UIParent, "ANCHOR_NONE")
+  scanTip:ClearLines()
+  if not pcall(scanTip[setter], scanTip, ...) then return "" end
+  local out = {}
+  for i = 1, scanTip:NumLines() do
+    local fs = _G["FullManaForeverScanTipTextLeft" .. i]
+    local t = fs and fs:GetText()
+    if t and not IsSecret(t) and t ~= "" then out[#out + 1] = t end
+  end
+  scanTip:Hide()
+  return OneLine(table.concat(out, " | "))
+end
+
+local function ScanSpells(add)
+  local n = 0
+  if C_SpellBook and C_SpellBook.GetNumSpellBookSkillLines then
+    local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
+    for i = 1, C_SpellBook.GetNumSpellBookSkillLines() do
+      local line = C_SpellBook.GetSpellBookSkillLineInfo(i)
+      if line then
+        for j = line.itemIndexOffset + 1, line.itemIndexOffset + line.numSpellBookItems do
+          local it = C_SpellBook.GetSpellBookItemInfo(j, bank)
+          if it and it.spellID then
+            n = n + 1
+            add(("spell [%s] %s %s%s cost=%s cd=%s : %s"):format(OneLine(line.name), Show(it.spellID),
+              OneLine(it.name), it.isPassive and " (passive)" or "", CostOf(it.spellID),
+              CooldownText(it.spellID), Describe(it.spellID)))
+          end
+        end
+      end
+    end
+  elseif GetNumSpellTabs then
+    for i = 1, GetNumSpellTabs() do
+      local tab, _, offset, num = GetSpellTabInfo(i)
+      for j = offset + 1, offset + num do
+        local name = GetSpellBookItemName(j, BOOKTYPE_SPELL or "spell")
+        local _, id = GetSpellBookItemInfo(j, BOOKTYPE_SPELL or "spell")
+        if id then
+          n = n + 1
+          local passive = IsPassiveSpell and IsPassiveSpell(j, BOOKTYPE_SPELL or "spell")
+          add(("spell [%s] %s %s%s cost=%s cd=%s : %s"):format(OneLine(tab), Show(id), OneLine(name),
+            passive and " (passive)" or "", CostOf(id), CooldownText(id), Describe(id)))
+        end
+      end
+    end
+  end
+  return n
+end
+
+local function ScanTalents(add)
+  if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then return 0 end
+  local n = 0
+  for tab = 1, GetNumTalentTabs() do
+    for i = 1, GetNumTalents(tab) do
+      local name, _, tier, column, rank, maxRank = GetTalentInfo(tab, i)
+      if name then
+        n = n + 1
+        add(("talent %d/%d %s %s/%s (row %s) : %s"):format(tab, i, OneLine(name), Show(rank), Show(maxRank),
+          Show(tier), TooltipLines("SetTalent", tab, i)))
+      end
+    end
+  end
+  return n
+end
+
+local function ItemLine(where, id, add)
+  if not id then return 0 end
+  local spellName, spellID = C_Item.GetItemSpell(id)
+  if not spellID then return 0 end
+  local name = C_Item.GetItemNameByID and C_Item.GetItemNameByID(id)
+  add(("item %s %s %s use=%s %s : %s"):format(where, Show(id), OneLine(name), Show(spellID), OneLine(spellName),
+    Describe(spellID)))
+  return 1
+end
+
+local function ScanItems(add)
+  local n, seen = 0, {}
+  for slot = 1, 19 do
+    local id = GetInventoryItemID and GetInventoryItemID("player", slot)
+    if id and not seen[id] then seen[id] = true; n = n + ItemLine("slot" .. slot, id, add) end
+  end
+  if C_Container and C_Container.GetContainerNumSlots then
+    for bag = 0, 4 do
+      for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
+        local id = C_Container.GetContainerItemID(bag, slot)
+        if id and not seen[id] then seen[id] = true; n = n + ItemLine("bag", id, add) end
+      end
+    end
+  end
+  return n
+end
+
+function ns.Scan()
+  if not log then ns.Print("log not ready yet") return end
+  if InCombatLockdown() then ns.Print("scan: not in combat, please") return end
+  local lines = log.lines
+  local dropped = 0
+  local function add(text)
+    if #lines < MAX_LINES then lines[#lines + 1] = "scan " .. text else dropped = dropped + 1 end
+  end
+  if #lines < MAX_LINES then
+    lines[#lines + 1] = ("---- scan %s ----"):format(date and date("%Y-%m-%d %H:%M") or "?")
+  end
+  add(HeaderText())
+  local counts = {}
+  for _, part in ipairs({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems } }) do
+    local ok, n = pcall(part[2], add)
+    counts[#counts + 1] = part[1] .. "=" .. (ok and tostring(n) or ("error " .. tostring(n):sub(1, 80)))
+    if not ok then add(part[1] .. " error: " .. tostring(n):sub(1, 200)) end
+  end
+  if dropped > 0 then
+    ns.Print(("log full: %d scan lines dropped. /fmf log clear, then /fmf scan again."):format(dropped))
+  end
+  ns.Print(("scan done: %s. /reload, then send WTF\\Account\\<account>\\SavedVariables\\FullManaForever.lua")
+    :format(table.concat(counts, " ")))
 end
 
 function ns.LogCommand(arg)
   if not log then ns.Print("log not ready yet") return end
   if arg == "on" then
+    if #log.lines >= MAX_LINES then
+      ns.Print(("log full (%d lines). /fmf log clear first."):format(#log.lines))
+      return
+    end
     if not log.on then log.on = true; BeginSession() end
     ns.Print("log ON. Play 10-20 minutes with fights, then /fmf log off and /reload."
       .. " File: WTF\\Account\\<account>\\SavedVariables\\FullManaForever.lua")

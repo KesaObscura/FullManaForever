@@ -58,7 +58,7 @@ end)
 test("auto bar length does not depend on lit icons or switched-off groups", function()
   local ns = M.load({ vertical = true, iconSize = 48 }, { bags = POT })
   M.tick(); local h1 = bar(ns).h
-  ns.db.enabled.rune = false; ns.db.test = true; M.tick()
+  ns.db.enabled.rune = false; ns.db.locked = false; M.tick()
   eq(bar(ns).h, h1)
 end)
 
@@ -473,18 +473,220 @@ test("bar markers stay inside the bar; the main one is thicker", function()
   eq(ticks[2].front.h, 14); eq(ticks[2].front.w, 2)
 end)
 
-test("test mode shows the five-second rule without casting", function()
-  local ns = M.load({ test = true }, { bags = POT })
+test("the unlocked frame (test mode) shows the five-second rule without casting", function()
+  local ns = M.load({ locked = false }, { bags = POT })
   regenApis(14.75, 0)
   M.tick()
   ok(bar(ns).fsr.shown, "strip hidden in test mode")
   ok(bar(ns).fsrText.shown, "seconds hidden in test mode")
   eq(bar(ns).regen.text, "14.8/s", "regen shows the real rate")
-  ns.db.test, ns.db.fsr = false, true
+  ns.db.locked, ns.db.fsr = true, true
   M.tick()
-  ok(not bar(ns).fsr.shown, "strip still shown after test mode")
-  ns.db.test, ns.db.fsr = true, false
+  ok(not bar(ns).fsr.shown, "strip still shown after locking")
+  ns.db.locked, ns.db.fsr = false, false
   M.tick()
   ok(not bar(ns).fsr.shown, "strip shown although switched off")
   noRegenApis()
+end)
+
+test("/fmf scan writes spells, talents and use items with the game's descriptions", function()
+  local ns = M.load(nil)
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { name = "Holy", itemIndexOffset = 0, numSpellBookItems = 2 } end,
+    GetSpellBookItemInfo = function(i)
+      if i == 1 then return { spellID = 14751, name = "Inner Focus" } end
+      return { spellID = 14522, name = "Meditation", isPassive = true }
+    end,
+  }
+  _G.C_Spell = {
+    GetSpellDescription = function(id) return id == 14751 and "Your next spell\ncosts no mana." or "Regen while casting." end,
+    GetSpellPowerCost = function() return { { type = 0, cost = 0 } } end,
+    GetSpellCooldown = function() return { startTime = 0, duration = 0 } end,
+  }
+  _G.GetInventoryItemID = function(_, slot) if slot == 13 then return 23027 end end
+  _G.C_Item.GetItemSpell = function(id) if id == 23027 then return "Warmth", 29166 end end
+  _G.C_Container.GetContainerNumSlots = function() return 0 end
+  SlashCmdList.FULLMANAFOREVER("scan")
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  ok(all:find("---- scan", 1, true), "no scan header")
+  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
+  ok(all:find("14522 Meditation (passive)", 1, true), "passive not marked")
+  ok(all:find("item slot13 23027", 1, true), "use item missing")
+  ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
+  _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
+end)
+
+test("five-second seconds never cover the mana numbers or the frame label", function()
+  local ns = M.load({ vertical = false, fsrScale = 2 }, { bags = POT })
+  local b = bar(ns)
+  local p = b.fsrBox.points[1]
+  eq(p[1], "RIGHT"); eq(p[3], "LEFT", "row: seconds not left of the bar")
+  ns.db.vertical = true; ns.Layout(true)
+  local label = M.upvalue(ns.ApplyLock, "anchor").label
+  ok(label.points[1][5] >= 8 + 28, "column: label not above the seconds: " .. tostring(label.points[1][5]))
+  ns.db.fsr = false; ns.Layout(true)
+  eq(label.points[1][5], 8, "label offset without the rule")
+end)
+
+test("/fmf test is the same switch as unlocking; an old test mode is switched off", function()
+  local ns = M.load({ test = true, dbVersion = 5 })
+  eq(ns.db.test, nil, "old test mode left on")
+  eq(ns.db.locked, true)
+  SlashCmdList.FULLMANAFOREVER("test")
+  eq(ns.db.locked, false, "/fmf test did not unlock")
+  SlashCmdList.FULLMANAFOREVER("test")
+  eq(ns.db.locked, true)
+end)
+
+test("row: mana numbers outside the bar, on the side away from the icons", function()
+  local ns = M.load({ vertical = false, barPosition = "below" }, { bags = POT })
+  local p = bar(ns).text.points[1]
+  eq(p[1], "TOP"); eq(p[3], "BOTTOM", "bar under the icons: numbers not below it")
+  ns.db.barPosition = "above"; ns.Layout(true)
+  p = bar(ns).text.points[1]
+  eq(p[1], "BOTTOM"); eq(p[3], "TOP", "bar above the icons: numbers not above it")
+  local label = M.upvalue(ns.ApplyLock, "anchor").label
+  eq(label.points[1][2], bar(ns).text, "frame label not above the numbers")
+end)
+
+-- 0.7.1 review ---------------------------------------------------------------------
+test("rune stays hidden when max HP cannot be read (no HP check, no risk)", function()
+  local ns = M.load(nil, { bags = { [12662] = 1 } })
+  M.state.maxMana, M.state.manaPct = 5000, 0.05 -- the rune (up to 1500) fits
+  M.tick()
+  ok(slotVisible(ns, 2), "rune hidden although HP is readable and full")
+  M.state.maxHP = M.secret(2000)
+  M.tick()
+  ok(not slotVisible(ns, 2), "rune shown without an HP check")
+end)
+
+test("a cooldown waiting for the end of combat counts as not ready", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 0, 0, 0 } -- drunk in combat: enable 0 until combat ends
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion shown while its cooldown waits")
+  M.state.cooldowns[3385] = nil
+  M.tick()
+  ok(buttons(ns)[1].outer.shown, "potion not back when ready")
+end)
+
+test("regen text turns gold during the rule even with the strip switched off", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "normal colour")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  eq(bar(ns).regen.text, "0.0/s", "casting rate not shown at once")
+  eq(bar(ns).regen.color[1], 1, "casting rate not gold")
+  ok(not bar(ns).fsr.shown, "strip shown although switched off")
+  noRegenApis()
+end)
+
+test("a new install has nothing to migrate and looks for no old macros", function()
+  local ns = M.load(nil)
+  eq(ns.db.dbVersion, 6)
+  eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
+end)
+
+test("switching the mana text off clears it even after format failures", function()
+  local ns = M.load(nil, { bags = POT })
+  _G.UnitPower = function() return {} end -- "%d" cannot format a table
+  for _ = 1, 25 do M.tick() end
+  ns.db.manaText = "none"
+  bar(ns).text.text = "stale"
+  M.tick()
+  eq(bar(ns).text.text, "", "mana text not cleared")
+end)
+
+test("item ids out of range are rejected", function()
+  local ns = M.load(nil)
+  for _, id in ipairs({ "inf", "1e300", "0", "1.5" }) do
+    ok(not ns.AddCustom(id, 300, "potion"), id .. " accepted")
+  end
+  ok(ns.AddCustom(4242, 300, "potion"), "valid id rejected")
+end)
+
+test("only the player's unit events are heard (no raid-wide handler calls)", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("log on")
+  local n = 0
+  for f in pairs(M.eventFrames) do
+    for e in pairs(f.events or {}) do
+      if e:find("^UNIT_") then
+        n = n + 1
+        ok(f.unitFilter and f.unitFilter[e] and f.unitFilter[e].player, e .. " registered for every unit")
+      end
+    end
+  end
+  ok(n >= 2, "unit events found: " .. n)
+  SlashCmdList.FULLMANAFOREVER("log off")
+end)
+
+test("/fmf log on with a full log says so instead of claiming it runs", function()
+  local ns = M.load(nil)
+  FullManaForeverLog.lines = {}
+  for i = 1, 6000 do FullManaForeverLog.lines[i] = "x" end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("log on")
+  ok(not FullManaForeverLog.on, "log on although full")
+  eq(#FullManaForeverLog.lines, 6000, "lines added past the limit")
+  local all = table.concat(M.printed, "\n")
+  ok(all:find("log full", 1, true), "no full message")
+  ok(not all:find("log ON", 1, true), "claims the log runs")
+  SlashCmdList.FULLMANAFOREVER("scan")
+  eq(#FullManaForeverLog.lines, 6000, "scan wrote past the limit")
+  ok(table.concat(M.printed, "\n"):find("scan lines dropped", 1, true), "scan does not say lines were dropped")
+end)
+
+test("a failing sample does not keep the probe running", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("probe 5sr")
+  local fsr = ns.FsrLeft
+  ns.FsrLeft = function() error("surprise") end
+  local f = diagFrame(ns)
+  local real = GetTime
+  _G.GetTime = function() return 115 end
+  f.scripts.OnUpdate(f)
+  _G.GetTime = function() return 131 end
+  f.scripts.OnUpdate(f)
+  _G.GetTime = real
+  ns.FsrLeft = fsr
+  ok(not M.upvalue(ns.Probe5SR, "probe").running, "probe still running")
+  ok(not f.scripts.OnUpdate, "collector still running")
+end)
+
+test("a probe started during a log counts its seconds from its own start", function()
+  local ns = M.load(nil)
+  diagApis()
+  SlashCmdList.FULLMANAFOREVER("log on")
+  local real = GetTime
+  _G.GetTime = function() return 500 end
+  SlashCmdList.FULLMANAFOREVER("probe 5sr")
+  M.printed = {}
+  _G.GetTime = function() return 503 end
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 2050)
+  _G.GetTime = real
+  ok(M.printed[1] and M.printed[1]:find("[^%d%.]3%.0 cast"), "chat stamp: " .. tostring(M.printed[1]))
+  SlashCmdList.FULLMANAFOREVER("log off")
+  noDiagApis()
+end)
+
+test("/fmf log records max health and the potion cooldowns as the game reports them", function()
+  local ns = M.load(nil, { bags = POT })
+  diagApis()
+  M.state.maxHP = M.secret(2000)
+  M.state.cooldowns[3385] = { 95, 120, 0 }
+  SlashCmdList.FULLMANAFOREVER("log on")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "guid", 438)
+  local f = diagFrame(ns)
+  f.scripts.OnUpdate(f)
+  SlashCmdList.FULLMANAFOREVER("log off")
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  ok(all:find("maxHP=SECRET", 1, true), "max health not logged")
+  ok(all:find("pots 3385 x2 cd=95+120 en=0 ready=false", 1, true), "potion cooldown not logged: " .. all)
+  ok(select(2, all:gsub("pots 3385", "")) >= 2, "potions missing in cast or sample line")
+  noDiagApis()
 end)

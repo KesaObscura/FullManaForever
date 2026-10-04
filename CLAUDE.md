@@ -67,3 +67,9 @@ and `/fmf log` (kept in releases for bug reports).
   family. Text with letters must use the game's "...Outline" font objects or stay as is.
 - `CurveConstants.ScaleTo100` exists in Forever: `UnitPowerPercent(..., ScaleTo100)` gives the
   mana percentage (shown in game as 58 %, 69 %).
+- Fifth log (0.7.1, priest 17): max health is readable in combat (`UnitHealthMax` = 332), so the
+  rune's HP check works there. Item cooldowns are readable in combat and work like Classic: a
+  mana potion drunk in combat starts its 2-minute cooldown at once (`enable` 1) and is ready
+  again in the same fight. Spell cooldowns (`C_Spell.GetSpellCooldown`) are SECRET in combat
+  and readable out of combat — for 0.8.0, spell readiness cannot be read in combat. The
+  potion cast in this log was Restore Mana 437 (no cost).
