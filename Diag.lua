@@ -344,6 +344,15 @@ local function Describe(id)
   return ok and OneLine(d) or "error"
 end
 
+-- the spell's own cooldown in the game data (seconds), also for spells not learned yet
+local function BaseCd(id)
+  if not GetSpellBaseCooldown or id == nil or IsSecret(id) then return "?" end
+  local ok, ms = pcall(GetSpellBaseCooldown, id)
+  if not ok or ms == nil then return "?" end
+  if IsSecret(ms) then return "SECRET" end
+  return Show(ms / 1000)
+end
+
 local scanTip
 local function TooltipLines(setter, ...)
   if not scanTip then
@@ -380,7 +389,7 @@ local function ScanSpells(add)
             add(("spell [%s] %s %s%s%s cost=%s cd=%s : %s"):format(OneLine(line.name), Show(it.spellID),
               OneLine(it.name), it.isPassive and " (passive)" or "", future and " (not learned yet)" or "",
               CostOf(it.spellID),
-              CooldownText(it.spellID), Describe(it.spellID)))
+              CooldownText(it.spellID) .. " base=" .. BaseCd(it.spellID), Describe(it.spellID)))
           end
         end
       end
@@ -395,7 +404,7 @@ local function ScanSpells(add)
           n = n + 1
           local passive = IsPassiveSpell and IsPassiveSpell(j, BOOKTYPE_SPELL or "spell")
           add(("spell [%s] %s %s%s cost=%s cd=%s : %s"):format(OneLine(tab), Show(id), OneLine(name),
-            passive and " (passive)" or "", CostOf(id), CooldownText(id), Describe(id)))
+            passive and " (passive)" or "", CostOf(id), CooldownText(id) .. " base=" .. BaseCd(id), Describe(id)))
         end
       end
     end
@@ -404,7 +413,13 @@ local function ScanSpells(add)
 end
 
 local function ScanTalents(add)
-  if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then return 0 end
+  if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then
+    add(("talents: old API missing. GetNumTalentTabs=%s GetTalentInfo=%s C_ClassTalents=%s C_Traits=%s"
+      .. " C_SpecializationInfo=%s C_Talent=%s GetTalentTabInfo=%s"):format(tostring(GetNumTalentTabs ~= nil),
+      tostring(GetTalentInfo ~= nil), tostring(C_ClassTalents ~= nil), tostring(C_Traits ~= nil),
+      tostring(C_SpecializationInfo ~= nil), tostring(_G.C_Talent ~= nil), tostring(GetTalentTabInfo ~= nil)))
+    return 0
+  end
   local n = 0
   for tab = 1, GetNumTalentTabs() do
     for i = 1, GetNumTalents(tab) do
@@ -445,7 +460,8 @@ local function ScanKnown(add)
       add(("known %d ? (not loaded, /fmf scan again)"):format(id))
     else
       n = n + 1
-      add(("known %d %s cost=%s cd=%s : %s"):format(id, OneLine(name), CostOf(id), CooldownText(id),
+      add(("known %d %s cost=%s cd=%s : %s"):format(id, OneLine(name), CostOf(id),
+        CooldownText(id) .. " base=" .. BaseCd(id),
         d ~= "" and d or "(no description yet, /fmf scan again)"))
     end
   end

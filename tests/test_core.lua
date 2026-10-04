@@ -509,14 +509,18 @@ test("/fmf scan writes spells, talents and use items with the game's description
   _G.GetInventoryItemID = function(_, slot) if slot == 13 then return 23027 end end
   _G.C_Item.GetItemSpell = function(id) if id == 23027 then return "Warmth", 29166 end end
   _G.C_Container.GetContainerNumSlots = function() return 0 end
+  _G.GetSpellBaseCooldown = function(id) return id == 14751 and 180000 or 0, 1500 end
   SlashCmdList.FULLMANAFOREVER("scan")
+  _G.GetSpellBaseCooldown = nil
   local all = table.concat(FullManaForeverLog.lines, "\n")
+  ok(all:find("cd=0+0 base=180", 1, true), "base cooldown missing: " .. all)
   ok(all:find("---- scan", 1, true), "no scan header")
-  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
+  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 base=180 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
   ok(all:find("14522 Meditation (passive) (not learned yet)", 1, true), "passive or future spell not marked")
   ok(all:find("item slot13 23027", 1, true), "use item missing")
   ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
   ok(all:find("known 29166", 1, true), "spells above level 1 not asked for")
+  ok(all:find("talents: old API missing", 1, true), "missing talent API not reported")
   ok(all:find("scan v", 1, true) and all:find("level=", 1, true), "no header")
   _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
 end)
