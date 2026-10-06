@@ -102,3 +102,6 @@ and `/fmf log` (kept in releases for bug reports).
   screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
   column), mana text, item list, unlocked frame. **Remind the owner after 0.8.0 is uploaded:**
   still missing No. 6 (settings window of the new version) and No. 9 (Eureka! in the spell slot).
+- Open for 0.8.1 (owner): the auto bar length counts every group the class can use, also groups
+  switched off (priest gnome: 5 icons even with only potions on). Idea: count only groups that
+  are switched on, minimum 3; lit icons never change it. 0.8.0 keeps the old behaviour.
