@@ -116,3 +116,7 @@ if __name__ == "__main__":
               (crop("images/120.webp", BAR, 2.5), "Percentage"),
               (crop("images/119.webp", BAR, 2.5), "Both"),
               (crop("images/118.webp", BAR, 2.5), "None")], top=170, stack=True)
+    if only("06"):
+        make("06_settings.png", "Settings that explain themselves",
+             "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
+             [(crop("images/111.webp", (80, 2, 960, 626), 0.83), "")], top=150)
