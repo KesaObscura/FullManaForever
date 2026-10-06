@@ -11,7 +11,6 @@
 - A potion's own cooldown is remembered, so a wand shot reported on top of it cannot make it look ready
 - The marker of the spell slot follows the spell the icon shows; the settings name the spell that comes back first
 - Settings: "Spells at mana <=" without an extra colon; Portuguese: Life Tap is "Tributo de Vida"
-- Skyborne's Ley Line reading waits its 2-minute cooldown after a cast in combat (before, it could show as ready right away)
 - Icons: the light on top now fades out downwards; the hard line in the middle made icons look half full
 - Log (`/fmf log on`): every spell your group casts with the caster's name (spells that help with mana every time, others once per class), who is in the group, and `/fmf log chat` also tests an invisible addon message to the group
 - Less work per update (no new table for the mana percentage, spell icons cached, no cooldown reads in combat)
