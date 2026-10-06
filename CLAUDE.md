@@ -113,3 +113,6 @@ and `/fmf log` (kept in releases for bug reports).
 - Sixth log (0.8.0, priest 19): every wand Shot puts a cooldown of the weapon speed (1.8 s) on
   all items (`GetItemCooldown` = start+1.80, enable 1); casts did not. Counting it hid every
   potion while wanding; cooldowns of 3 s or less are now ignored for items (fixed in 0.8.0).
+  The owner confirmed the game really blocks potions for those 1.8 s (cooldown swipe on the
+  button). Decision: the icon still shows while wanding — it means "the potion fits, stop
+  shooting and drink"; hiding it would hide every potion as long as the wand keeps firing.
