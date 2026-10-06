@@ -5,6 +5,12 @@
 - While you shoot a wand the game blocks items for a moment after each shot: the potion icon now stays lit and shows that short wait as a sweep, like the action bar (the potion fits, stop shooting and drink). Slow ranged and melee weapons are covered too (up to 5 s)
 - Nothing is shown while your character is dead or a ghost (the unlocked frame still shows, to place it)
 - Removed the one-time clean-up of the old FMF_* macros from 0.6.6 (it ran at every login); a macro left over from then can be deleted by hand
+- Own spells, never shown as ready too early: every spell's cooldown is read before a fight (before, only the first ready one's, and none with "Show only in combat"); a spell whose cooldown was never read waits until after the fight; a cast of a lower rank counts too; Inner Focus's cooldown starts when its buff is used
+- Life Tap is only shown once its mana is known, so it always has the health check; its mana is read again after fights and gear changes
+- A potion's own cooldown is remembered, so a wand shot reported on top of it cannot make it look ready
+- The marker of the spell slot follows the spell the icon shows; the settings name the spell that comes back first
+- Settings: "Spells at mana <=" without an extra colon; Portuguese: Life Tap is "Tributo de Vida"
+- Less work per update (no new table for the mana percentage, spell icons cached, no cooldown reads in combat)
 
 **Full Mana Forever 0.8.0**
 

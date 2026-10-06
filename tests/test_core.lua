@@ -764,10 +764,15 @@ local function spellApis(book, opts)
   opts = opts or {}
   local cds = opts.cds or {}
   _G.Enum.SpellBookSpellBank = { Player = 0 }
+  _G.Enum.SpellBookItemType = { Spell = 1, FutureSpell = 3 }
   _G.C_SpellBook = {
     GetNumSpellBookSkillLines = function() return 1 end,
     GetSpellBookSkillLineInfo = function() return { name = "Class", itemIndexOffset = 0, numSpellBookItems = #book } end,
-    GetSpellBookItemInfo = function(i) return { spellID = book[i], name = opts.names and opts.names[book[i]] or ("Spell" .. book[i]) } end,
+    GetSpellBookItemInfo = function(i)
+      local id = book[i]
+      return { spellID = id, name = opts.names and opts.names[id] or ("Spell" .. id),
+        itemType = opts.future and opts.future[id] and 3 or 1 }
+    end,
   }
   _G.C_Spell = {
     GetSpellName = function(id) return opts.names and opts.names[id] or ("Spell" .. id) end,
@@ -776,7 +781,11 @@ local function spellApis(book, opts)
     GetSpellCooldown = function(id)
       if opts.secretCd then return M.secret({}) end
       local c = cds[id] or { 0, 0 }
-      return { startTime = c[1], duration = c[2] }
+      return { startTime = c[1], duration = c[2], isEnabled = c[3] ~= false }
+    end,
+    GetSpellPowerCost = function(id)
+      if id == 5019 then return {} end -- wand
+      return { { type = 0, cost = 50 } }
     end,
   }
   _G.GetSpellBaseCooldown = function(id) return (opts.base and opts.base[id] or 0) * 1000, 1500 end
@@ -937,4 +946,174 @@ test("nothing is shown while the character is dead or a ghost", function()
   M.state.dead = false
   M.tick()
   ok(buttons(ns)[1].outer.shown and bar(ns).shown, "not back after resurrection")
+end)
+
+-- 0.8.1 review ---------------------------------------------------------------------
+local function at(t, fn) local real = GetTime; _G.GetTime = function() return t end; fn(); _G.GetTime = real end
+
+test("every spell cooldown is read before combat, not only the first ready spell's", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local cds = spellApis({ 12051, 1259823 }, { base = { [12051] = 480, [1259823] = 120 } })
+  cds[1259823] = { 90, 120 } -- Eureka! on cooldown from before the reload
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2; M.tick() -- out of combat: Evocation ready, shown first
+  spellApis({ 12051, 1259823 }, { secretCd = true, base = { [12051] = 480, [1259823] = 120 } })
+  M.state.combat = true
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051)
+  M.tick()
+  ok(not spellSlot(ns), "Eureka! shown in combat while still on cooldown")
+  at(211, function() M.tick() end)
+  ok(spellSlot(ns), "Eureka! not back after its cooldown")
+  noSpellApis()
+end)
+
+test("with 'only in combat' the cooldowns are still read out of combat", function()
+  local ns = M.load({ onlyCombat = true }, { class = "MAGE" })
+  local cds = spellApis({ 12051 }, { base = { [12051] = 480 } })
+  cds[12051] = { 90, 480 }
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2; M.tick()
+  spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
+  M.state.combat = true; M.tick()
+  ok(not spellSlot(ns), "Evocation shown in combat although on cooldown")
+  noSpellApis()
+end)
+
+test("a spell whose cooldown was never read counts as not ready in combat", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051 }, { secretCd = true })
+  ns.Spells.Rebuild()
+  M.state.combat = true; M.state.manaPct = 0.2; M.tick()
+  ok(not spellSlot(ns), "unknown cooldown shown as ready")
+  noSpellApis()
+end)
+
+test("Inner Focus: its cooldown starts when the next spell uses the buff", function()
+  local ns = M.load(nil, { class = "PRIEST" })
+  local cds = spellApis({ 14751 }, { base = { [14751] = 180 } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2; M.tick()
+  ok(spellSlot(ns), "Inner Focus not shown when ready")
+  cds[14751] = { 0, 0, false } -- buff up, cooldown waits
+  M.tick()
+  ok(not spellSlot(ns), "shown while its cooldown waits")
+  spellApis({ 14751 }, { secretCd = true, base = { [14751] = 180 } })
+  M.state.combat = true
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 14751)
+  at(200, function() M.tick() end)
+  ok(not spellSlot(ns), "shown before the buff was used")
+  at(200, function() M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 5019) end) -- wand: no mana
+  at(300, function() M.tick() end)
+  ok(not spellSlot(ns), "a wand shot started the cooldown")
+  at(300, function() M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 2054) end) -- Heal uses it
+  at(479, function() M.tick() end)
+  ok(not spellSlot(ns), "shown before 180 s after the buff was used")
+  at(481, function() M.tick() end)
+  ok(spellSlot(ns), "not back 180 s after the buff was used")
+  noSpellApis()
+end)
+
+test("Life Tap waits for its text: no icon without the health check", function()
+  local ns = M.load(nil, { class = "WARLOCK" })
+  local desc = {}
+  spellApis({ 1454 }, { desc = desc })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.5; M.tick()
+  ok(not spellSlot(ns), "Life Tap shown without knowing its mana")
+  desc[1454] = "Converts 300 Health into 300 Mana for you."
+  M.tick()
+  ok(spellSlot(ns), "Life Tap not shown once its text is loaded")
+  noSpellApis()
+end)
+
+test("a cast of a lower rank starts the cooldown too; spells of later levels do not count", function()
+  local ns = M.load(nil, { class = "SHAMAN" })
+  spellApis({ 16190, 17359 }, { names = { [16190] = "Tide", [17359] = "Tide" }, base = { [16190] = 300, [17359] = 300 } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2; M.tick()
+  ok(spellSlot(ns), "Mana Tide not shown")
+  spellApis({ 16190, 17359 }, { secretCd = true, names = { [16190] = "Tide", [17359] = "Tide" }, base = { [16190] = 300 } })
+  M.state.combat = true
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 16190)
+  M.tick()
+  ok(not spellSlot(ns), "rank 1 cast did not start the cooldown")
+  noSpellApis()
+  local ns2 = M.load(nil, { class = "DRUID" })
+  spellApis({ 29166 }, { future = { [29166] = true } })
+  ns2.Spells.Rebuild()
+  eq(ns2.Spells.AnyKnown(), false, "a spell of a later level counted as known")
+  noSpellApis()
+end)
+
+test("options: spell status names the spell that comes back first; no colon after <=", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local cds = spellApis({ 12051, 1259823 }, { names = { [12051] = "Evocation", [1259823] = "Eureka" } })
+  cds[12051], cds[1259823] = { 90, 480 }, { 90, 120 }
+  ns.Spells.Rebuild()
+  ns.ToggleOptions(true)
+  local st
+  for _, r in ipairs(M.upvalue(ns.RefreshOptions, "groupRows")) do
+    if ns.GROUPS[r.i].spells then st = r.st.text end
+  end
+  ok(st and st:find("Eureka", 1, true), "status: " .. tostring(st))
+  local found
+  for _, w in pairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optSpellThr then found = true end
+  end
+  ok(found, "label of the spell threshold has a colon after <=")
+  noSpellApis()
+end)
+
+test("a short wand cooldown does not hide a potion's own cooldown", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 90, 120 } -- drunk
+  M.tick()
+  M.state.cooldowns[3385] = { 99.5, 1.8 } -- next wand shot reported instead
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion shown while its own cooldown runs")
+  M.state.cooldowns[3385] = nil
+  at(211, function() M.tick() end)
+  ok(buttons(ns)[1].outer.shown, "potion not back after its cooldown")
+  local _, l = slotVisible(ns, 1)
+  eq(l.sweep.drawBling, false, "sweep flashes after every shot")
+end)
+
+test("perf: little garbage per tick with percent and number text", function()
+  local ns = M.load({ manaText = "both" }, { bags = { [13444] = 1, [3827] = 1, [3385] = 1 } })
+  M.state.maxMana = 5000; M.state.manaPct = 0.5
+  for _ = 1, 5 do M.tick() end
+  collectgarbage("collect"); collectgarbage("stop")
+  local before = collectgarbage("count")
+  for _ = 1, 200 do M.tick() end
+  local kb = (collectgarbage("count") - before) / 200
+  collectgarbage("restart")
+  ok(kb < 1.5, ("%.2f KB garbage per tick"):format(kb))
+end)
+
+test("/fmf scan trainer does not break without C_Spell", function()
+  local ns = M.load(nil)
+  _G.TrainerSpellsBuiltin = { PRIEST = { [1] = { [1243] = { cost = 10 } } } }
+  _G.C_Spell = nil
+  local okRun = pcall(SlashCmdList.FULLMANAFOREVER, "scan trainer")
+  _G.TrainerSpellsBuiltin = nil
+  ok(okRun, "scan trainer errored")
+  ok(table.concat(FullManaForeverLog.lines, "\n"):find("trainer PRIEST L1 1243", 1, true), "line missing")
+end)
+
+test("ptBR names Life Tap correctly", function()
+  local ns = M.load(nil, { locale = "ptBR" })
+  ok(ns.L.tipSpellThr:find("Tributo de Vida", 1, true), "wrong spell name in ptBR")
+end)
+
+test("the spell marker follows the spell the icon shows", function()
+  local ns = M.load({ spellThreshold = 0.5 }, { class = "WARLOCK" })
+  local cds = spellApis({ 1259823, 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana." } })
+  cds[1259823] = { 90, 120 } -- Eureka! (first in the list) on cooldown: Life Tap is shown
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.9; M.tick()
+  local p = bar(ns).ticks[SPELL_SLOT][1].front.points[1]
+  local len = bar(ns):GetWidth()
+  ok(math.abs(p[4] - len * 0.7) < 0.01, "marker not at Life Tap's 70 %: " .. tostring(p[4] / len))
+  noSpellApis()
 end)

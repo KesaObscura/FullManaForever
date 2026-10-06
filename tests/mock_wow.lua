@@ -74,6 +74,7 @@ function methods:SetCooldown(st, d) M.calls.SetCooldown = (M.calls.SetCooldown o
 function methods:Clear() self.cdStart, self.cdDur = nil, nil end
 function methods:SetHideCountdownNumbers(v) self.hideNumbers = v end
 function methods:SetDrawEdge(v) self.drawEdge = v end
+function methods:SetDrawBling(v) self.drawBling = v end
 function methods:EnableMouse(v) self.mouse = v end
 function methods:IsMouseEnabled() return self.mouse end
 function methods:SetOrientation(o) self.orient = o end

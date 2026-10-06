@@ -118,3 +118,7 @@ and `/fmf log` (kept in releases for bug reports).
   shooting and drink"; hiding it would hide every potion as long as the wand keeps firing.
   0.8.1: the icon shows that wait as a cooldown sweep; the limit is 5 s (untested whether bows,
   guns or melee swings put such a cooldown on items too; a hunter or paladin log would tell).
+- 0.8.1 review: unverified in game — whether `C_Spell.GetSpellCooldown` reports `isEnabled =
+  false` for Inner Focus while its buff is up (the addon also waits for the next mana spell
+  itself), and the cooldown of Skyborne's Ley Line reading (no `cd` in Data.lua; if
+  `GetSpellBaseCooldown` reports 0 it is shown as ready right after a cast in combat).

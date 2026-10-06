@@ -116,7 +116,8 @@ end
 -- next(v, dir) for steppers that do not simply add a step (bar length).
 local function Stepper(parent, x, text, get, set, o)
   local s = { x = x }
-  s.label = Label(parent, text ~= "" and (text .. ":") or "")
+  -- "Spells at mana <=" ends in a sign already: no colon after it
+  s.label = Label(parent, (text == "" or text:sub(-1) == "=") and text or (text .. ":"))
   s.value = Label(parent, "", "GameFontNormal")
   s.minus = Button(parent, "-", 22)
   s.plus = Button(parent, "+", 22)
@@ -611,8 +612,7 @@ end
 -- own spells: the one that would light up, or the first one and its cooldown
 local function SpellStatus()
   local S = ns.Spells
-  local first, firstID = S.FirstKnown()
-  if not first then return "|cff888888" .. L.stSpellNone .. "|r", true end
+  if not S.FirstKnown() then return "|cff888888" .. L.stSpellNone .. "|r", true end
   local maxMana = UnitPowerMax("player", 0)
   if IsSecret(maxMana) or not maxMana or maxMana <= 0 then maxMana = nil end
   local sp, id = S.Candidate()
@@ -627,8 +627,10 @@ local function SpellStatus()
     end
     return text .. "|r"
   end
-  local _, left = S.Ready(first)
-  return "|cffffaa33" .. L.stSpellCd:format(S.Name(firstID) or "?", math.ceil(left)) .. "|r"
+  -- none ready: the one that comes back first (unknown wait: Inner Focus, or not read yet)
+  local soon, soonID, left = S.Soonest()
+  if not left then return "|cffffaa33" .. L.stSpellWait:format(S.Name(soonID) or "?") .. "|r" end
+  return "|cffffaa33" .. L.stSpellCd:format(S.Name(soonID) or "?", math.ceil(left)) .. "|r"
 end
 
 local function StatusText(i, group)

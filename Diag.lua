@@ -563,7 +563,7 @@ local function ScanTrainer(add)
     n = n + 1
     local race = type(info) == "table" and info.race or nil
     if type(race) == "table" then race = table.concat(race, "/") end
-    local okN, name = pcall(C_Spell.GetSpellName, id)
+    local okN, name = pcall(C_Spell and C_Spell.GetSpellName, id)
     add(("trainer %s L%d %d %s%s%s cost=%s base=%s : %s"):format(class, lvl, id,
       okN and name ~= nil and OneLine(name) or "?",
       type(info) == "table" and info.rank and (" r" .. tostring(info.rank)) or "",
@@ -630,7 +630,7 @@ function ns.Scan(what)
   if InCombatLockdown() then ns.Print("scan: not in combat, please") return end
   if what == "trainer" then
     if not TrainerList(function(_, _, id)
-      if C_Spell.RequestLoadSpellData then pcall(C_Spell.RequestLoadSpellData, id) end
+      if C_Spell and C_Spell.RequestLoadSpellData then pcall(C_Spell.RequestLoadSpellData, id) end
     end) then
       ns.Print("scan trainer: the addon TrainerSpells is not loaded")
       return

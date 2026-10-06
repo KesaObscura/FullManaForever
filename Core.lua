@@ -270,11 +270,20 @@ end
 -- seconds; anything this short is the cooldown a wand shot (or an auto attack) puts on every
 -- item, not the item's own (mana items have minutes). Slow bows and two-handers stay below 5 s.
 local SHORT_CD = 5
+local longUntil = {} -- [item] = GetTime() when its own (long) cooldown ends
 CooldownState = function(id)
   local s, d, enable = C_Container.GetItemCooldown(id)
   if IsSecret(s) or IsSecret(d) or IsSecret(enable) then
     Debug("cdsecret", "item cooldown is secret - treating as ready")
     return true, 0
+  end
+  if s and d and d > SHORT_CD then longUntil[id] = s + d end
+  -- the game may report a wand shot's short cooldown while the item's own still runs
+  local own = longUntil[id]
+  if own and d and d <= SHORT_CD then
+    local left = own - GetTime()
+    if left > 0.05 then return false, left end
+    longUntil[id] = nil
   end
   -- a few seconds: a wand shot, not the item's own cooldown; counting it hid every potion
   -- while wanding (the icon shows the short wait as a sweep instead, see ApplySweep)
@@ -361,7 +370,8 @@ end
 local function FirstThreshold(i, maxMana)
   local group = ns.GROUPS[i]
   if group.spells then
-    local sp = ns.Spells.FirstKnown()
+    -- the spell the icon would show (Life Tap has its own threshold), else the first known
+    local sp = ns.Spells.Candidate() or ns.Spells.FirstKnown()
     return sp and ns.Spells.Threshold(sp, maxMana)
   end
   if db.pickMode == "fit" and CanBand(group) then
@@ -494,7 +504,6 @@ local PLACEHOLDER = {
   gem    = "Interface\\Icons\\INV_Misc_Gem_Ruby_01",
   herb   = "Interface\\Icons\\INV_Misc_QuestionMark",
   gear   = "Interface\\Icons\\INV_Jewelry_Talisman_07",
-  spell  = "Interface\\Icons\\Spell_Nature_Purge",
 }
 local TICK_COLOR = {
   potion = { 0.45, 0.75, 1 },
@@ -571,6 +580,7 @@ local function CreateLayer(parent)
     sweep:SetAllPoints(l.icon)
     if sweep.SetHideCountdownNumbers then sweep:SetHideCountdownNumbers(true) end
     if sweep.SetDrawEdge then sweep:SetDrawEdge(false) end
+    if sweep.SetDrawBling then sweep:SetDrawBling(false) end -- no flash after every shot
     l.sweep = sweep
   end
   -- soft light from the top, dark edge at the bottom: a slightly "glassy" icon
@@ -698,10 +708,12 @@ end
 local function ManaPercent()
   local curve = CurveConstants and CurveConstants.ScaleTo100
   if not curve then return nil end
-  for _, v in ipairs({ powerVariant or 1, (powerVariant == 2) and 1 or 2 }) do
-    local ok, r = TryPower(v, curve)
-    if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
-  end
+  -- the known argument order first, then the other one (no table: this runs every tick)
+  local first = powerVariant or 1
+  local ok, r = TryPower(first, curve)
+  if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
+  ok, r = TryPower(first == 2 and 1 or 2, curve)
+  if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
 end
 ns.ManaPercent = ManaPercent
 
@@ -737,8 +749,8 @@ end
 -- so no empty gaps appear for groups you have nothing for. The mana check itself is
 -- secret, so a ready item below its threshold still keeps its (invisible) slot.
 -- Settings changes call Layout(true); every tick only the set of shown icons is compared
--- auto bar length is fixed: room for every group this class can ever show (priest 4,
--- mage 5). It does not follow lit icons or groups switched off in the options.
+-- auto bar length is fixed: room for every group this class can ever show (priest 4, mage 5,
+-- one more with an own mana spell). It does not follow lit icons or groups switched off.
 function ns.AutoBarLength()
   local size, gap = db.iconSize, db.iconGap or 6
   local slots = 0
@@ -1206,6 +1218,7 @@ local function Update()
     return
   end
   local maxHP = UnitHealthMax("player")
+  ns.Spells.Refresh() -- out of combat: read every spell cooldown, also with hidden icons
   groupOK = GroupAllowed()
   playerLevel = ReadPlayerLevel()
   -- one broken group (odd item, API change) must not blank the others
