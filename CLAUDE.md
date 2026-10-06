@@ -125,5 +125,6 @@ and `/fmf log` (kept in releases for bug reports).
 - 0.8.1 review: unverified in game — whether `C_Spell.GetSpellCooldown` reports `isEnabled =
   false` for Inner Focus while its buff is up (the addon also waits for the next mana spell
   itself). Ley Line reading: 2 min cooldown (owner, from the game tooltip), now `cd = 120` in
-  Data.lua; the Skyborne scan ran before `/fmf scan` printed `base=`, so whether
-  `GetSpellBaseCooldown` reports it is still unknown (the API wins when it reports more than 0).
+  Data.lua (kept as a fallback). Seventh log (0.8.1, Skyborne mage 5): `GetSpellBaseCooldown`
+  reports 120 for it; cast in combat with no cost, cooldown SECRET in combat; the icon hid after
+  the cast. The racial "Walk on Air" 1259416 (120) has nothing to do with mana.
