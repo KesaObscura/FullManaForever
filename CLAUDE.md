@@ -121,7 +121,7 @@ and `/fmf log` (kept in releases for bug reports).
   0.8.1: the icon shows that wait as a cooldown sweep; the owner saw the same lock on spells, so
   the spell icon borrows the last short item cooldown for its sweep (spell cooldowns are secret
   in combat) and Spells.lua ignores read spell cooldowns of 5 s or less; the limit is 5 s (owner, 0.8.1: melee
-  swings with a dagger on a priest put no cooldown on items; bows and guns still untested).
+  swings (dagger, priest) and a bow put no cooldown on items; only wands do).
 - 0.8.1 review: unverified in game — whether `C_Spell.GetSpellCooldown` reports `isEnabled =
   false` for Inner Focus while its buff is up (the addon also waits for the next mana spell
   itself). Ley Line reading: 2 min cooldown (owner, from the game tooltip), now `cd = 120` in

@@ -267,8 +267,9 @@ local function OwnedItem(i)
 end
 
 -- returns ready, secondsLeft
--- seconds; anything this short is the cooldown a wand shot (or an auto attack) puts on every
--- item, not the item's own (mana items have minutes). Slow bows and two-handers stay below 5 s.
+-- seconds; anything this short is the cooldown a wand shot puts on every item (and spell), not
+-- the item's own (mana items have minutes). Bows and melee swings put none (owner, 0.8.1);
+-- 5 s leaves room for slow wands.
 local SHORT_CD = 5
 local longUntil = {} -- [item] = GetTime() when its own (long) cooldown ends
 -- the last short cooldown seen on any item: the game puts it on spells too, where it cannot be
