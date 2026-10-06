@@ -271,12 +271,16 @@ end
 -- item, not the item's own (mana items have minutes). Slow bows and two-handers stay below 5 s.
 local SHORT_CD = 5
 local longUntil = {} -- [item] = GetTime() when its own (long) cooldown ends
+-- the last short cooldown seen on any item: the game puts it on spells too, where it cannot be
+-- read in combat, so the spell icon borrows it for its sweep
+local lockStart, lockDur
 CooldownState = function(id)
   local s, d, enable = C_Container.GetItemCooldown(id)
   if IsSecret(s) or IsSecret(d) or IsSecret(enable) then
     Debug("cdsecret", "item cooldown is secret - treating as ready")
     return true, 0
   end
+  if s and d and d > 0 and d <= SHORT_CD and s + d > GetTime() then lockStart, lockDur = s, d end
   if s and d and d > SHORT_CD then longUntil[id] = s + d end
   -- the game may report a wand shot's short cooldown while the item's own still runs
   local own = longUntil[id]
@@ -958,14 +962,20 @@ local function ClearSweep(l)
 end
 
 -- the sweep is set only when a new short cooldown starts, not every tick
-local function ApplySweep(l, id)
+local function SweepAt(l, s, d)
   if not l.sweep then return end
-  local s, d = ShortCooldown(id)
   if not s then ClearSweep(l) return end
   if l.sweepStart ~= s then
     l.sweep:SetCooldown(s, d)
     l.sweepStart = s
   end
+end
+
+local function ApplySweep(l, id) SweepAt(l, ShortCooldown(id)) end
+
+-- the short lock of a wand shot on spells, taken from the items (see CooldownState)
+local function SpellLock()
+  if lockStart and lockStart + lockDur > GetTime() then return lockStart, lockDur end
 end
 
 local function SetLayer(l, id, n, texture)
@@ -1050,6 +1060,7 @@ local function UpdateSpellButton(b, maxMana, maxHP)
   local sp, id = S.Candidate()
   if not sp then b.outer:Hide() return end
   SetLayer(l, -id, nil, S.Texture(id))
+  SweepAt(l, SpellLock())
   ApplyBand(l, nil, S.Threshold(sp, maxMana))
   l:Show()
   HideLayers(b, 2)

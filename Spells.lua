@@ -10,6 +10,9 @@ local S = {}
 ns.Spells = S
 
 local GCD = 1.6            -- a cooldown this short is the global cooldown, not the spell's
+-- a cooldown read from the game this short is a wand shot's lock on all spells (and items),
+-- not the spell's own: mana spells have minutes. The icon shows it as a sweep (Core.lua)
+local SHORT = 5
 local MANA = 0
 local NEVER = math.huge    -- readyAt while the cooldown waits (Inner Focus until it is used)
 local known = {}           -- [entry] = the player's spell ID (highest rank in the book)
@@ -129,7 +132,7 @@ function S.Ready(sp)
       seen[sp] = true
       if enabled == false then
         readyAt[sp] = NEVER
-      elseif dur > GCD and start > 0 then
+      elseif dur > SHORT and start > 0 then
         readyAt[sp] = start + dur
         if waiting == sp then waiting = nil end -- the game counts it already
       elseif readyAt[sp] ~= NEVER or waiting ~= sp then

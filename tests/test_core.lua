@@ -1182,3 +1182,32 @@ test("auto bar length counts only the groups that are switched on, at least 3 ic
   eq(ns.AutoBarLength(), len(4), "potion, rune, herb and spell")
   noSpellApis()
 end)
+
+test("a wand shot's lock shows on the spell icon too, and never hides it", function()
+  local ns = M.load(nil, { class = "PRIEST", bags = POT })
+  local cds = spellApis({ 1259823 }, { base = { [1259823] = 120 } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2
+  -- out of combat the game reports the lock on the spell itself: not the spell's cooldown
+  cds[1259823] = { 99, 1.8 }
+  M.state.cooldowns[3385] = { 99, 1.8 }
+  M.tick()
+  local vis, l = spellSlot(ns)
+  ok(vis, "spell hidden by the wand's lock")
+  eq(l.sweep.cdStart, 99, "no sweep on the spell"); eq(l.sweep.cdDur, 1.8)
+  -- in combat the spell's cooldown is secret: the items tell
+  spellApis({ 1259823 }, { secretCd = true, base = { [1259823] = 120 } })
+  M.state.combat = true
+  M.state.cooldowns[3385] = { 101, 1.8 }
+  M.tick()
+  vis, l = spellSlot(ns)
+  ok(vis, "spell hidden in combat")
+  eq(l.sweep.cdStart, 101, "sweep not following the new shot")
+  M.state.cooldowns[3385] = nil
+  local real = GetTime
+  _G.GetTime = function() return 103 end
+  M.tick()
+  _G.GetTime = real
+  eq(l.sweep.cdStart, nil, "spell sweep left on after the wait")
+  noSpellApis()
+end)

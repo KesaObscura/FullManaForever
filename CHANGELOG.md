@@ -2,7 +2,7 @@
 
 **Full Mana Forever 0.8.1**
 
-- While you shoot a wand the game blocks items for a moment after each shot: the potion icon now stays lit and shows that short wait as a sweep, like the action bar (the potion fits, stop shooting and drink). Slow ranged and melee weapons are covered too (up to 5 s)
+- While you shoot a wand the game blocks items for a moment after each shot: the potion icon now stays lit and shows that short wait as a sweep, like the action bar (the potion fits, stop shooting and drink). The spell icon shows the same wait (the game locks spells too) and no longer hides for it out of combat. Slow ranged and melee weapons are covered too (up to 5 s)
 - Auto bar length: room only for the icon groups you switched on (at least 3 icons); switching a group on or off in the settings resizes the bar at once
 - Nothing is shown while your character is dead or a ghost (the unlocked frame still shows, to place it)
 - Removed the one-time clean-up of the old FMF_* macros from 0.6.6 (it ran at every login); a macro left over from then can be deleted by hand

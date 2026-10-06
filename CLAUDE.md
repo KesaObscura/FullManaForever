@@ -118,7 +118,9 @@ and `/fmf log` (kept in releases for bug reports).
   The owner confirmed the game really blocks potions for those 1.8 s (cooldown swipe on the
   button). Decision: the icon still shows while wanding — it means "the potion fits, stop
   shooting and drink"; hiding it would hide every potion as long as the wand keeps firing.
-  0.8.1: the icon shows that wait as a cooldown sweep; the limit is 5 s (untested whether bows,
+  0.8.1: the icon shows that wait as a cooldown sweep; the owner saw the same lock on spells, so
+  the spell icon borrows the last short item cooldown for its sweep (spell cooldowns are secret
+  in combat) and Spells.lua ignores read spell cooldowns of 5 s or less; the limit is 5 s (untested whether bows,
   guns or melee swings put such a cooldown on items too; a hunter or paladin log would tell).
 - 0.8.1 review: unverified in game — whether `C_Spell.GetSpellCooldown` reports `isEnabled =
   false` for Inner Focus while its buff is up (the addon also waits for the next mana spell
