@@ -100,8 +100,9 @@ and `/fmf log` (kept in releases for bug reports).
   whisper / send addon messages in combat (`/fmf log chat`).
 - CurseForge gallery (owner, 0.7.x): 1280x720 images made by `tools/gallery.py` from in-game
   screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
-  column), mana text, item list, unlocked frame. **Remind the owner after 0.8.0 is uploaded:**
-  still missing No. 6 (settings window of the new version) and No. 9 (Eureka! in the spell slot).
+  column), mana text, item list, unlocked frame. For 0.8.0 (made, hand over with the release
+  when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
+  replace the 0.7.0 ones on CurseForge.
 - Open for 0.8.1 (owner): the auto bar length counts every group the class can use, also groups
   switched off (priest gnome: 5 icons even with only potions on). Idea: count only groups that
   are switched on, minimum 3; lit icons never change it. 0.8.0 keeps the old behaviour.
