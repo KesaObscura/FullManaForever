@@ -297,7 +297,7 @@ end
 
 -- groups whose items share one cooldown can stack several items in one slot ("bands")
 local function CanBand(group)
-  return not group.equipped and not group.preferReady
+  return not group.equipped and not group.preferReady and not group.spells
 end
 
 -- strongest first; equal restore: never the sleep potion, then list order (own items first)

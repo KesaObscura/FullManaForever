@@ -883,3 +883,16 @@ test("unlocked frame previews the own spell; options show its status", function(
   ok(found and found:find(ns.L.stSpellReady:format("Inner Focus", 50), 1, true), "status: " .. tostring(found))
   noSpellApis()
 end)
+
+test("the spell threshold has its own marker on the mana bar", function()
+  local ns = M.load({ spellThreshold = 0.3 }, { class = "PRIEST" })
+  spellApis({ 1259823 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.9; M.tick()
+  local t = bar(ns).ticks[SPELL_SLOT][1]
+  ok(t.front.shown, "no marker for own spells")
+  local p = t.front.points[1]
+  local len = bar(ns):GetWidth()
+  ok(math.abs(p[4] - len * 0.3) < 0.01, "marker not at 30 %: " .. tostring(p[4]) .. " of " .. tostring(len))
+  noSpellApis()
+end)
