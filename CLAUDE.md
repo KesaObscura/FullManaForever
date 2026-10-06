@@ -14,7 +14,7 @@ and `/fmf log` (kept in releases for bug reports).
   esES). `lua5.1 tests/run.lua` checks keys and placeholders.
 - **Run the tests after every change:** `lua5.1 tests/run.lua` must end with `0 failed`.
 - **After every change, hand the owner a test zip** built from the committed state:
-  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
+  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
   (same contents as `.pkgmeta` packages).
 - Work on the session branch; `main` changes only through a PR the owner merges.
 
@@ -98,3 +98,7 @@ and `/fmf log` (kept in releases for bug reports).
   they are (in raids people ask by voice). Whispering a request is only an option, off by
   default. Waiting on a log: are group members' spell IDs readable in combat, and may an addon
   whisper / send addon messages in combat (`/fmf log chat`).
+- CurseForge gallery (owner, 0.7.x): 1280x720 images made by `tools/gallery.py` from in-game
+  screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
+  column), mana text, item list, unlocked frame. **Remind the owner after 0.8.0 is uploaded:**
+  still missing No. 6 (settings window of the new version) and No. 9 (Eureka! in the spell slot).
