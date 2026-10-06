@@ -3,6 +3,7 @@
 **Full Mana Forever 0.8.1**
 
 - While you shoot a wand the game blocks items for a moment after each shot: the potion icon now stays lit and shows that short wait as a sweep, like the action bar (the potion fits, stop shooting and drink). Slow ranged and melee weapons are covered too (up to 5 s)
+- Nothing is shown while your character is dead or a ghost (the unlocked frame still shows, to place it)
 
 **Full Mana Forever 0.8.0**
 

@@ -199,6 +199,7 @@ function M.reset(opts)
   _G.UnitHealthMax = function() return S.maxHP end
   _G.UnitClass = function() return "Class", S.class end
   _G.UnitLevel = function() return S.level end
+  _G.UnitIsDeadOrGhost = function() return S.dead or false end
   _G.issecretvalue = isSecret
   _G.C_Item = {
     GetItemCount = function(id) count("GetItemCount"); return S.bags[id] or 0 end,

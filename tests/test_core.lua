@@ -929,3 +929,21 @@ test("a wand shot shows a short sweep on the potion instead of hiding it", funct
   M.tick()
   eq(l.sweep.cdStart, nil, "sweep left on after the wait")
 end)
+
+test("nothing is shown while the character is dead or a ghost", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.tick()
+  ok(buttons(ns)[1].outer.shown and bar(ns).shown, "not shown alive")
+  M.state.dead = true
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion shown while dead")
+  ok(not bar(ns).shown, "mana bar shown while dead")
+  ns.db.locked = false
+  M.tick()
+  ok(buttons(ns)[1].outer.shown, "unlocked frame hidden while dead")
+  ns.db.locked = true
+  M.state.dead = false
+  M.tick()
+  ok(buttons(ns)[1].outer.shown and bar(ns).shown, "not back after resurrection")
+end)

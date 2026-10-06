@@ -1196,8 +1196,11 @@ local function Update()
   -- the frame rect may not be known yet at login: convert old positions on the first tick
   if anchor and not IsPinned(db.point) then PinTopLeft() end
   local maxMana = UnitPowerMax("player", MANA)
-  if IsSecret(maxMana) or not maxMana or maxMana <= 0 then
-    Debug("maxmana", "max mana unavailable or secret")
+  -- dead or a ghost: nothing to drink (the unlocked frame still shows, to place it)
+  local okD, dead = pcall(UnitIsDeadOrGhost, "player")
+  local isDead = okD and not IsSecret(dead) and dead and db.locked
+  if isDead or IsSecret(maxMana) or not maxMana or maxMana <= 0 then
+    if not isDead then Debug("maxmana", "max mana unavailable or secret") end
     for _, b in ipairs(buttons) do b.outer:Hide() end
     if bar then bar:Hide() end
     return
