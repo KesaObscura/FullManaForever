@@ -296,12 +296,52 @@ local function OnUpdate()
   end
 end
 
--- group members' casts: is the spell ID readable (also in combat)? Innervate and Mana Tide
--- always, other casts only the first 40 per session (enough to answer, small log)
-local GROUP_WATCH = { [29166] = "Innervate", [16190] = "ManaTide", [17354] = "ManaTide", [17359] = "ManaTide" }
-local groupCount = 0
+-- group members' casts: is the spell ID readable (also in combat), and who cast it? Spells
+-- that give mana are logged every time (Classic IDs; a rank with another ID in Forever still
+-- shows up once below), every other spell once per class, so the log names everything the
+-- group casts without filling up
+local GROUP_WATCH = {
+  [29166] = "Innervate", [16190] = "ManaTide", [17354] = "ManaTide", [17359] = "ManaTide",
+  [5675] = "ManaSpring", [10495] = "ManaSpring", [10496] = "ManaSpring", [10497] = "ManaSpring",
+  [19742] = "Wisdom", [19850] = "Wisdom", [19852] = "Wisdom", [19853] = "Wisdom", [19854] = "Wisdom",
+  [25290] = "Wisdom", [25894] = "GreaterWisdom", [25918] = "GreaterWisdom",
+  [20166] = "SealWisdom", [20356] = "SealWisdom", [20357] = "SealWisdom", [20271] = "Judgement",
+  [1459] = "Intellect", [1460] = "Intellect", [1461] = "Intellect", [10156] = "Intellect",
+  [10157] = "Intellect", [23028] = "Brilliance",
+  [14752] = "DivineSpirit", [14818] = "DivineSpirit", [14819] = "DivineSpirit", [27841] = "DivineSpirit",
+  [27681] = "PrayerSpirit",
+  [5504] = "Water", [5505] = "Water", [5506] = "Water", [6127] = "Water", [10138] = "Water",
+  [10139] = "Water", [10140] = "Water",
+}
+local MAX_GROUP_LINES = 300
+local groupCount, groupSeen = 0, {}
+local rosterDumps, rosterSize = 0, nil
+
+local function Who(unit)
+  if not UnitName then return "?" end
+  local ok, name = pcall(UnitName, unit)
+  return ok and Show(name) or "error"
+end
+
+-- who is in the group (class, level, is the name readable): at log start and when the size
+-- changes, at most 5 times per session
+local function LogRoster()
+  local n = GetNumGroupMembers and GetNumGroupMembers() or 0
+  if IsSecret(n) or n == rosterSize or rosterDumps >= 5 then return end
+  rosterSize, rosterDumps = n, rosterDumps + 1
+  local raid = IsInRaid and IsInRaid() or false
+  ToLog(("group roster members=%s raid=%s combat=%s"):format(Show(n), tostring(raid), tostring(InCombatLockdown())))
+  local count = raid and n or math.max(n - 1, 0)
+  for i = 1, math.min(count, 40) do
+    local unit = (raid and "raid" or "party") .. i
+    local _, class = UnitClass(unit)
+    ToLog(("group member %s %s level=%s who=%s"):format(unit, Show(class), Show(UnitLevel(unit)),
+      Who(unit)))
+  end
+end
 
 local function OnGroupEvent(_, event, a1, a2, a3, a4)
+  if event == "GROUP_ROSTER_UPDATE" then LogRoster() return end
   if event == "CHAT_MSG_ADDON" then
     if a1 == "FMF" then
       ToLog(("addon msg text=%s channel=%s sender=%s combat=%s"):format(Show(a2), Show(a3), Show(a4),
@@ -310,27 +350,43 @@ local function OnGroupEvent(_, event, a1, a2, a3, a4)
     return
   end
   local unit, id = a1, a3
-  if IsSecret(unit) or type(unit) ~= "string" or not (unit:match("^party%d$") or unit:match("^raid%d+$")) then
+  if groupCount >= MAX_GROUP_LINES then return end
+  if IsSecret(unit) then
+    -- a secret unit cannot be told apart from target or nameplates: logged a few times
+    if not groupSeen.secretUnit or groupSeen.secretUnit < 5 then
+      groupSeen.secretUnit = (groupSeen.secretUnit or 0) + 1
+      groupCount = groupCount + 1
+      ToLog("group cast unit=SECRET spell=" .. Show(id))
+    end
     return
   end
-  local watch = not IsSecret(id) and GROUP_WATCH[id]
-  if not watch and groupCount >= 40 then return end
-  groupCount = groupCount + 1
+  if type(unit) ~= "string" or not (unit:match("^party%d$") or unit:match("^raid%d+$")) then
+    return
+  end
   local _, class = UnitClass(unit)
+  local watch = not IsSecret(id) and GROUP_WATCH[id]
+  if not watch then
+    local key = Show(class) .. ":" .. Show(id)
+    local limit = IsSecret(id) and 20 or 1 -- a secret ID: a few samples, it may be anything
+    if (groupSeen[key] or 0) >= limit then return end
+    groupSeen[key] = (groupSeen[key] or 0) + 1
+  end
+  groupCount = groupCount + 1
   local name = "?"
   if not IsSecret(id) and C_Spell and C_Spell.GetSpellName then
     local ok, n = pcall(C_Spell.GetSpellName, id)
     if ok then name = Show(n) end
   end
-  ToLog(("group cast %s %s spell=%s %s%s combat=%s"):format(unit, Show(class), Show(id), name,
-    watch and (" WATCH " .. watch) or "", tostring(InCombatLockdown())))
+  ToLog(("group cast %s %s spell=%s %s%s combat=%s who=%s"):format(unit, Show(class), Show(id), name,
+    watch and (" WATCH " .. watch) or "", tostring(InCombatLockdown()), Who(unit)))
 end
 
 local function Start()
   if frame:GetScript("OnUpdate") then return end
-  groupCount = 0
+  groupCount, groupSeen, rosterDumps, rosterSize = 0, {}, 0, nil
   pcall(groupFrame.RegisterEvent, groupFrame, "UNIT_SPELLCAST_SUCCEEDED")
   pcall(groupFrame.RegisterEvent, groupFrame, "CHAT_MSG_ADDON")
+  pcall(groupFrame.RegisterEvent, groupFrame, "GROUP_ROSTER_UPDATE")
   groupFrame:SetScript("OnEvent", function(...) pcall(OnGroupEvent, ...) end)
   clock.start, clock.next, clock.power, clock.lastRegen, clock.lastAura, clock.lastSample =
     GetTime(), 0, 0, nil, nil, GetTime()
@@ -363,6 +419,7 @@ local function BeginSession()
   end
   ToLog(HeaderText())
   ToLog(AuraText())
+  pcall(LogRoster)
 end
 
 ------------------------------------------------------------------------
@@ -666,9 +723,15 @@ function ns.LogCommand(arg)
     if C_ChatInfo and C_ChatInfo.SendAddonMessage then
       okA, resA = pcall(C_ChatInfo.SendAddonMessage, "FMF", "test", "WHISPER", me)
     end
-    local text = ("chat test combat=%s whisper=%s prefix=%s addon=%s %s"):format(tostring(InCombatLockdown()),
-      okW and "sent" or ("error " .. tostring(errW):sub(1, 80)), tostring(okP),
-      okA and "sent" or "error", Show(resA))
+    -- the group gets an invisible addon message: does it reach other FMF users (in combat too)?
+    local channel = (IsInRaid and IsInRaid() and "RAID") or (IsInGroup and IsInGroup() and "PARTY") or nil
+    local okG, resG = false, "no group"
+    if channel and C_ChatInfo and C_ChatInfo.SendAddonMessage then
+      okG, resG = pcall(C_ChatInfo.SendAddonMessage, "FMF", "test " .. Show(me), channel)
+    end
+    local text = ("chat test combat=%s whisper=%s prefix=%s addon=%s %s group=%s %s %s"):format(
+      tostring(InCombatLockdown()), okW and "sent" or ("error " .. tostring(errW):sub(1, 80)), tostring(okP),
+      okA and "sent" or "error", Show(resA), Show(channel), okG and "sent" or "error", Show(resG))
     ToLog(text)
     ns.Print(text .. (log.on and "" or "  (/fmf log on first, to record the answer)"))
   elseif arg == "clear" then

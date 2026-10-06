@@ -729,16 +729,23 @@ end)
 
 test("/fmf log records group members' casts and the chat test", function()
   local ns = M.load(nil)
-  SlashCmdList.FULLMANAFOREVER("log on")
+  M.state.group = true
+  _G.GetNumGroupMembers = function() return 3 end
+  _G.UnitName = function(u) return u == "player" and "Me" or ("N" .. u) end
   _G.UnitClass = function(u) if u == "party1" then return "Druid", "DRUID" end return "Class", "PRIEST" end
+  SlashCmdList.FULLMANAFOREVER("log on")
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party1", "g", 29166)
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party2", "g", M.secret(5185))
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "nameplate3", "g", 133)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party2", "g", 585) -- Smite twice: logged once
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party2", "g", 585)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party1", "g", 19742) -- Blessing of Wisdom twice: both
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party1", "g", 19742)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", M.secret("party1"), "g", 1)
   local sent = {}
-  _G.UnitName = function() return "Me" end
   _G.SendChatMessage = function(text, kind, _, to) sent[#sent + 1] = kind .. ":" .. to end
   _G.C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end,
-    SendAddonMessage = function(p, text, kind, to) sent[#sent + 1] = "addon:" .. p .. ":" .. to; return 0 end }
+    SendAddonMessage = function(p, text, kind, to) sent[#sent + 1] = "addon:" .. p .. ":" .. tostring(to or kind); return 0 end }
   SlashCmdList.FULLMANAFOREVER("log chat")
   M.Fire("CHAT_MSG_ADDON", "FMF", "test", "WHISPER", "Me")
   SlashCmdList.FULLMANAFOREVER("log off")
@@ -748,12 +755,18 @@ test("/fmf log records group members' casts and the chat test", function()
     if g.allUnits then ok(not next(g.events), "group listener still registered after log off") end
   end
   local all = table.concat(FullManaForeverLog.lines, "\n")
-  _G.SendChatMessage, _G.C_ChatInfo, _G.UnitName = nil, nil, nil
-  ok(all:find("group cast party1 DRUID spell=29166 ? WATCH Innervate", 1, true), "innervate: " .. all)
+  _G.SendChatMessage, _G.C_ChatInfo, _G.UnitName, _G.GetNumGroupMembers = nil, nil, nil, nil
+  ok(all:find("group roster members=3 raid=false", 1, true), "roster: " .. all)
+  ok(all:find("group member party2 PRIEST level=60 who=Nparty2", 1, true), "roster member")
+  ok(all:find("group cast party1 DRUID spell=29166 ? WATCH Innervate combat=false who=Nparty1", 1, true), "innervate: " .. all)
   ok(all:find("group cast party2 PRIEST spell=SECRET", 1, true), "secret group cast")
   ok(not all:find("nameplate3", 1, true), "non-group unit logged")
-  eq(sent[1], "WHISPER:Me"); eq(sent[2], "addon:FMF:Me")
-  ok(all:find("chat test combat=false whisper=sent prefix=true addon=sent", 1, true), "chat test line")
+  local function count(pat) local n = 0; for _ in all:gmatch(pat) do n = n + 1 end return n end
+  eq(count("spell=585 "), 1, "a plain spell is logged once per class")
+  eq(count("WATCH Wisdom"), 2, "a mana spell is logged every time")
+  ok(all:find("group cast unit=SECRET spell=1", 1, true), "secret unit")
+  eq(sent[1], "WHISPER:Me"); eq(sent[2], "addon:FMF:Me"); eq(sent[3], "addon:FMF:PARTY")
+  ok(all:find("chat test combat=false whisper=sent prefix=true addon=sent 0 group=PARTY sent 0", 1, true), "chat test line")
   ok(all:find("addon msg text=test channel=WHISPER sender=Me", 1, true), "addon message not logged")
 end)
 
