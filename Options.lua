@@ -566,7 +566,7 @@ Build = function()
   for i, group in ipairs(ns.GROUPS) do
     if ns.ForMyClass(group) then
       local cb = Check(col, L["grp_" .. group.key], function() return db.enabled[group.key] end,
-        function(v) db.enabled[group.key] = v end)
+        function(v) db.enabled[group.key] = v; ns.Layout(true) end) -- auto bar length follows
       if first then cb:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y); first = false end
       local st = Label(col, "", "GameFontHighlightSmall")
       if st.SetWordWrap then st:SetWordWrap(false) end -- one line; long texts end in "..."

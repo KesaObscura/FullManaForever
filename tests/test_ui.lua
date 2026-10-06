@@ -288,3 +288,18 @@ test("item list: equipped gear is recognised the same way as by the icons", func
   _G.IsEquippedItem = nil
   eq(found, "|cff66ff66" .. ns.L.libEquipped .. "|r", "gear text")
 end)
+
+test("options: switching a group off shortens the auto bar at once", function()
+  local ns = M.load({ vertical = true, iconSize = 48, iconGap = 6 })
+  ns.ToggleOptions(true)
+  local bar = M.upvalue(ns.PositionBar, "bar")
+  M.tick(); local h1 = bar.h
+  local cb
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.grp_rune and w.GetChecked then cb = w end
+  end
+  ok(cb, "rune checkbox")
+  cb:SetChecked(false); cb.scripts.OnClick(cb)
+  eq(ns.db.enabled.rune, false)
+  eq(bar.h, h1 - 48 - 6, "bar length after switching runes off")
+end)

@@ -37,7 +37,7 @@ local DEFAULTS = {
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
   barThickness = 14,
-  barLength  = 0,       -- 0 = auto: room for every group of the class
+  barLength  = 0,       -- 0 = auto: room for every group switched on (at least 3)
   barColor   = "blue",
   iconGap    = 6,
   iconSize   = 44,
@@ -760,7 +760,10 @@ function ns.AutoBarLength()
   local size, gap = db.iconSize, db.iconGap or 6
   local slots = 0
   for _, g in ipairs(ns.GROUPS) do
-    if ns.ForMyClass(g) and (not g.spells or ns.Spells.AnyKnown()) then slots = slots + 1 end
+    -- only groups that are switched on; lit icons never change it (the bar stays still)
+    if db.enabled[g.key] and ns.ForMyClass(g) and (not g.spells or ns.Spells.AnyKnown()) then
+      slots = slots + 1
+    end
   end
   slots = math.max(slots, 3)
   return size * slots + gap * (slots - 1)

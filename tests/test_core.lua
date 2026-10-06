@@ -55,11 +55,14 @@ test("solo/party/raid filter hides icons and bar", function()
   M.tick(); ok(not buttons(ns)[1].outer.shown, "raid"); ok(not bar(ns).shown, "bar in raid")
 end)
 
-test("auto bar length does not depend on lit icons or switched-off groups", function()
+test("auto bar length does not depend on lit icons, a switched-off group shortens it", function()
   local ns = M.load({ vertical = true, iconSize = 48 }, { bags = POT })
-  M.tick(); local h1 = bar(ns).h
-  ns.db.enabled.rune = false; ns.db.locked = false; M.tick()
-  eq(bar(ns).h, h1)
+  M.state.manaPct = 1.0; M.tick(); local h1 = bar(ns).h
+  M.state.manaPct = 0.2; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit")
+  eq(bar(ns).h, h1, "a lit icon changed the length")
+  ns.db.enabled.rune = false; ns.Layout(true)
+  eq(bar(ns).h, h1 - 48 - 6, "a switched-off group still takes room")
 end)
 
 -- fixes ------------------------------------------------------------------------
@@ -1160,5 +1163,22 @@ test("Ley Line reading waits its 2 minutes after a cast in combat, base cooldown
   M.tick()
   _G.GetTime = real
   ok(spellSlot(ns), "not shown after 120 s")
+  noSpellApis()
+end)
+
+test("auto bar length counts only the groups that are switched on, at least 3 icons", function()
+  local ns = M.load(nil, { class = "PRIEST" })
+  spellApis({ 1259823 }, { base = { [1259823] = 120 } })
+  ns.Spells.Rebuild()
+  local size, gap = ns.db.iconSize, ns.db.iconGap or 6
+  local function len(n) return size * n + gap * (n - 1) end
+  eq(ns.AutoBarLength(), len(5), "potion, rune, herb, gear and spell of a priest with Eureka")
+  for k in pairs(ns.db.enabled) do ns.db.enabled[k] = false end
+  ns.db.enabled.potion = true
+  eq(ns.AutoBarLength(), len(3), "only potions: the minimum")
+  ns.db.enabled.gem = true
+  eq(ns.AutoBarLength(), len(3), "mage gems give a priest no room")
+  ns.db.enabled.rune, ns.db.enabled.herb, ns.db.enabled.spell = true, true, true
+  eq(ns.AutoBarLength(), len(4), "potion, rune, herb and spell")
   noSpellApis()
 end)
