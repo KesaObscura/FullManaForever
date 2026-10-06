@@ -70,11 +70,11 @@ otherwise the game does not load it.
 | `/fmf item <id> <amount> [potion\|rune\|gem\|herb\|gear]` | add your own item |
 | `/fmf item clear` | remove all own items |
 | `/fmf probe` | print API status for bug reports |
-| `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen) for a bug report; `/fmf log clear` empties it |
+| `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen, in a group also the group's casts) for a bug report; `/fmf log clear` empties it |
 | `/fmf probe 5sr` | 30 seconds of casts and regen in the chat, for bug reports |
 | `/fmf scan` | write your spells, talents and items with a "Use:" effect into the log, for bug reports |
 | `/fmf scan trainer` | with the addon TrainerSpells installed: every trainer spell of the mana classes into the log |
-| `/fmf log chat` | test whether the addon may send chat and addon messages (whispers yourself) |
+| `/fmf log chat` | test whether the addon may send chat and addon messages (whispers yourself; in a group also an invisible addon message to the group) |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
 | `/fmf reset` | reset the position |
@@ -88,7 +88,8 @@ did and what you expected. Lua errors are easiest to read with BugGrabber + BugS
 For problems with the five-second rule or the regen display: `/fmf log on`, play until it
 happens, `/fmf log off`, `/reload`, then attach
 `WTF\Account\<account>\SavedVariables\FullManaForever.lua`. The log holds class, level,
-casts, mana costs and regen values, nothing personal.
+casts, mana costs and regen values. In a group it also holds the names, classes and casts of
+your group members: remove them before you share the file, if you like.
 
 ## Development
 
