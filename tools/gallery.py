@@ -120,3 +120,17 @@ if __name__ == "__main__":
         make("06_settings.png", "Settings that explain themselves",
              "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
              [(crop("images/111.webp", (80, 2, 960, 626), 0.83), "")], top=150)
+    if only("09"):
+        make("09_own_spells.png", "Your own mana spells too",
+             "Eureka!, Evocation, Innervate, Mana Tide, Inner Focus, Life Tap: lit when ready and your mana is low.",
+             [(crop("images/144.webp", (1150, 150, 1475, 240), 3.0), "")], top=200)
+    if only("07n"):
+        make("08_unlocked.png", "Easy to place",
+             "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
+             [(crop("images/141.webp", (1150, 132, 1480, 240), 2.9), "")], top=190)
+    if only("06n"):
+        S = (196, 168, 1076, 772)
+        make("06_settings.png", "Settings that explain themselves",
+             "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
+             [(crop("images/141.webp", (196, 168, 636, 772), 0.8), "Display and look"),
+              (crop("images/141.webp", (636, 168, 1076, 772), 0.8), "Visibility, drinking, own spells")], top=145)
