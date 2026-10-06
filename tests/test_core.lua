@@ -908,3 +908,24 @@ test("a global cooldown (cast, wand shot) does not hide the potions", function()
   M.tick()
   ok(not buttons(ns)[1].outer.shown, "potion shown on its own cooldown")
 end)
+
+test("a wand shot shows a short sweep on the potion instead of hiding it", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 99, 1.8 }
+  M.tick()
+  local vis, l = slotVisible(ns, 1)
+  ok(vis, "potion hidden during the wand's cooldown")
+  ok(l.sweep, "no sweep frame on the icon")
+  eq(l.sweep.cdStart, 99, "sweep not started"); eq(l.sweep.cdDur, 1.8)
+  ok(l.sweep.hideNumbers, "countdown numbers on a 1.8 s sweep")
+  M.calls = {}
+  M.tick()
+  eq(M.calls.SetCooldown or 0, 0, "sweep set again every tick")
+  M.state.cooldowns[3385] = { 99, 4.5 } -- slow bow / two-hander: still not the potion's own
+  M.tick()
+  ok(slotVisible(ns, 1), "potion hidden by a 4.5 s swing")
+  M.state.cooldowns[3385] = nil
+  M.tick()
+  eq(l.sweep.cdStart, nil, "sweep left on after the wait")
+end)

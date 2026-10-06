@@ -70,6 +70,10 @@ function methods:IsEnabled() return self.enabled ~= false end
 function methods:SetTextColor(r, g, b) self.color = { r, g, b } end
 function methods:AddLine(t) self.lines = self.lines or {}; self.lines[#self.lines + 1] = t end
 function methods:GetAlpha() return self.alpha end
+function methods:SetCooldown(st, d) M.calls.SetCooldown = (M.calls.SetCooldown or 0) + 1; self.cdStart, self.cdDur = st, d end
+function methods:Clear() self.cdStart, self.cdDur = nil, nil end
+function methods:SetHideCountdownNumbers(v) self.hideNumbers = v end
+function methods:SetDrawEdge(v) self.drawEdge = v end
 function methods:EnableMouse(v) self.mouse = v end
 function methods:IsMouseEnabled() return self.mouse end
 function methods:SetOrientation(o) self.orient = o end

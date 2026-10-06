@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.0"
+ns.VERSION = "0.8.1"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -267,15 +267,17 @@ local function OwnedItem(i)
 end
 
 -- returns ready, secondsLeft
-local SHORT_CD = 3 -- seconds; anything this short is a global cooldown
+-- seconds; anything this short is the cooldown a wand shot (or an auto attack) puts on every
+-- item, not the item's own (mana items have minutes). Slow bows and two-handers stay below 5 s.
+local SHORT_CD = 5
 CooldownState = function(id)
   local s, d, enable = C_Container.GetItemCooldown(id)
   if IsSecret(s) or IsSecret(d) or IsSecret(enable) then
     Debug("cdsecret", "item cooldown is secret - treating as ready")
     return true, 0
   end
-  -- a few seconds: the global cooldown of a cast or a wand shot, not the item's own
-  -- cooldown (mana items have minutes); counting it hid every potion while wanding
+  -- a few seconds: a wand shot, not the item's own cooldown; counting it hid every potion
+  -- while wanding (the icon shows the short wait as a sweep instead, see ApplySweep)
   if d and d > 0 and d <= SHORT_CD then return true, 0 end
   -- enable 0: the cooldown waits for something (e.g. the end of combat) before it runs
   if enable == 0 or enable == false then return false, (d and d > 0) and d or 0 end
@@ -284,6 +286,14 @@ CooldownState = function(id)
   return left <= 0.05, math.max(left, 0)
 end
 ns.CooldownState = function(id) return CooldownState(id) end
+
+-- start, duration of a short item cooldown (wand shot) that is still running, else nil
+local function ShortCooldown(id)
+  local s, d = C_Container.GetItemCooldown(id)
+  if IsSecret(s) or IsSecret(d) or not s or not d or d <= 0 or d > SHORT_CD then return nil end
+  if s + d <= GetTime() then return nil end
+  return s, d
+end
 
 -- restore used for thresholds: max ("No waste") or average ("More per fight")
 local function Restore(it)
@@ -554,6 +564,15 @@ local function CreateLayer(parent)
   l.icon = l:CreateTexture(nil, "ARTWORK")
   l.icon:SetAllPoints()
   l.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+  -- the game blocks items for a moment after each wand shot: the icon stays (the potion
+  -- fits, stop shooting and drink) and a sweep shows the wait, like on the action bar
+  local okCd, sweep = pcall(CreateFrame, "Cooldown", nil, l, "CooldownFrameTemplate")
+  if okCd and sweep then
+    sweep:SetAllPoints(l.icon)
+    if sweep.SetHideCountdownNumbers then sweep:SetHideCountdownNumbers(true) end
+    if sweep.SetDrawEdge then sweep:SetDrawEdge(false) end
+    l.sweep = sweep
+  end
   -- soft light from the top, dark edge at the bottom: a slightly "glassy" icon
   l.shine = l:CreateTexture(nil, "ARTWORK", nil, 2)
   l.shine:SetPoint("TOPLEFT")
@@ -911,8 +930,27 @@ end
 ------------------------------------------------------------------------
 -- update loop
 ------------------------------------------------------------------------
+local function ClearSweep(l)
+  if l.sweep and l.sweepStart then
+    if l.sweep.Clear then l.sweep:Clear() else l.sweep:SetCooldown(0, 0) end
+    l.sweepStart = nil
+  end
+end
+
+-- the sweep is set only when a new short cooldown starts, not every tick
+local function ApplySweep(l, id)
+  if not l.sweep then return end
+  local s, d = ShortCooldown(id)
+  if not s then ClearSweep(l) return end
+  if l.sweepStart ~= s then
+    l.sweep:SetCooldown(s, d)
+    l.sweepStart = s
+  end
+end
+
 local function SetLayer(l, id, n, texture)
   if l.itemID ~= id or not id then
+    ClearSweep(l)
     l.icon:SetTexture(texture or C_Item.GetItemIconByID(id))
     l.itemID = id
   end
@@ -1029,6 +1067,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
+    ApplySweep(l, c.it.id)
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
     ApplyBand(l, lo, Threshold(c.it, maxMana))

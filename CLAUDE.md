@@ -116,3 +116,5 @@ and `/fmf log` (kept in releases for bug reports).
   The owner confirmed the game really blocks potions for those 1.8 s (cooldown swipe on the
   button). Decision: the icon still shows while wanding — it means "the potion fits, stop
   shooting and drink"; hiding it would hide every potion as long as the wand keeps firing.
+  0.8.1: the icon shows that wait as a cooldown sweep; the limit is 5 s (untested whether bows,
+  guns or melee swings put such a cooldown on items too; a hunter or paladin log would tell).
