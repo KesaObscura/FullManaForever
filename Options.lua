@@ -4,6 +4,7 @@
 
 local _, ns = ...
 local L = ns.L
+local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
 local win, panelButton
 local widgets = {}        -- options widgets that need Refresh()
 local groupRows = {}      -- consumable groups in the window: { cb, st, i, compact, placed }
@@ -579,8 +580,15 @@ Build = function()
   groupTail = { frame = margin.label, dx = 4 }
   if #groupRows == 0 then margin.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 4, c.y) end
   c.y = c.y - 36
+  -- own spells (Evocation, Innervate, ...): one mana% for all of them
+  local spellThr = Stepper(col, PAD + 4, L.optSpellThr, function() return db.spellThreshold end,
+    function(v) db.spellThreshold = v; ns.InvalidateCurves() end,
+    { step = 0.05, lo = 0.10, hi = 0.90, tip = L.tipSpellThr,
+      fmt = function(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end })
+  spellThr.label:SetPoint("TOPLEFT", margin.label, "TOPLEFT", 0, -32)
+  c.y = c.y - 32
   local items = Button(col, L.optItems, 180, 24)
-  items:SetPoint("TOPLEFT", margin.label, "TOPLEFT", -4, -36)
+  items:SetPoint("TOPLEFT", spellThr.label, "TOPLEFT", -4, -36)
   items:SetScript("OnClick", function() ns.ToggleLibrary(true) end)
   Tip(items, L.optItems, L.tipItems)
   c.y = c.y - 34
@@ -600,9 +608,33 @@ end
 -- refresh
 ------------------------------------------------------------------------
 -- text, compact (nothing to report: fits next to the group name)
+-- own spells: the one that would light up, or the first one and its cooldown
+local function SpellStatus()
+  local S = ns.Spells
+  local first, firstID = S.FirstKnown()
+  if not first then return "|cff888888" .. L.stSpellNone .. "|r", true end
+  local maxMana = UnitPowerMax("player", 0)
+  if IsSecret(maxMana) or not maxMana or maxMana <= 0 then maxMana = nil end
+  local sp, id = S.Candidate()
+  if sp then
+    local text = "|cff66ff66" .. L.stSpellReady:format(S.Name(id) or "?",
+      math.floor(S.Threshold(sp, maxMana) * 100 + 0.5))
+    local hp = S.HpCost(sp)
+    local maxHP = UnitHealthMax("player")
+    if hp and not IsSecret(maxHP) and maxHP and maxHP > 0 then
+      local t = hp / maxHP + ns.db.runeMargin
+      text = text .. (t >= 1 and (" |cffff4444" .. L.stHpNever .. "|r") or L.stHp:format(math.ceil(t * 100)))
+    end
+    return text .. "|r"
+  end
+  local _, left = S.Ready(first)
+  return "|cffffaa33" .. L.stSpellCd:format(S.Name(firstID) or "?", math.ceil(left)) .. "|r"
+end
+
 local function StatusText(i, group)
   local db = ns.db
   if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r", true end
+  if group.spells then return SpellStatus() end
   local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
   if not item then return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r", true end
   if not ready then

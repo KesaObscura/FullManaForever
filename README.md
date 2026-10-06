@@ -30,6 +30,9 @@ when the icon lights up.
   *Strongest only*.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
   (30 % by default).
+- **Own mana spells**: Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the
+  racials Eureka! (gnome) and Ley Line reading (Skyborne) light up when ready and your mana
+  is at or below a set share (50 % by default); Life Tap when its mana fits.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.
@@ -70,6 +73,8 @@ otherwise the game does not load it.
 | `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen) for a bug report; `/fmf log clear` empties it |
 | `/fmf probe 5sr` | 30 seconds of casts and regen in the chat, for bug reports |
 | `/fmf scan` | write your spells, talents and items with a "Use:" effect into the log, for bug reports |
+| `/fmf scan trainer` | with the addon TrainerSpells installed: every trainer spell of the mana classes into the log |
+| `/fmf log chat` | test whether the addon may send chat and addon messages (whispers yourself) |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
 | `/fmf reset` | reset the position |

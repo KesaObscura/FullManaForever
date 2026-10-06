@@ -185,10 +185,11 @@ end
 
 local function HeaderText()
   local _, class = UnitClass("player")
+  local race = UnitRace and select(2, UnitRace("player"))
   local okL, lvl = Call(UnitLevel, "player")
   local okM, max = Call(UnitPowerMax, "player", MANA)
-  return ("v%s %s level=%s maxMana=%s combat=%s API: GetPowerRegen=%s C_Spell.GetSpellPowerCost=%s C_UnitAuras=%s"):format(
-    ns.VERSION, Show(class), okL and Show(lvl) or "?", okM and Show(max) or "?",
+  return ("v%s %s %s level=%s maxMana=%s combat=%s API: GetPowerRegen=%s C_Spell.GetSpellPowerCost=%s C_UnitAuras=%s"):format(
+    ns.VERSION, Show(class), Show(race), okL and Show(lvl) or "?", okM and Show(max) or "?",
     tostring(InCombatLockdown()), tostring(GetPowerRegen ~= nil),
     tostring(C_Spell ~= nil and C_Spell.GetSpellPowerCost ~= nil), tostring(C_UnitAuras ~= nil))
     .. HealthText() .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),
@@ -199,6 +200,9 @@ end
 -- collector: one event frame, two outputs (chat probe, saved log)
 ------------------------------------------------------------------------
 local frame = CreateFrame("Frame")
+-- group casts need every unit (party1-4, raidN); it listens only while the log runs
+local groupFrame = CreateFrame("Frame")
+groupFrame.allUnits = true
 local probe = { running = false }
 local log -- FullManaForeverLog once the saved variables are loaded
 local clock = { start = 0, next = 0, power = 0, lastRegen = nil, lastAura = nil, lastSample = 0 }
@@ -286,13 +290,48 @@ local function OnUpdate()
     ToChat("5sr probe done. Please copy the chat lines above.")
   end
   if not Active() then
+    groupFrame:UnregisterAllEvents()
     frame:UnregisterAllEvents()
     frame:SetScript("OnUpdate", nil)
   end
 end
 
+-- group members' casts: is the spell ID readable (also in combat)? Innervate and Mana Tide
+-- always, other casts only the first 40 per session (enough to answer, small log)
+local GROUP_WATCH = { [29166] = "Innervate", [16190] = "ManaTide", [17354] = "ManaTide", [17359] = "ManaTide" }
+local groupCount = 0
+
+local function OnGroupEvent(_, event, a1, a2, a3, a4)
+  if event == "CHAT_MSG_ADDON" then
+    if a1 == "FMF" then
+      ToLog(("addon msg text=%s channel=%s sender=%s combat=%s"):format(Show(a2), Show(a3), Show(a4),
+        tostring(InCombatLockdown())))
+    end
+    return
+  end
+  local unit, id = a1, a3
+  if IsSecret(unit) or type(unit) ~= "string" or not (unit:match("^party%d$") or unit:match("^raid%d+$")) then
+    return
+  end
+  local watch = not IsSecret(id) and GROUP_WATCH[id]
+  if not watch and groupCount >= 40 then return end
+  groupCount = groupCount + 1
+  local _, class = UnitClass(unit)
+  local name = "?"
+  if not IsSecret(id) and C_Spell and C_Spell.GetSpellName then
+    local ok, n = pcall(C_Spell.GetSpellName, id)
+    if ok then name = Show(n) end
+  end
+  ToLog(("group cast %s %s spell=%s %s%s combat=%s"):format(unit, Show(class), Show(id), name,
+    watch and (" WATCH " .. watch) or "", tostring(InCombatLockdown())))
+end
+
 local function Start()
   if frame:GetScript("OnUpdate") then return end
+  groupCount = 0
+  pcall(groupFrame.RegisterEvent, groupFrame, "UNIT_SPELLCAST_SUCCEEDED")
+  pcall(groupFrame.RegisterEvent, groupFrame, "CHAT_MSG_ADDON")
+  groupFrame:SetScript("OnEvent", function(...) pcall(OnGroupEvent, ...) end)
   clock.start, clock.next, clock.power, clock.lastRegen, clock.lastAura, clock.lastSample =
     GetTime(), 0, 0, nil, nil, GetTime()
   for _, e in ipairs(EVENTS) do
@@ -343,6 +382,15 @@ local function Describe(id)
   return ok and OneLine(d) or "error"
 end
 
+-- the spell's own cooldown in the game data (seconds), also for spells not learned yet
+local function BaseCd(id)
+  if not GetSpellBaseCooldown or id == nil or IsSecret(id) then return "?" end
+  local ok, ms = pcall(GetSpellBaseCooldown, id)
+  if not ok or ms == nil then return "?" end
+  if IsSecret(ms) then return "SECRET" end
+  return Show(ms / 1000)
+end
+
 local scanTip
 local function TooltipLines(setter, ...)
   if not scanTip then
@@ -374,9 +422,12 @@ local function ScanSpells(add)
           local it = C_SpellBook.GetSpellBookItemInfo(j, bank)
           if it and it.spellID then
             n = n + 1
-            add(("spell [%s] %s %s%s cost=%s cd=%s : %s"):format(OneLine(line.name), Show(it.spellID),
-              OneLine(it.name), it.isPassive and " (passive)" or "", CostOf(it.spellID),
-              CooldownText(it.spellID), Describe(it.spellID)))
+            -- the book may also list spells for later levels ("future"): those count too
+            local future = Enum and Enum.SpellBookItemType and it.itemType == Enum.SpellBookItemType.FutureSpell
+            add(("spell [%s] %s %s%s%s cost=%s cd=%s : %s"):format(OneLine(line.name), Show(it.spellID),
+              OneLine(it.name), it.isPassive and " (passive)" or "", future and " (not learned yet)" or "",
+              CostOf(it.spellID),
+              CooldownText(it.spellID) .. " base=" .. BaseCd(it.spellID), Describe(it.spellID)))
           end
         end
       end
@@ -391,7 +442,32 @@ local function ScanSpells(add)
           n = n + 1
           local passive = IsPassiveSpell and IsPassiveSpell(j, BOOKTYPE_SPELL or "spell")
           add(("spell [%s] %s %s%s cost=%s cd=%s : %s"):format(OneLine(tab), Show(id), OneLine(name),
-            passive and " (passive)" or "", CostOf(id), CooldownText(id), Describe(id)))
+            passive and " (passive)" or "", CostOf(id), CooldownText(id) .. " base=" .. BaseCd(id), Describe(id)))
+        end
+      end
+    end
+  end
+  return n
+end
+
+-- talents through the newer trait API (C_ClassTalents + C_Traits)
+local function ScanTraits(add)
+  local cid = C_ClassTalents.GetActiveConfigID and C_ClassTalents.GetActiveConfigID()
+  if not cid then add("talents: no active talent config") return 0 end
+  local info = C_Traits.GetConfigInfo(cid)
+  local n = 0
+  for _, tree in ipairs(info and info.treeIDs or {}) do
+    for _, node in ipairs(C_Traits.GetTreeNodes(tree) or {}) do
+      local ni = C_Traits.GetNodeInfo(cid, node)
+      for _, entry in ipairs(ni and ni.entryIDs or {}) do
+        local ei = C_Traits.GetEntryInfo(cid, entry)
+        local di = ei and ei.definitionID and C_Traits.GetDefinitionInfo(ei.definitionID)
+        local id = di and (di.spellID or di.overriddenSpellID)
+        if id then
+          n = n + 1
+          local okN, name = pcall(C_Spell.GetSpellName, id)
+          add(("talent tree=%s node=%s %s %s %s/%s : %s"):format(Show(tree), Show(node), Show(id),
+            okN and OneLine(name) or "?", Show(ni.currentRank), Show(ni.maxRanks), Describe(id)))
         end
       end
     end
@@ -400,7 +476,14 @@ local function ScanSpells(add)
 end
 
 local function ScanTalents(add)
-  if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then return 0 end
+  if not (GetNumTalentTabs and GetNumTalents and GetTalentInfo) then
+    if C_ClassTalents and C_Traits then return ScanTraits(add) end
+    add(("talents: old API missing. GetNumTalentTabs=%s GetTalentInfo=%s C_ClassTalents=%s C_Traits=%s"
+      .. " C_SpecializationInfo=%s C_Talent=%s GetTalentTabInfo=%s"):format(tostring(GetNumTalentTabs ~= nil),
+      tostring(GetTalentInfo ~= nil), tostring(C_ClassTalents ~= nil), tostring(C_Traits ~= nil),
+      tostring(C_SpecializationInfo ~= nil), tostring(_G.C_Talent ~= nil), tostring(GetTalentTabInfo ~= nil)))
+    return 0
+  end
   local n = 0
   for tab = 1, GetNumTalentTabs() do
     for i = 1, GetNumTalents(tab) do
@@ -412,6 +495,81 @@ local function ScanTalents(add)
       end
     end
   end
+  return n
+end
+
+-- spells that give or save mana, learned above level 1 (a new character cannot see them in
+-- its spell book). IDs from Classic; the scan prints the name Forever has for each ID, so a
+-- wrong or changed ID shows up as a different name. Talents and racials come from the
+-- talent and spell book scans.
+local KNOWN = {
+  29166, -- Innervate (druid)
+  12051, -- Evocation (mage)
+  6117, 1463, 1459, 23028, -- Mage Armor, Mana Shield, Arcane Intellect, Arcane Brilliance
+  759, 3552, 10053, 10054, -- Conjure Mana Agate, Jade, Citrine, Ruby
+  1454, 18220, -- Life Tap, Dark Pact (warlock)
+  5675, 16190, -- Mana Spring Totem, Mana Tide Totem (shaman)
+  19742, 25894, 20166, -- Blessing / Greater Blessing of Wisdom, Seal of Wisdom (paladin)
+  14751, 15270, -- Inner Focus, Spirit Tap (priest)
+}
+
+local function ScanKnown(add)
+  if not (C_Spell and C_Spell.GetSpellName) then return 0 end
+  local n = 0
+  for _, id in ipairs(KNOWN) do
+    if C_Spell.RequestLoadSpellData then pcall(C_Spell.RequestLoadSpellData, id) end
+    local ok, name = pcall(C_Spell.GetSpellName, id)
+    local d = Describe(id)
+    if not ok or name == nil then
+      add(("known %d ? (not loaded, /fmf scan again)"):format(id))
+    else
+      n = n + 1
+      add(("known %d %s cost=%s cd=%s : %s"):format(id, OneLine(name), CostOf(id),
+        CooldownText(id) .. " base=" .. BaseCd(id),
+        d ~= "" and d or "(no description yet, /fmf scan again)"))
+    end
+  end
+  return n
+end
+
+-- every spell a class trainer teaches in Forever, as the addon TrainerSpells lists it (its
+-- table is read at run time on the player's own client; nothing of it ships with this addon)
+local TRAINER_CLASSES = { "PRIEST", "MAGE", "DRUID", "SHAMAN", "PALADIN", "WARLOCK", "HUNTER" }
+
+local function SortedKeys(t)
+  local keys = {}
+  for k in pairs(t) do if type(k) == "number" then keys[#keys + 1] = k end end
+  table.sort(keys)
+  return keys
+end
+
+local function TrainerList(fn)
+  local data = _G.TrainerSpellsBuiltin
+  if type(data) ~= "table" then return false end
+  for _, class in ipairs(TRAINER_CLASSES) do
+    local levels = data[class]
+    if type(levels) == "table" then
+      for _, lvl in ipairs(SortedKeys(levels)) do
+        for _, id in ipairs(SortedKeys(levels[lvl])) do fn(class, lvl, id, levels[lvl][id]) end
+      end
+    end
+  end
+  return true
+end
+
+local function ScanTrainer(add)
+  local n = 0
+  local ok = TrainerList(function(class, lvl, id, info)
+    n = n + 1
+    local race = type(info) == "table" and info.race or nil
+    if type(race) == "table" then race = table.concat(race, "/") end
+    local okN, name = pcall(C_Spell.GetSpellName, id)
+    add(("trainer %s L%d %d %s%s%s cost=%s base=%s : %s"):format(class, lvl, id,
+      okN and name ~= nil and OneLine(name) or "?",
+      type(info) == "table" and info.rank and (" r" .. tostring(info.rank)) or "",
+      race and (" race=" .. tostring(race)) or "", CostOf(id), BaseCd(id), Describe(id)))
+  end)
+  if not ok then add("trainer: TrainerSpells is not loaded") end
   return n
 end
 
@@ -442,9 +600,7 @@ local function ScanItems(add)
   return n
 end
 
-function ns.Scan()
-  if not log then ns.Print("log not ready yet") return end
-  if InCombatLockdown() then ns.Print("scan: not in combat, please") return end
+local function RunScan(parts)
   local lines = log.lines
   local dropped = 0
   local function add(text)
@@ -455,7 +611,7 @@ function ns.Scan()
   end
   add(HeaderText())
   local counts = {}
-  for _, part in ipairs({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems } }) do
+  for _, part in ipairs(parts) do
     local ok, n = pcall(part[2], add)
     counts[#counts + 1] = part[1] .. "=" .. (ok and tostring(n) or ("error " .. tostring(n):sub(1, 80)))
     if not ok then add(part[1] .. " error: " .. tostring(n):sub(1, 200)) end
@@ -465,6 +621,26 @@ function ns.Scan()
   end
   ns.Print(("scan done: %s. /reload, then send WTF\\Account\\<account>\\SavedVariables\\FullManaForever.lua")
     :format(table.concat(counts, " ")))
+end
+
+-- /fmf scan: own spells, talents, items, known mana spells. /fmf scan trainer: all trainer
+-- spells of the mana classes; the game loads their texts first, the list is written 3 s later.
+function ns.Scan(what)
+  if not log then ns.Print("log not ready yet") return end
+  if InCombatLockdown() then ns.Print("scan: not in combat, please") return end
+  if what == "trainer" then
+    if not TrainerList(function(_, _, id)
+      if C_Spell.RequestLoadSpellData then pcall(C_Spell.RequestLoadSpellData, id) end
+    end) then
+      ns.Print("scan trainer: the addon TrainerSpells is not loaded")
+      return
+    end
+    ns.Print("scan trainer: loading spell texts, 3 s ...")
+    local function write() RunScan({ { "trainer", ScanTrainer } }) end
+    if C_Timer and C_Timer.After then C_Timer.After(3, write) else write() end
+    return
+  end
+  RunScan({ { "spells", ScanSpells }, { "talents", ScanTalents }, { "items", ScanItems }, { "known", ScanKnown } })
 end
 
 function ns.LogCommand(arg)
@@ -480,6 +656,21 @@ function ns.LogCommand(arg)
   elseif arg == "off" then
     if log.on then ToLog("log off"); log.on = false end
     ns.Print(("log OFF, %d lines. /reload (or log out) so the game writes the file."):format(#log.lines))
+  elseif arg == "chat" then
+    -- may an addon send chat and addon messages (in combat too)? Whispers itself only.
+    local me = UnitName("player")
+    local okW, errW = pcall(SendChatMessage, "Full Mana Forever: chat test", "WHISPER", nil, me)
+    local okP = C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix
+      and pcall(C_ChatInfo.RegisterAddonMessagePrefix, "FMF")
+    local okA, resA = false, "API missing"
+    if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+      okA, resA = pcall(C_ChatInfo.SendAddonMessage, "FMF", "test", "WHISPER", me)
+    end
+    local text = ("chat test combat=%s whisper=%s prefix=%s addon=%s %s"):format(tostring(InCombatLockdown()),
+      okW and "sent" or ("error " .. tostring(errW):sub(1, 80)), tostring(okP),
+      okA and "sent" or "error", Show(resA))
+    ToLog(text)
+    ns.Print(text .. (log.on and "" or "  (/fmf log on first, to record the answer)"))
   elseif arg == "clear" then
     wipe(log.lines)
     ns.Print("log cleared")

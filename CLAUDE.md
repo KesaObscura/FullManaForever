@@ -1,8 +1,8 @@
 # Working on Full Mana Forever
 
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
-Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Core.lua → Options.lua →
-Library.lua → Diag.lua. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
+Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Core.lua →
+Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).
 
 ## Rules
@@ -14,7 +14,7 @@ and `/fmf log` (kept in releases for bug reports).
   esES). `lua5.1 tests/run.lua` checks keys and placeholders.
 - **Run the tests after every change:** `lua5.1 tests/run.lua` must end with `0 failed`.
 - **After every change, hand the owner a test zip** built from the committed state:
-  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
+  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
   (same contents as `.pkgmeta` packages).
 - Work on the session branch; `main` changes only through a PR the owner merges.
 
@@ -29,6 +29,10 @@ and `/fmf log` (kept in releases for bug reports).
 ## Releases
 
 - The owner uploads to CurseForge by hand, release type **Release**.
+- CurseForge summary (short description): at most 256 characters. Since 0.8.0 (226): "Shows a
+  mana potion, rune, mana item or your own mana spell (Evocation, Innervate, Eureka! ...) the
+  moment it is ready and nothing is wasted. Plus a mana bar with the five-second rule and your
+  live mana regen. For WoW Forever." Gallery image descriptions: also at most 256.
 - GitHub release: tag `vX.Y.Z` on the release commit, not a pre-release, same changelog text
   and zip. This session cannot push tags; the owner creates the tag with the release.
 
@@ -73,3 +77,42 @@ and `/fmf log` (kept in releases for bug reports).
   again in the same fight. Spell cooldowns (`C_Spell.GetSpellCooldown`) are SECRET in combat
   and readable out of combat — for 0.8.0, spell readiness cannot be read in combat. The
   potion cast in this log was Restore Mana 437 (no cost).
+- Scans for 0.8.0 (`/fmf scan`, `/fmf scan trainer` with TrainerSpells installed): the spell book
+  does not list spells of later levels. `GetSpellBaseCooldown` works for any spell ID, also
+  unlearned ones. Talents: the old talent API is gone; `C_ClassTalents.GetActiveConfigID` +
+  `C_Traits` read the talent tree with ranks (priest: 54 talents). TrainerSpells is "All Rights
+  Reserved": never copy its data or code into this repo; it is read only at run time.
+- Mana spells in Forever (ID, level, base cooldown s): Innervate 29166 (druid 40, 360; +400 %
+  regen, 100 % while casting, 20 s), Evocation 12051 (mage 20, 480; +1500 % for 8 s, channeled),
+  Mana Tide Totem 16190/17359 (shaman, 300; group, every 3 s for 12 s), Life Tap 1454/11689
+  (warlock, no cd, health to mana), Mana Spring Totem 5675/10497, Blessing of Wisdom 19742/19854
+  and Greater 25894/25918, Seal of Wisdom 20166/20357, Lay on Hands 10310 (paladin, 1200, gives
+  550 mana), Mage Armor 6117/22783 (50 % regen while casting), Totemic Recall 36936 (25 % of
+  totem mana back), Drain Mana 11704, Viper Sting 14280. Talents/procs: Inner Focus 14751 (180,
+  next spell free), Omen of Clarity 16864, Meditation 14521, Spirit Tap 15270.
+  Racials: Gnome Eureka! 1259823 (120; next 3 spells 10 % cheaper), Expansive Mind 20591 (+5 %
+  max mana); Skyborne (new race) Ley Line reading 1259705 (+100 % health and mana regen, 15 s or
+  15 min near a ley line); Human Spirit 20598 (+5 % spirit). Racial priest spells (Desperate
+  Prayer, Starshards, Feedback, ...) have nothing to do with mana.
+- Decision (owner, 0.8.0): show which group members have Innervate / Mana Tide ready and who
+  they are (in raids people ask by voice). Whispering a request is only an option, off by
+  default. Waiting on a log: are group members' spell IDs readable in combat, and may an addon
+  whisper / send addon messages in combat (`/fmf log chat`).
+- CurseForge gallery (owner, 0.7.x): 1280x720 images made by `tools/gallery.py` from in-game
+  screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
+  column), mana text, item list, unlocked frame. For 0.8.0 (made, hand over with the release
+  when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
+  replace the 0.7.0 ones on CurseForge.
+- Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
+  progress is already taken off); the addon uses the real value, so an icon lights up only when
+  the cast lands. `UnitPowerPercent(..., predicted=true)` could light it up during the cast;
+  risk: a flicker when the cast is interrupted. Owner decides.
+- Open for 0.8.1 (owner): the auto bar length counts every group the class can use, also groups
+  switched off (priest gnome: 5 icons even with only potions on). Idea: count only groups that
+  are switched on, minimum 3; lit icons never change it. 0.8.0 keeps the old behaviour.
+- Sixth log (0.8.0, priest 19): every wand Shot puts a cooldown of the weapon speed (1.8 s) on
+  all items (`GetItemCooldown` = start+1.80, enable 1); casts did not. Counting it hid every
+  potion while wanding; cooldowns of 3 s or less are now ignored for items (fixed in 0.8.0).
+  The owner confirmed the game really blocks potions for those 1.8 s (cooldown swipe on the
+  button). Decision: the icon still shows while wanding — it means "the potion fits, stop
+  shooting and drink"; hiding it would hide every potion as long as the wand keeps firing.

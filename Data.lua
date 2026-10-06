@@ -60,4 +60,25 @@ ns.GROUPS = {
       { id = 4381, min = 96, max = 160 },   -- Minor Recombobulator (trinket, 96-160 mana + health, 5 min)
     },
   },
+  {
+    key = "spell", -- own spells that give or save mana (ns.SPELLS), each with its own cooldown
+    spells = true,
+    items = {},
+  },
+}
+
+-- Own spells, first ready one wins (texts and cooldowns from /fmf scan in Forever).
+-- id: any rank; the player's own rank is found by name in the spell book.
+-- cd: seconds, used in combat where the game's cooldown is secret (the game's base cooldown
+-- is preferred when it can be read). Without "fit" the icon lights up at or below the
+-- "Spells at mana" setting; "fit": the mana it gives (from its description) must fit into
+-- the missing mana and it costs that much health (Life Tap).
+ns.SPELLS = {
+  { key = "evocation",  id = 12051,   class = "MAGE",    cd = 480 }, -- +1500 % regen for 8 s
+  { key = "innervate",  id = 29166,   class = "DRUID",   cd = 360 }, -- +400 % regen for 20 s
+  { key = "manatide",   id = 16190,   class = "SHAMAN",  cd = 300 }, -- talent, group mana
+  { key = "leyline",    id = 1259705 },                            -- Skyborne: +100 % regen
+  { key = "innerfocus", id = 14751,   class = "PRIEST",  cd = 180 }, -- next spell free
+  { key = "eureka",     id = 1259823, cd = 120 },                  -- Gnome: 3 spells 10 % cheaper
+  { key = "lifetap",    id = 1454,    class = "WARLOCK", fit = true }, -- health to mana
 }

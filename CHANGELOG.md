@@ -1,5 +1,14 @@
 # Changelog
 
+**Full Mana Forever 0.8.0**
+
+- New: your own mana spells get an icon slot, like the consumables: Evocation (mage), Innervate (druid, on yourself), Mana Tide Totem (shaman), Inner Focus (priest), Life Tap (warlock) and the racials Eureka! (gnome) and Ley Line reading (Skyborne). A spell lights up when it is ready and your mana is at or below "Spells at mana" (50 % by default), shown by a turquoise marker on the mana bar. Life Tap lights up like a potion when its mana fits and keeps the same minimum health as runes
+- Fixed: potions and other items no longer disappear while you shoot a wand or cast; the short global cooldown the game puts on items too was taken for the item's own cooldown
+- In combat Forever hides spell cooldowns from addons, so the addon counts them from your own cast; out of combat it reads them exactly. A spell is never shown as ready too early
+- For bug reports and research: `/fmf scan` also lists mana spells of later levels with the game's own descriptions and base cooldowns, reads talents through the newer talent API and names your race
+- `/fmf scan trainer` lists every trainer spell of the mana classes when the addon TrainerSpells is installed
+- The log also records group members' Innervate and Mana Tide; `/fmf log chat` tests whether the addon may send chat and addon messages
+
 **Full Mana Forever 0.7.1**
 
 - Icons in a row: the mana numbers sit outside the bar, on the side away from the icons (below the bar when the icons are above it, and the other way round), so markers and the five-second strip no longer cover them

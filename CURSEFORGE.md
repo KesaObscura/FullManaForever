@@ -4,7 +4,7 @@
 
 Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules. Made for healers first, useful for every mana user.
 
-> **Tested so far:** works in combat; tested in Forever at low level (priest 16–17, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight). Level-60 items (runes, raid trinkets) and Innervate could not be tested yet. Please report anything odd — see *Bug reports* below.
+> **Tested so far:** works in combat; tested in Forever at low level (priest 16–17, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; own spells with the gnome's Eureka!, in and out of combat). Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Inner Focus, Life Tap, Ley Line reading) could not be tested yet. Please report anything odd — see *Bug reports* below.
 
 ## What it does
 
@@ -12,8 +12,9 @@ Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules
 - **Right potion for the deficit.** With several potions in your bags, the icon shows the **strongest potion that will not overflow**: a weak one when you are slightly down, a strong one when you are low.
 - **One simple setting: Drinking.** *No waste* waits until the whole potion fits. *More per fight* uses the average restore, so you drink earlier and fit more potions into a long fight. *Strongest only* keeps it simple.
 - **Runes are safe.** A rune is only shown when you will keep a configurable share of your health after its damage (30 % by default).
+- **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Ley Line reading (Skyborne) get their own icon: it lights up when the spell is ready and your mana is at or below a share you choose (50 % by default). Life Tap lights up like a potion when its mana fits, with the same health check as runes. Forever hides spell cooldowns from addons in combat, so the addon counts them from your cast — never too early.
 - **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length, icon size and spacing are adjustable.
-- **Five-second rule and mana regen.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it). Under the mana numbers you see the regen running right now, per second — also in combat, and including talents like Spirit Tap or Innervate.
+- **Five-second rule and mana regen.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it). Next to the mana bar (under the numbers when the icons are in a column) you see the regen running right now, per second — also in combat, and including talents like Spirit Tap or Innervate.
 - **Mana text** like the game's status text: numeric value, percentage, both or none.
 - **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
 - **Item list.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category.
@@ -53,10 +54,10 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 ## Planned
 
-Pre-pull checklist (consumables, buffs), Innervate / Mana Tide on you, sound when a potion is ready again, group sync of mana cooldowns (Innervate, Mana Tide) and a helper for the druid or shaman giving them out.
+Pre-pull checklist (consumables, buffs), who in your group has Innervate / Mana Tide ready, sound when a potion is ready again, group sync of mana cooldowns (Innervate, Mana Tide) and a helper for the druid or shaman giving them out.
 
 ## Bug reports
 
 Please include the output of `/fmf probe`, your class and level, and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
-For the five-second rule or the regen display: `/fmf log on`, play until it happens, `/fmf log off`, `/reload`, and attach `WTF\Account\<account>\SavedVariables\FullManaForever.lua` (class, level, casts and regen values, nothing personal).
+For the five-second rule or the regen display: `/fmf log on`, play until it happens, `/fmf log off`, `/reload`, and attach `WTF\Account\ACCOUNTNAME\SavedVariables\FullManaForever.lua` (class, level, casts and regen values, nothing personal).

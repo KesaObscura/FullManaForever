@@ -117,7 +117,7 @@ end
 local function BuildContent()
   local y, n, hn = -2, 0, 0
   for gi, group in ipairs(ns.GROUPS) do
-    if ns.ForMyClass(group) then
+    if ns.ForMyClass(group) and not group.spells then
       hn = hn + 1
       local h = Header(hn)
       h.label:SetText(L["grp_" .. group.key])
@@ -268,7 +268,7 @@ local function Build(point)
   local chosen = "potion"
   local entries = {}
   for _, g in ipairs(ns.GROUPS) do
-    if ns.ForMyClass(g) then entries[#entries + 1] = { value = g.key, text = L["grp_" .. g.key] } end
+    if ns.ForMyClass(g) and not g.spells then entries[#entries + 1] = { value = g.key, text = L["grp_" .. g.key] } end
   end
   local cat
   ui.WithRegistry(reg, function()

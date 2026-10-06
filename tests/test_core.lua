@@ -491,29 +491,37 @@ end)
 
 test("/fmf scan writes spells, talents and use items with the game's descriptions", function()
   local ns = M.load(nil)
+  _G.Enum.SpellBookItemType = { Spell = 1, FutureSpell = 3 }
   _G.C_SpellBook = {
     GetNumSpellBookSkillLines = function() return 1 end,
     GetSpellBookSkillLineInfo = function() return { name = "Holy", itemIndexOffset = 0, numSpellBookItems = 2 } end,
     GetSpellBookItemInfo = function(i)
       if i == 1 then return { spellID = 14751, name = "Inner Focus" } end
-      return { spellID = 14522, name = "Meditation", isPassive = true }
+      return { spellID = 14522, name = "Meditation", isPassive = true, itemType = 3 }
     end,
   }
   _G.C_Spell = {
     GetSpellDescription = function(id) return id == 14751 and "Your next spell\ncosts no mana." or "Regen while casting." end,
     GetSpellPowerCost = function() return { { type = 0, cost = 0 } } end,
     GetSpellCooldown = function() return { startTime = 0, duration = 0 } end,
+    GetSpellName = function(id) return "Spell" .. id end,
   }
   _G.GetInventoryItemID = function(_, slot) if slot == 13 then return 23027 end end
   _G.C_Item.GetItemSpell = function(id) if id == 23027 then return "Warmth", 29166 end end
   _G.C_Container.GetContainerNumSlots = function() return 0 end
+  _G.GetSpellBaseCooldown = function(id) return id == 14751 and 180000 or 0, 1500 end
   SlashCmdList.FULLMANAFOREVER("scan")
+  _G.GetSpellBaseCooldown = nil
   local all = table.concat(FullManaForeverLog.lines, "\n")
+  ok(all:find("cd=0+0 base=180", 1, true), "base cooldown missing: " .. all)
   ok(all:find("---- scan", 1, true), "no scan header")
-  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
-  ok(all:find("14522 Meditation (passive)", 1, true), "passive not marked")
+  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 base=180 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
+  ok(all:find("14522 Meditation (passive) (not learned yet)", 1, true), "passive or future spell not marked")
   ok(all:find("item slot13 23027", 1, true), "use item missing")
   ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
+  ok(all:find("known 29166", 1, true), "spells above level 1 not asked for")
+  ok(all:find("talents: old API missing", 1, true), "missing talent API not reported")
+  ok(all:find("scan v", 1, true) and all:find("level=", 1, true), "no header")
   _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
 end)
 
@@ -615,7 +623,7 @@ test("only the player's unit events are heard (no raid-wide handler calls)", fun
   local n = 0
   for f in pairs(M.eventFrames) do
     for e in pairs(f.events or {}) do
-      if e:find("^UNIT_") then
+      if e:find("^UNIT_") and not f.allUnits then
         n = n + 1
         ok(f.unitFilter and f.unitFilter[e] and f.unitFilter[e].player, e .. " registered for every unit")
       end
@@ -689,4 +697,214 @@ test("/fmf log records max health and the potion cooldowns as the game reports t
   ok(all:find("pots 3385 x2 cd=95+120 en=0 ready=false", 1, true), "potion cooldown not logged: " .. all)
   ok(select(2, all:gsub("pots 3385", "")) >= 2, "potions missing in cast or sample line")
   noDiagApis()
+end)
+
+test("/fmf scan trainer lists the trainer spells of TrainerSpells with the game's texts", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("scan trainer")
+  ok(table.concat(M.printed, "\n"):find("TrainerSpells is not loaded", 1, true), "missing addon not reported")
+  _G.TrainerSpellsBuiltin = { PRIEST = { [10] = { [13908] = { cost = 15, rank = 1, race = { "Dwarf", "Human" } },
+    [2006] = { cost = 285, rank = 1 } } }, WARRIOR = { [1] = { [100] = { cost = 10 } } } }
+  local requested = 0
+  _G.C_Spell = { GetSpellName = function(id) return "Spell" .. id end,
+    GetSpellDescription = function(id) return "Text " .. id end,
+    RequestLoadSpellData = function() requested = requested + 1 end }
+  SlashCmdList.FULLMANAFOREVER("scan trainer")
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  _G.TrainerSpellsBuiltin, _G.C_Spell = nil, nil
+  eq(requested, 2, "texts requested for the mana classes only")
+  ok(all:find("trainer PRIEST L10 2006 Spell2006 r1", 1, true), "trainer line: " .. all)
+  ok(all:find("13908 Spell13908 r1 race=Dwarf/Human", 1, true), "racial spell not marked")
+  ok(not all:find("WARRIOR", 1, true), "class without mana scanned")
+end)
+
+test("/fmf scan reads talents through the trait API", function()
+  local ns = M.load(nil)
+  _G.C_ClassTalents = { GetActiveConfigID = function() return 7 end }
+  _G.C_Traits = {
+    GetConfigInfo = function() return { treeIDs = { 1 } } end,
+    GetTreeNodes = function() return { 11 } end,
+    GetNodeInfo = function() return { entryIDs = { 21 }, currentRank = 5, maxRanks = 5 } end,
+    GetEntryInfo = function() return { definitionID = 31 } end,
+    GetDefinitionInfo = function() return { spellID = 15270 } end,
+  }
+  _G.C_Spell = { GetSpellName = function() return "Spirit Tap" end,
+    GetSpellDescription = function() return "50% while casting" end }
+  SlashCmdList.FULLMANAFOREVER("scan")
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  _G.C_ClassTalents, _G.C_Traits, _G.C_Spell = nil, nil, nil
+  ok(all:find("talent tree=1 node=11 15270 Spirit Tap 5/5 : 50% while casting", 1, true), "talent line: " .. all)
+end)
+
+test("/fmf log records group members' casts and the chat test", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("log on")
+  _G.UnitClass = function(u) if u == "party1" then return "Druid", "DRUID" end return "Class", "PRIEST" end
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party1", "g", 29166)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "party2", "g", M.secret(5185))
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "nameplate3", "g", 133)
+  local sent = {}
+  _G.UnitName = function() return "Me" end
+  _G.SendChatMessage = function(text, kind, _, to) sent[#sent + 1] = kind .. ":" .. to end
+  _G.C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end,
+    SendAddonMessage = function(p, text, kind, to) sent[#sent + 1] = "addon:" .. p .. ":" .. to; return 0 end }
+  SlashCmdList.FULLMANAFOREVER("log chat")
+  M.Fire("CHAT_MSG_ADDON", "FMF", "test", "WHISPER", "Me")
+  SlashCmdList.FULLMANAFOREVER("log off")
+  local f = diagFrame(ns)
+  f.scripts.OnUpdate(f)
+  for g in pairs(M.eventFrames) do
+    if g.allUnits then ok(not next(g.events), "group listener still registered after log off") end
+  end
+  local all = table.concat(FullManaForeverLog.lines, "\n")
+  _G.SendChatMessage, _G.C_ChatInfo, _G.UnitName = nil, nil, nil
+  ok(all:find("group cast party1 DRUID spell=29166 ? WATCH Innervate", 1, true), "innervate: " .. all)
+  ok(all:find("group cast party2 PRIEST spell=SECRET", 1, true), "secret group cast")
+  ok(not all:find("nameplate3", 1, true), "non-group unit logged")
+  eq(sent[1], "WHISPER:Me"); eq(sent[2], "addon:FMF:Me")
+  ok(all:find("chat test combat=false whisper=sent prefix=true addon=sent", 1, true), "chat test line")
+  ok(all:find("addon msg text=test channel=WHISPER sender=Me", 1, true), "addon message not logged")
+end)
+
+-- own mana spells (0.8.0) ------------------------------------------------------------
+local SPELL_SLOT = 6
+-- a spell book with the given spells (name = "Spell<id>"), cooldowns from cds[id] = { start, dur }
+local function spellApis(book, opts)
+  opts = opts or {}
+  local cds = opts.cds or {}
+  _G.Enum.SpellBookSpellBank = { Player = 0 }
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { name = "Class", itemIndexOffset = 0, numSpellBookItems = #book } end,
+    GetSpellBookItemInfo = function(i) return { spellID = book[i], name = opts.names and opts.names[book[i]] or ("Spell" .. book[i]) } end,
+  }
+  _G.C_Spell = {
+    GetSpellName = function(id) return opts.names and opts.names[id] or ("Spell" .. id) end,
+    GetSpellTexture = function(id) return "tex" .. id end,
+    GetSpellDescription = function(id) return opts.desc and opts.desc[id] or "" end,
+    GetSpellCooldown = function(id)
+      if opts.secretCd then return M.secret({}) end
+      local c = cds[id] or { 0, 0 }
+      return { startTime = c[1], duration = c[2] }
+    end,
+  }
+  _G.GetSpellBaseCooldown = function(id) return (opts.base and opts.base[id] or 0) * 1000, 1500 end
+  return cds
+end
+local function noSpellApis() _G.C_SpellBook, _G.C_Spell, _G.GetSpellBaseCooldown = nil, nil, nil end
+local function spellSlot(ns) return slotVisible(ns, SPELL_SLOT) end
+
+test("Evocation lights up when ready and mana is at or below the setting", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.6; M.tick()
+  ok(not spellSlot(ns), "shown above 50%")
+  M.state.manaPct = 0.4; M.tick()
+  local vis, l = spellSlot(ns)
+  ok(vis, "hidden at 40%")
+  eq(l.icon.texture, "tex12051")
+  noSpellApis()
+end)
+
+test("own spell on cooldown: exact out of combat, counted from the cast in combat", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local cds = spellApis({ 12051 }, { base = { [12051] = 480 } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2
+  cds[12051] = { 99, 1.5 } -- only the global cooldown
+  M.tick()
+  ok(spellSlot(ns), "global cooldown hides the spell")
+  cds[12051] = { 90, 480 }
+  M.tick()
+  ok(not spellSlot(ns), "spell on cooldown shown out of combat")
+  -- in combat the game's cooldown is secret: our own count from the cast decides
+  cds[12051] = nil
+  M.tick()
+  ok(spellSlot(ns), "not ready again after its cooldown")
+  spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
+  M.state.combat = true
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051)
+  M.tick()
+  ok(not spellSlot(ns), "shown in combat right after the cast")
+  local real = GetTime
+  _G.GetTime = function() return 100 + 479 end
+  M.tick()
+  ok(not spellSlot(ns), "shown before 480 s")
+  _G.GetTime = function() return 100 + 481 end
+  M.tick()
+  _G.GetTime = real
+  ok(spellSlot(ns), "not shown after 480 s")
+  noSpellApis()
+end)
+
+test("Life Tap lights up when its mana fits, with the rune health check", function()
+  local ns = M.load(nil, { class = "WARLOCK" })
+  spellApis({ 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana for you." } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.8; M.tick() -- deficit 200 < 300
+  ok(not spellSlot(ns), "shown although 300 mana do not fit")
+  M.state.manaPct = 0.6; M.tick() -- deficit 400
+  ok(spellSlot(ns), "hidden although 300 mana fit")
+  M.state.healthPct = 0.4; M.tick() -- 300/2000 + 30% = 45% needed
+  ok(not spellSlot(ns), "shown with too little health")
+  noSpellApis()
+end)
+
+test("no mana spells: no slot, no room on the bar; spells are not items", function()
+  local ns = M.load(nil, { class = "PRIEST" })
+  local before = ns.AutoBarLength()
+  spellApis({ 585 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.1; M.tick()
+  ok(not buttons(ns)[SPELL_SLOT].outer.shown, "slot without spells")
+  eq(ns.AutoBarLength(), before, "bar room for a missing spell slot")
+  spellApis({ 14751 })
+  ns.Spells.Rebuild()
+  ok(ns.AutoBarLength() > before, "no bar room for Inner Focus")
+  ns.AddCustom(4242, 300, "spell")
+  for _, c in ipairs(ns.db.custom) do eq(c.group, "potion", "own item went into the spell slot") end
+  noSpellApis()
+end)
+
+test("unlocked frame previews the own spell; options show its status", function()
+  local ns = M.load({ locked = false }, { class = "PRIEST" })
+  spellApis({ 14751 }, { names = { [14751] = "Inner Focus" } })
+  ns.Spells.Rebuild()
+  M.tick()
+  local vis, l = spellSlot(ns)
+  ok(vis, "no preview"); eq(l.icon.texture, "tex14751")
+  ns.db.locked = true
+  ns.ToggleOptions(true)
+  local found
+  for _, r in ipairs(M.upvalue(ns.RefreshOptions, "groupRows")) do
+    if ns.GROUPS[r.i].spells then found = r.st.text end
+  end
+  ok(found and found:find(ns.L.stSpellReady:format("Inner Focus", 50), 1, true), "status: " .. tostring(found))
+  noSpellApis()
+end)
+
+test("the spell threshold has its own marker on the mana bar", function()
+  local ns = M.load({ spellThreshold = 0.3 }, { class = "PRIEST" })
+  spellApis({ 1259823 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.9; M.tick()
+  local t = bar(ns).ticks[SPELL_SLOT][1]
+  ok(t.front.shown, "no marker for own spells")
+  local p = t.front.points[1]
+  local len = bar(ns):GetWidth()
+  ok(math.abs(p[4] - len * 0.3) < 0.01, "marker not at 30 %: " .. tostring(p[4]) .. " of " .. tostring(len))
+  noSpellApis()
+end)
+
+test("a global cooldown (cast, wand shot) does not hide the potions", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 99.5, 1.5 } -- every wand shot / cast starts this on items too
+  M.tick()
+  ok(buttons(ns)[1].outer.shown, "potion hidden by the global cooldown")
+  ok(bar(ns).ticks[1][1].front.shown, "potion marker hidden by the global cooldown")
+  M.state.cooldowns[3385] = { 90, 120 } -- the potion's own cooldown still hides it
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion shown on its own cooldown")
 end)
