@@ -81,7 +81,7 @@ function methods:SetOrientation(o) self.orient = o end
 function methods:GetStatusBarTexture() self.sbt = self.sbt or new("Texture", self); return self.sbt end
 function methods:SetGradient(o, a, b)
   assert(type(a) == "table" and type(b) == "table", "SetGradient expects colors")
-  self.grad = o
+  self.grad, self.gradMin, self.gradMax = o, a, b
 end
 function methods:EnableMouseWheel(v) self.wheel = v end
 function methods:SetToplevel(v) self.toplevel = v end

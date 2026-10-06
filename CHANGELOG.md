@@ -10,6 +10,7 @@
 - A potion's own cooldown is remembered, so a wand shot reported on top of it cannot make it look ready
 - The marker of the spell slot follows the spell the icon shows; the settings name the spell that comes back first
 - Settings: "Spells at mana <=" without an extra colon; Portuguese: Life Tap is "Tributo de Vida"
+- Icons: the light on top now fades out downwards; the hard line in the middle made icons look half full
 - Less work per update (no new table for the mana percentage, spell icons cached, no cooldown reads in combat)
 
 **Full Mana Forever 0.8.0**

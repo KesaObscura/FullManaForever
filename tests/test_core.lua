@@ -1117,3 +1117,15 @@ test("the spell marker follows the spell the icon shows", function()
   ok(math.abs(p[4] - len * 0.7) < 0.01, "marker not at Life Tap's 70 %: " .. tostring(p[4] / len))
   noSpellApis()
 end)
+
+test("icon shine fades out downwards, no hard half-way line", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2; M.tick()
+  for _, b in ipairs(buttons(ns)) do
+    for _, l in ipairs(b.layers) do
+      eq(l.shine.grad, "VERTICAL")
+      eq(l.shine.gradMin.a, 0)       -- bottom edge invisible
+      ok(l.shine.gradMax.a <= 0.15, "top too bright")
+    end
+  end
+end)

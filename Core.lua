@@ -583,11 +583,16 @@ local function CreateLayer(parent)
     if sweep.SetDrawBling then sweep:SetDrawBling(false) end -- no flash after every shot
     l.sweep = sweep
   end
-  -- soft light from the top, dark edge at the bottom: a slightly "glassy" icon
+  -- soft light from the top that fades out downwards: a slightly "glassy" icon. A flat
+  -- strip left a hard line in the middle that looked like a half-full icon
   l.shine = l:CreateTexture(nil, "ARTWORK", nil, 2)
   l.shine:SetPoint("TOPLEFT")
   l.shine:SetPoint("TOPRIGHT")
-  l.shine:SetColorTexture(1, 1, 1, 0.10)
+  l.shine:SetColorTexture(1, 1, 1, 1)
+  if not pcall(l.shine.SetGradient, l.shine, "VERTICAL", CreateColor(1, 1, 1, 0),
+      CreateColor(1, 1, 1, 0.14)) then
+    l.shine:Hide() -- no hard line without a gradient
+  end
   Border(l, l, "OVERLAY", 0, 0, 0, 1, 1)
   l.inner = Border(l, l, "OVERLAY", 1, 1, 1, 0.12, 0)
   l.count = l:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
@@ -777,7 +782,7 @@ function ns.Layout(force)
     b.outer:SetSize(size, size)
     for _, l in ipairs(b.layers) do
       l.glow:SetSize(size * 1.9, size * 1.9)
-      l.shine:SetHeight(size * 0.45)
+      l.shine:SetHeight(size * 0.6)
     end
     b.outer:ClearAllPoints()
     if vertical then
