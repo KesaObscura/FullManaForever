@@ -85,7 +85,7 @@ and `/fmf log` (kept in releases for bug reports).
 - Mana spells in Forever (ID, level, base cooldown s): Innervate 29166 (druid 40, 360; +400 %
   regen, 100 % while casting, 20 s), Evocation 12051 (mage 20, 480; +1500 % for 8 s, channeled),
   Mana Tide Totem 16190/17359 (shaman, 300; group, every 3 s for 12 s), Life Tap 1454/11689
-  (warlock, no cd, health to mana), Mana Spring Totem 5675/10497, Blessing of Wisdom 19742/19854
+  (warlock 14, no cd, health to mana; not tested in game yet), Mana Spring Totem 5675/10497, Blessing of Wisdom 19742/19854
   and Greater 25894/25918, Seal of Wisdom 20166/20357, Lay on Hands 10310 (paladin, 1200, gives
   550 mana), Mage Armor 6117/22783 (50 % regen while casting), Totemic Recall 36936 (25 % of
   totem mana back), Drain Mana 11704, Viper Sting 14280. Talents/procs: Inner Focus 14751 (180,
@@ -97,7 +97,10 @@ and `/fmf log` (kept in releases for bug reports).
 - Decision (owner, 0.8.0): show which group members have Innervate / Mana Tide ready and who
   they are (in raids people ask by voice). Whispering a request is only an option, off by
   default. Waiting on a log: are group members' spell IDs readable in combat, and may an addon
-  whisper / send addon messages in combat (`/fmf log chat`).
+  whisper / send addon messages in combat (`/fmf log chat`). The beta cap (30) rules out Innervate
+  and Mana Tide, so since 0.8.1 the log names every spell the group casts (mana helpers like
+  Blessing of Wisdom, Mana Spring, Arcane Intellect, Divine Spirit, Conjure Water every time,
+  others once per class), the caster's name and the roster.
 - CurseForge gallery (owner, 0.7.x): 1280x720 images made by `tools/gallery.py` from in-game
   screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
   column), mana text, item list, unlocked frame. For 0.8.0 (made, hand over with the release
@@ -106,13 +109,22 @@ and `/fmf log` (kept in releases for bug reports).
 - Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
   progress is already taken off); the addon uses the real value, so an icon lights up only when
   the cast lands. `UnitPowerPercent(..., predicted=true)` could light it up during the cast;
-  risk: a flicker when the cast is interrupted. Owner decides.
-- Open for 0.8.1 (owner): the auto bar length counts every group the class can use, also groups
-  switched off (priest gnome: 5 icons even with only potions on). Idea: count only groups that
-  are switched on, minimum 3; lit icons never change it. 0.8.0 keeps the old behaviour.
+  risk: a flicker when the cast is interrupted. Decision (owner, 0.8.1): keep the real value.
+- Decision (owner, 0.8.1): the auto bar length counts only groups that are switched on (and the
+  class can use), minimum 3; lit icons never change it.
 - Sixth log (0.8.0, priest 19): every wand Shot puts a cooldown of the weapon speed (1.8 s) on
   all items (`GetItemCooldown` = start+1.80, enable 1); casts did not. Counting it hid every
   potion while wanding; cooldowns of 3 s or less are now ignored for items (fixed in 0.8.0).
   The owner confirmed the game really blocks potions for those 1.8 s (cooldown swipe on the
   button). Decision: the icon still shows while wanding — it means "the potion fits, stop
   shooting and drink"; hiding it would hide every potion as long as the wand keeps firing.
+  0.8.1: the icon shows that wait as a cooldown sweep; the owner saw the same lock on spells, so
+  the spell icon borrows the last short item cooldown for its sweep (spell cooldowns are secret
+  in combat) and Spells.lua ignores read spell cooldowns of 5 s or less; the limit is 5 s (owner, 0.8.1: melee
+  swings (dagger, priest) and a bow put no cooldown on items; only wands do).
+- 0.8.1 review: unverified in game — whether `C_Spell.GetSpellCooldown` reports `isEnabled =
+  false` for Inner Focus while its buff is up (the addon also waits for the next mana spell
+  itself). Ley Line reading: 2 min cooldown (owner, from the game tooltip), now `cd = 120` in
+  Data.lua (kept as a fallback). Seventh log (0.8.1, Skyborne mage 5): `GetSpellBaseCooldown`
+  reports 120 for it; cast in combat with no cost, cooldown SECRET in combat; the icon hid after
+  the cast. The racial "Walk on Air" 1259416 (120) has nothing to do with mana.

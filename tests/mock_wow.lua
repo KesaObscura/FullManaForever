@@ -70,13 +70,18 @@ function methods:IsEnabled() return self.enabled ~= false end
 function methods:SetTextColor(r, g, b) self.color = { r, g, b } end
 function methods:AddLine(t) self.lines = self.lines or {}; self.lines[#self.lines + 1] = t end
 function methods:GetAlpha() return self.alpha end
+function methods:SetCooldown(st, d) M.calls.SetCooldown = (M.calls.SetCooldown or 0) + 1; self.cdStart, self.cdDur = st, d end
+function methods:Clear() self.cdStart, self.cdDur = nil, nil end
+function methods:SetHideCountdownNumbers(v) self.hideNumbers = v end
+function methods:SetDrawEdge(v) self.drawEdge = v end
+function methods:SetDrawBling(v) self.drawBling = v end
 function methods:EnableMouse(v) self.mouse = v end
 function methods:IsMouseEnabled() return self.mouse end
 function methods:SetOrientation(o) self.orient = o end
 function methods:GetStatusBarTexture() self.sbt = self.sbt or new("Texture", self); return self.sbt end
 function methods:SetGradient(o, a, b)
   assert(type(a) == "table" and type(b) == "table", "SetGradient expects colors")
-  self.grad = o
+  self.grad, self.gradMin, self.gradMax = o, a, b
 end
 function methods:EnableMouseWheel(v) self.wheel = v end
 function methods:SetToplevel(v) self.toplevel = v end
@@ -148,7 +153,6 @@ function M.reset(opts)
     manaPct = 1, maxMana = 1000, maxHP = 2000, healthPct = 1,
     bags = opts.bags or {}, cooldowns = {}, class = opts.class or "PRIEST",
     raid = false, group = false, combat = false, instance = "none",
-    macros = opts.macros or {}, macrosLoaded = opts.macrosLoaded ~= false,
     powerFails = false, locale = opts.locale or "enUS",
     level = opts.level or 60, minLevel = opts.minLevel or {}, uncached = opts.uncached or {},
   }
@@ -195,6 +199,7 @@ function M.reset(opts)
   _G.UnitHealthMax = function() return S.maxHP end
   _G.UnitClass = function() return "Class", S.class end
   _G.UnitLevel = function() return S.level end
+  _G.UnitIsDeadOrGhost = function() return S.dead or false end
   _G.issecretvalue = isSecret
   _G.C_Item = {
     GetItemCount = function(id) count("GetItemCount"); return S.bags[id] or 0 end,
@@ -223,19 +228,6 @@ function M.reset(opts)
   _G.GetLocale = function() return S.locale end
   _G.C_Timer = { NewTicker = function(_, f) M.tick = f; return {} end, After = function(_, f) f() end }
   _G.SlashCmdList = {}
-  _G.GetNumMacros = function()
-    if not S.macrosLoaded then return 0, 0 end
-    local n = 0
-    for _ in pairs(S.macros) do n = n + 1 end
-    return n, 0
-  end
-  _G.GetMacroIndexByName = function(name)
-    if not S.macrosLoaded then return 0 end
-    return S.macros[name] or 0
-  end
-  _G.DeleteMacro = function(idx)
-    for k, v in pairs(S.macros) do if v == idx then S.macros[k] = nil end end
-  end
   _G.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
   _G.unpack = unpack or table.unpack
   _G.hooksecurefunc = M.noop

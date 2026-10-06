@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.0"
+ns.VERSION = "0.8.1"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -37,7 +37,7 @@ local DEFAULTS = {
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
   barThickness = 14,
-  barLength  = 0,       -- 0 = auto: room for every group of the class
+  barLength  = 0,       -- 0 = auto: room for every group switched on (at least 3)
   barColor   = "blue",
   iconGap    = 6,
   iconSize   = 44,
@@ -267,15 +267,31 @@ local function OwnedItem(i)
 end
 
 -- returns ready, secondsLeft
-local SHORT_CD = 3 -- seconds; anything this short is a global cooldown
+-- seconds; anything this short is the cooldown a wand shot puts on every item (and spell), not
+-- the item's own (mana items have minutes). Bows and melee swings put none (owner, 0.8.1);
+-- 5 s leaves room for slow wands.
+local SHORT_CD = 5
+local longUntil = {} -- [item] = GetTime() when its own (long) cooldown ends
+-- the last short cooldown seen on any item: the game puts it on spells too, where it cannot be
+-- read in combat, so the spell icon borrows it for its sweep
+local lockStart, lockDur
 CooldownState = function(id)
   local s, d, enable = C_Container.GetItemCooldown(id)
   if IsSecret(s) or IsSecret(d) or IsSecret(enable) then
     Debug("cdsecret", "item cooldown is secret - treating as ready")
     return true, 0
   end
-  -- a few seconds: the global cooldown of a cast or a wand shot, not the item's own
-  -- cooldown (mana items have minutes); counting it hid every potion while wanding
+  if s and d and d > 0 and d <= SHORT_CD and s + d > GetTime() then lockStart, lockDur = s, d end
+  if s and d and d > SHORT_CD then longUntil[id] = s + d end
+  -- the game may report a wand shot's short cooldown while the item's own still runs
+  local own = longUntil[id]
+  if own and d and d <= SHORT_CD then
+    local left = own - GetTime()
+    if left > 0.05 then return false, left end
+    longUntil[id] = nil
+  end
+  -- a few seconds: a wand shot, not the item's own cooldown; counting it hid every potion
+  -- while wanding (the icon shows the short wait as a sweep instead, see ApplySweep)
   if d and d > 0 and d <= SHORT_CD then return true, 0 end
   -- enable 0: the cooldown waits for something (e.g. the end of combat) before it runs
   if enable == 0 or enable == false then return false, (d and d > 0) and d or 0 end
@@ -284,6 +300,14 @@ CooldownState = function(id)
   return left <= 0.05, math.max(left, 0)
 end
 ns.CooldownState = function(id) return CooldownState(id) end
+
+-- start, duration of a short item cooldown (wand shot) that is still running, else nil
+local function ShortCooldown(id)
+  local s, d = C_Container.GetItemCooldown(id)
+  if IsSecret(s) or IsSecret(d) or not s or not d or d <= 0 or d > SHORT_CD then return nil end
+  if s + d <= GetTime() then return nil end
+  return s, d
+end
 
 -- restore used for thresholds: max ("No waste") or average ("More per fight")
 local function Restore(it)
@@ -351,7 +375,8 @@ end
 local function FirstThreshold(i, maxMana)
   local group = ns.GROUPS[i]
   if group.spells then
-    local sp = ns.Spells.FirstKnown()
+    -- the spell the icon would show (Life Tap has its own threshold), else the first known
+    local sp = ns.Spells.Candidate() or ns.Spells.FirstKnown()
     return sp and ns.Spells.Threshold(sp, maxMana)
   end
   if db.pickMode == "fit" and CanBand(group) then
@@ -484,7 +509,6 @@ local PLACEHOLDER = {
   gem    = "Interface\\Icons\\INV_Misc_Gem_Ruby_01",
   herb   = "Interface\\Icons\\INV_Misc_QuestionMark",
   gear   = "Interface\\Icons\\INV_Jewelry_Talisman_07",
-  spell  = "Interface\\Icons\\Spell_Nature_Purge",
 }
 local TICK_COLOR = {
   potion = { 0.45, 0.75, 1 },
@@ -554,11 +578,26 @@ local function CreateLayer(parent)
   l.icon = l:CreateTexture(nil, "ARTWORK")
   l.icon:SetAllPoints()
   l.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-  -- soft light from the top, dark edge at the bottom: a slightly "glassy" icon
+  -- the game blocks items for a moment after each wand shot: the icon stays (the potion
+  -- fits, stop shooting and drink) and a sweep shows the wait, like on the action bar
+  local okCd, sweep = pcall(CreateFrame, "Cooldown", nil, l, "CooldownFrameTemplate")
+  if okCd and sweep then
+    sweep:SetAllPoints(l.icon)
+    if sweep.SetHideCountdownNumbers then sweep:SetHideCountdownNumbers(true) end
+    if sweep.SetDrawEdge then sweep:SetDrawEdge(false) end
+    if sweep.SetDrawBling then sweep:SetDrawBling(false) end -- no flash after every shot
+    l.sweep = sweep
+  end
+  -- soft light from the top that fades out downwards: a slightly "glassy" icon. A flat
+  -- strip left a hard line in the middle that looked like a half-full icon
   l.shine = l:CreateTexture(nil, "ARTWORK", nil, 2)
   l.shine:SetPoint("TOPLEFT")
   l.shine:SetPoint("TOPRIGHT")
-  l.shine:SetColorTexture(1, 1, 1, 0.10)
+  l.shine:SetColorTexture(1, 1, 1, 1)
+  if not pcall(l.shine.SetGradient, l.shine, "VERTICAL", CreateColor(1, 1, 1, 0),
+      CreateColor(1, 1, 1, 0.14)) then
+    l.shine:Hide() -- no hard line without a gradient
+  end
   Border(l, l, "OVERLAY", 0, 0, 0, 1, 1)
   l.inner = Border(l, l, "OVERLAY", 1, 1, 1, 0.12, 0)
   l.count = l:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
@@ -679,10 +718,12 @@ end
 local function ManaPercent()
   local curve = CurveConstants and CurveConstants.ScaleTo100
   if not curve then return nil end
-  for _, v in ipairs({ powerVariant or 1, (powerVariant == 2) and 1 or 2 }) do
-    local ok, r = TryPower(v, curve)
-    if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
-  end
+  -- the known argument order first, then the other one (no table: this runs every tick)
+  local first = powerVariant or 1
+  local ok, r = TryPower(first, curve)
+  if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
+  ok, r = TryPower(first == 2 and 1 or 2, curve)
+  if ok and r ~= nil and (IsSecret(r) or type(r) == "number") then return r end
 end
 ns.ManaPercent = ManaPercent
 
@@ -718,13 +759,16 @@ end
 -- so no empty gaps appear for groups you have nothing for. The mana check itself is
 -- secret, so a ready item below its threshold still keeps its (invisible) slot.
 -- Settings changes call Layout(true); every tick only the set of shown icons is compared
--- auto bar length is fixed: room for every group this class can ever show (priest 4,
--- mage 5). It does not follow lit icons or groups switched off in the options.
+-- auto bar length is fixed: room for every group this class can ever show (priest 4, mage 5,
+-- one more with an own mana spell). It does not follow lit icons or groups switched off.
 function ns.AutoBarLength()
   local size, gap = db.iconSize, db.iconGap or 6
   local slots = 0
   for _, g in ipairs(ns.GROUPS) do
-    if ns.ForMyClass(g) and (not g.spells or ns.Spells.AnyKnown()) then slots = slots + 1 end
+    -- only groups that are switched on; lit icons never change it (the bar stays still)
+    if db.enabled[g.key] and ns.ForMyClass(g) and (not g.spells or ns.Spells.AnyKnown()) then
+      slots = slots + 1
+    end
   end
   slots = math.max(slots, 3)
   return size * slots + gap * (slots - 1)
@@ -746,7 +790,7 @@ function ns.Layout(force)
     b.outer:SetSize(size, size)
     for _, l in ipairs(b.layers) do
       l.glow:SetSize(size * 1.9, size * 1.9)
-      l.shine:SetHeight(size * 0.45)
+      l.shine:SetHeight(size * 0.6)
     end
     b.outer:ClearAllPoints()
     if vertical then
@@ -911,8 +955,33 @@ end
 ------------------------------------------------------------------------
 -- update loop
 ------------------------------------------------------------------------
+local function ClearSweep(l)
+  if l.sweep and l.sweepStart then
+    if l.sweep.Clear then l.sweep:Clear() else l.sweep:SetCooldown(0, 0) end
+    l.sweepStart = nil
+  end
+end
+
+-- the sweep is set only when a new short cooldown starts, not every tick
+local function SweepAt(l, s, d)
+  if not l.sweep then return end
+  if not s then ClearSweep(l) return end
+  if l.sweepStart ~= s then
+    l.sweep:SetCooldown(s, d)
+    l.sweepStart = s
+  end
+end
+
+local function ApplySweep(l, id) SweepAt(l, ShortCooldown(id)) end
+
+-- the short lock of a wand shot on spells, taken from the items (see CooldownState)
+local function SpellLock()
+  if lockStart and lockStart + lockDur > GetTime() then return lockStart, lockDur end
+end
+
 local function SetLayer(l, id, n, texture)
   if l.itemID ~= id or not id then
+    ClearSweep(l)
     l.icon:SetTexture(texture or C_Item.GetItemIconByID(id))
     l.itemID = id
   end
@@ -992,6 +1061,7 @@ local function UpdateSpellButton(b, maxMana, maxHP)
   local sp, id = S.Candidate()
   if not sp then b.outer:Hide() return end
   SetLayer(l, -id, nil, S.Texture(id))
+  SweepAt(l, SpellLock())
   ApplyBand(l, nil, S.Threshold(sp, maxMana))
   l:Show()
   HideLayers(b, 2)
@@ -1029,6 +1099,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
+    ApplySweep(l, c.it.id)
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
     ApplyBand(l, lo, Threshold(c.it, maxMana))
@@ -1157,13 +1228,17 @@ local function Update()
   -- the frame rect may not be known yet at login: convert old positions on the first tick
   if anchor and not IsPinned(db.point) then PinTopLeft() end
   local maxMana = UnitPowerMax("player", MANA)
-  if IsSecret(maxMana) or not maxMana or maxMana <= 0 then
-    Debug("maxmana", "max mana unavailable or secret")
+  -- dead or a ghost: nothing to drink (the unlocked frame still shows, to place it)
+  local okD, dead = pcall(UnitIsDeadOrGhost, "player")
+  local isDead = okD and not IsSecret(dead) and dead and db.locked
+  if isDead or IsSecret(maxMana) or not maxMana or maxMana <= 0 then
+    if not isDead then Debug("maxmana", "max mana unavailable or secret") end
     for _, b in ipairs(buttons) do b.outer:Hide() end
     if bar then bar:Hide() end
     return
   end
   local maxHP = UnitHealthMax("player")
+  ns.Spells.Refresh() -- out of combat: read every spell cooldown, also with hidden icons
   groupOK = GroupAllowed()
   playerLevel = ReadPlayerLevel()
   -- one broken group (odd item, API change) must not blank the others
@@ -1188,27 +1263,6 @@ function ns.InvalidateCurves()
     b.hpT = nil
     for _, l in ipairs(b.layers) do l.hi = nil end
   end
-end
-
-------------------------------------------------------------------------
--- macros were removed in 0.6.7 (a macro cannot see mana, so it never matched the icon).
--- Users who had them switched on get their FMF_* macros deleted once, out of combat.
-------------------------------------------------------------------------
-local OLD_MACROS = { "FMF_Potion", "FMF_Rune", "FMF_Gem", "FMF_Other" }
-
--- Macro data can arrive after login (UPDATE_MACROS). While no macro at all is known the
--- data is probably not loaded yet, so the job stays pending and runs again later.
-local function DeleteOldMacros()
-  if not db.cleanMacros then return true end
-  if InCombatLockdown() or not (GetMacroIndexByName and DeleteMacro and GetNumMacros) then return false end
-  local global, char = GetNumMacros()
-  if (global or 0) + (char or 0) == 0 then return false end
-  for _, name in ipairs(OLD_MACROS) do
-    local idx = GetMacroIndexByName(name)
-    if idx and idx > 0 and not pcall(DeleteMacro, idx) then return false end
-  end
-  db.cleanMacros = nil
-  return true
 end
 
 ------------------------------------------------------------------------
@@ -1353,10 +1407,10 @@ end
 ------------------------------------------------------------------------
 -- boot
 ------------------------------------------------------------------------
-local DB_VERSION = 6 -- the last migration below
+local DB_VERSION = 7 -- the last migration below
 
 local function InitDB()
-  -- a new install has nothing to migrate (no old macros to look for)
+  -- a new install has nothing to migrate
   FullManaForeverDB = FullManaForeverDB or { dbVersion = DB_VERSION }
   db = FullManaForeverDB
   CopyDefaults(DEFAULTS, db)
@@ -1373,9 +1427,6 @@ local function InitDB()
     db.dbVersion = 4
   end
   if db.dbVersion < 5 then
-    -- 0.6.7 could miss macros that were not loaded yet at login: look again for everyone
-    -- (the FMF_* names were only ever created by this addon)
-    db.cleanMacros = true
     db.showAdvanced = nil
     db.dbVersion = 5
   end
@@ -1384,6 +1435,13 @@ local function InitDB()
     -- mode left on would have no switch to turn it off
     db.test = nil
     db.dbVersion = 6
+  end
+  if db.dbVersion < 7 then
+    -- 0.8.1: the one-time removal of the old FMF_* macros (0.6.6) is gone; drop its flag and
+    -- the test-mode key that 0.7.1 test builds left behind
+    db.cleanMacros = nil
+    db.test = nil
+    db.dbVersion = 7
   end
   ns.SetLanguage(db.language)
   ns.db = db
@@ -1396,11 +1454,6 @@ boot:RegisterEvent("PLAYER_LOGIN")
 boot:SetScript("OnEvent", function(self, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON then
     InitDB()
-  elseif event == "PLAYER_REGEN_ENABLED" or event == "UPDATE_MACROS" then
-    if DeleteOldMacros() then
-      self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-      self:UnregisterEvent("UPDATE_MACROS")
-    end
   elseif event == "PLAYER_ENTERING_WORLD" then
     textFails = 0
   elseif event == "PLAYER_LOGIN" then
@@ -1414,10 +1467,6 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     end
     C_Timer.NewTicker(0.1, SafeUpdate)
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    if not DeleteOldMacros() then
-      self:RegisterEvent("PLAYER_REGEN_ENABLED")
-      self:RegisterEvent("UPDATE_MACROS")
-    end
     Print(L.loaded, ns.VERSION)
   end
 end)

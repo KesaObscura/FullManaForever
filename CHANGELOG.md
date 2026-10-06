@@ -1,5 +1,20 @@
 # Changelog
 
+**Full Mana Forever 0.8.1**
+
+- While you shoot a wand the game blocks items for a moment after each shot: the potion icon now stays lit and shows that short wait as a sweep, like the action bar (the potion fits, stop shooting and drink). The spell icon shows the same wait (the game locks spells too) and no longer hides for it out of combat. Only wands do this; bows and melee swings put no wait on items
+- Auto bar length: room only for the icon groups you switched on (at least 3 icons); switching a group on or off in the settings resizes the bar at once
+- Nothing is shown while your character is dead or a ghost (the unlocked frame still shows, to place it)
+- Removed the one-time clean-up of the old FMF_* macros from 0.6.6 (it ran at every login); a macro left over from then can be deleted by hand
+- Own spells, never shown as ready too early: every spell's cooldown is read before a fight (before, only the first ready one's, and none with "Show only in combat"); a spell whose cooldown was never read waits until after the fight; a cast of a lower rank counts too; Inner Focus's cooldown starts when its buff is used
+- Life Tap is only shown once its mana is known, so it always has the health check; its mana is read again after fights and gear changes
+- A potion's own cooldown is remembered, so a wand shot reported on top of it cannot make it look ready
+- The marker of the spell slot follows the spell the icon shows; the settings name the spell that comes back first
+- Settings: "Spells at mana <=" without an extra colon; Portuguese: Life Tap is "Tributo de Vida"
+- Icons: the light on top now fades out downwards; the hard line in the middle made icons look half full
+- Log (`/fmf log on`): every spell your group casts with the caster's name (spells that help with mana every time, others once per class), who is in the group, and `/fmf log chat` also tests an invisible addon message to the group
+- Less work per update (no new table for the mana percentage, spell icons cached, no cooldown reads in combat)
+
 **Full Mana Forever 0.8.0**
 
 - New: your own mana spells get an icon slot, like the consumables: Evocation (mage), Innervate (druid, on yourself), Mana Tide Totem (shaman), Inner Focus (priest), Life Tap (warlock) and the racials Eureka! (gnome) and Ley Line reading (Skyborne). A spell lights up when it is ready and your mana is at or below "Spells at mana" (50 % by default), shown by a turquoise marker on the mana bar. Life Tap lights up like a potion when its mana fits and keeps the same minimum health as runes
