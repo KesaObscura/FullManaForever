@@ -110,3 +110,6 @@ and `/fmf log` (kept in releases for bug reports).
 - Open for 0.8.1 (owner): the auto bar length counts every group the class can use, also groups
   switched off (priest gnome: 5 icons even with only potions on). Idea: count only groups that
   are switched on, minimum 3; lit icons never change it. 0.8.0 keeps the old behaviour.
+- Sixth log (0.8.0, priest 19): every wand Shot puts a cooldown of the weapon speed (1.8 s) on
+  all items (`GetItemCooldown` = start+1.80, enable 1); casts did not. Counting it hid every
+  potion while wanding; cooldowns of 3 s or less are now ignored for items (fixed in 0.8.0).
