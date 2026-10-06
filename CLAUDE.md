@@ -120,5 +120,6 @@ and `/fmf log` (kept in releases for bug reports).
   guns or melee swings put such a cooldown on items too; a hunter or paladin log would tell).
 - 0.8.1 review: unverified in game — whether `C_Spell.GetSpellCooldown` reports `isEnabled =
   false` for Inner Focus while its buff is up (the addon also waits for the next mana spell
-  itself), and the cooldown of Skyborne's Ley Line reading (no `cd` in Data.lua; if
-  `GetSpellBaseCooldown` reports 0 it is shown as ready right after a cast in combat).
+  itself). Ley Line reading: 2 min cooldown (owner, from the game tooltip), now `cd = 120` in
+  Data.lua; the Skyborne scan ran before `/fmf scan` printed `base=`, so whether
+  `GetSpellBaseCooldown` reports it is still unknown (the API wins when it reports more than 0).

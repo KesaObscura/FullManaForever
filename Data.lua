@@ -78,7 +78,7 @@ ns.SPELLS = {
   { key = "evocation",  id = 12051,   class = "MAGE",    cd = 480 }, -- +1500 % regen for 8 s
   { key = "innervate",  id = 29166,   class = "DRUID",   cd = 360 }, -- +400 % regen for 20 s
   { key = "manatide",   id = 16190,   class = "SHAMAN",  cd = 300 }, -- talent, group mana
-  { key = "leyline",    id = 1259705 },                            -- Skyborne: +100 % regen
+  { key = "leyline",    id = 1259705, cd = 120 },                  -- Skyborne: +100 % regen
   { key = "innerfocus", id = 14751,   class = "PRIEST",  cd = 180, afterUse = true }, -- next spell free;
                                                   -- its cooldown starts when the buff is used
   { key = "eureka",     id = 1259823, cd = 120 },                  -- Gnome: 3 spells 10 % cheaper

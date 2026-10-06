@@ -1129,3 +1129,23 @@ test("icon shine fades out downwards, no hard half-way line", function()
     end
   end
 end)
+
+test("Ley Line reading waits its 2 minutes after a cast in combat, base cooldown unreadable", function()
+  local ns = M.load(nil, { class = "PRIEST" })
+  spellApis({ 1259705 }) -- GetSpellBaseCooldown reports 0
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2; M.tick() -- read once out of combat: ready
+  ok(spellSlot(ns), "ready spell hidden out of combat")
+  spellApis({ 1259705 }, { secretCd = true })
+  M.state.combat = true
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 1259705)
+  local real = GetTime
+  _G.GetTime = function() return 100 + 119 end
+  M.tick()
+  ok(not spellSlot(ns), "shown before 120 s")
+  _G.GetTime = function() return 100 + 121 end
+  M.tick()
+  _G.GetTime = real
+  ok(spellSlot(ns), "not shown after 120 s")
+  noSpellApis()
+end)
