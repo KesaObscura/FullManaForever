@@ -1233,27 +1233,6 @@ function ns.InvalidateCurves()
 end
 
 ------------------------------------------------------------------------
--- macros were removed in 0.6.7 (a macro cannot see mana, so it never matched the icon).
--- Users who had them switched on get their FMF_* macros deleted once, out of combat.
-------------------------------------------------------------------------
-local OLD_MACROS = { "FMF_Potion", "FMF_Rune", "FMF_Gem", "FMF_Other" }
-
--- Macro data can arrive after login (UPDATE_MACROS). While no macro at all is known the
--- data is probably not loaded yet, so the job stays pending and runs again later.
-local function DeleteOldMacros()
-  if not db.cleanMacros then return true end
-  if InCombatLockdown() or not (GetMacroIndexByName and DeleteMacro and GetNumMacros) then return false end
-  local global, char = GetNumMacros()
-  if (global or 0) + (char or 0) == 0 then return false end
-  for _, name in ipairs(OLD_MACROS) do
-    local idx = GetMacroIndexByName(name)
-    if idx and idx > 0 and not pcall(DeleteMacro, idx) then return false end
-  end
-  db.cleanMacros = nil
-  return true
-end
-
-------------------------------------------------------------------------
 -- probe
 ------------------------------------------------------------------------
 local function Probe()
@@ -1395,10 +1374,10 @@ end
 ------------------------------------------------------------------------
 -- boot
 ------------------------------------------------------------------------
-local DB_VERSION = 6 -- the last migration below
+local DB_VERSION = 7 -- the last migration below
 
 local function InitDB()
-  -- a new install has nothing to migrate (no old macros to look for)
+  -- a new install has nothing to migrate
   FullManaForeverDB = FullManaForeverDB or { dbVersion = DB_VERSION }
   db = FullManaForeverDB
   CopyDefaults(DEFAULTS, db)
@@ -1415,9 +1394,6 @@ local function InitDB()
     db.dbVersion = 4
   end
   if db.dbVersion < 5 then
-    -- 0.6.7 could miss macros that were not loaded yet at login: look again for everyone
-    -- (the FMF_* names were only ever created by this addon)
-    db.cleanMacros = true
     db.showAdvanced = nil
     db.dbVersion = 5
   end
@@ -1426,6 +1402,13 @@ local function InitDB()
     -- mode left on would have no switch to turn it off
     db.test = nil
     db.dbVersion = 6
+  end
+  if db.dbVersion < 7 then
+    -- 0.8.1: the one-time removal of the old FMF_* macros (0.6.6) is gone; drop its flag and
+    -- the test-mode key that 0.7.1 test builds left behind
+    db.cleanMacros = nil
+    db.test = nil
+    db.dbVersion = 7
   end
   ns.SetLanguage(db.language)
   ns.db = db
@@ -1438,11 +1421,6 @@ boot:RegisterEvent("PLAYER_LOGIN")
 boot:SetScript("OnEvent", function(self, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON then
     InitDB()
-  elseif event == "PLAYER_REGEN_ENABLED" or event == "UPDATE_MACROS" then
-    if DeleteOldMacros() then
-      self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-      self:UnregisterEvent("UPDATE_MACROS")
-    end
   elseif event == "PLAYER_ENTERING_WORLD" then
     textFails = 0
   elseif event == "PLAYER_LOGIN" then
@@ -1456,10 +1434,6 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     end
     C_Timer.NewTicker(0.1, SafeUpdate)
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    if not DeleteOldMacros() then
-      self:RegisterEvent("PLAYER_REGEN_ENABLED")
-      self:RegisterEvent("UPDATE_MACROS")
-    end
     Print(L.loaded, ns.VERSION)
   end
 end)

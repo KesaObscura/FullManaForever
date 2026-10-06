@@ -152,7 +152,6 @@ function M.reset(opts)
     manaPct = 1, maxMana = 1000, maxHP = 2000, healthPct = 1,
     bags = opts.bags or {}, cooldowns = {}, class = opts.class or "PRIEST",
     raid = false, group = false, combat = false, instance = "none",
-    macros = opts.macros or {}, macrosLoaded = opts.macrosLoaded ~= false,
     powerFails = false, locale = opts.locale or "enUS",
     level = opts.level or 60, minLevel = opts.minLevel or {}, uncached = opts.uncached or {},
   }
@@ -228,19 +227,6 @@ function M.reset(opts)
   _G.GetLocale = function() return S.locale end
   _G.C_Timer = { NewTicker = function(_, f) M.tick = f; return {} end, After = function(_, f) f() end }
   _G.SlashCmdList = {}
-  _G.GetNumMacros = function()
-    if not S.macrosLoaded then return 0, 0 end
-    local n = 0
-    for _ in pairs(S.macros) do n = n + 1 end
-    return n, 0
-  end
-  _G.GetMacroIndexByName = function(name)
-    if not S.macrosLoaded then return 0 end
-    return S.macros[name] or 0
-  end
-  _G.DeleteMacro = function(idx)
-    for k, v in pairs(S.macros) do if v == idx then S.macros[k] = nil end end
-  end
   _G.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
   _G.unpack = unpack or table.unpack
   _G.hooksecurefunc = M.noop

@@ -139,20 +139,11 @@ test("mana text comes back after a loading screen", function()
   eq(bar(ns).text.text, "500 / 1000")
 end)
 
-test("old FMF macros are removed once macro data is loaded", function()
-  local ns = M.load({ dbVersion = 3, macros = true },
-    { macros = { FMF_Potion = 3, Mine = 5 }, macrosLoaded = false })
-  ok(M.state.macros.FMF_Potion, "deleted before load?")
-  M.state.macrosLoaded = true
-  M.Fire("UPDATE_MACROS")
-  ok(not M.state.macros.FMF_Potion, "FMF_Potion still there")
-  ok(M.state.macros.Mine, "user macro deleted")
-end)
-
-test("macro cleanup also runs for users upgraded by 0.6.7", function()
-  local ns = M.load({ dbVersion = 4 }, { macros = { FMF_Rune = 2 } })
-  M.Fire("UPDATE_MACROS")
-  ok(not M.state.macros.FMF_Rune)
+test("old saved data: the macro cleanup flag and the old test mode are dropped", function()
+  local ns = M.load({ dbVersion = 6, cleanMacros = true, test = false })
+  eq(ns.db.cleanMacros, nil, "macro flag kept")
+  eq(ns.db.test, nil, "test key kept")
+  eq(ns.db.dbVersion, 7)
 end)
 
 -- performance ------------------------------------------------------------------
@@ -593,9 +584,9 @@ test("regen text turns gold during the rule even with the strip switched off", f
   noRegenApis()
 end)
 
-test("a new install has nothing to migrate and looks for no old macros", function()
+test("a new install has nothing to migrate", function()
   local ns = M.load(nil)
-  eq(ns.db.dbVersion, 6)
+  eq(ns.db.dbVersion, 7)
   eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
 end)
 
