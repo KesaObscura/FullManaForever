@@ -85,7 +85,7 @@ and `/fmf log` (kept in releases for bug reports).
 - Mana spells in Forever (ID, level, base cooldown s): Innervate 29166 (druid 40, 360; +400 %
   regen, 100 % while casting, 20 s), Evocation 12051 (mage 20, 480; +1500 % for 8 s, channeled),
   Mana Tide Totem 16190/17359 (shaman, 300; group, every 3 s for 12 s), Life Tap 1454/11689
-  (warlock, no cd, health to mana), Mana Spring Totem 5675/10497, Blessing of Wisdom 19742/19854
+  (warlock 14, no cd, health to mana; not tested in game yet), Mana Spring Totem 5675/10497, Blessing of Wisdom 19742/19854
   and Greater 25894/25918, Seal of Wisdom 20166/20357, Lay on Hands 10310 (paladin, 1200, gives
   550 mana), Mage Armor 6117/22783 (50 % regen while casting), Totemic Recall 36936 (25 % of
   totem mana back), Drain Mana 11704, Viper Sting 14280. Talents/procs: Inner Focus 14751 (180,
@@ -120,8 +120,8 @@ and `/fmf log` (kept in releases for bug reports).
   shooting and drink"; hiding it would hide every potion as long as the wand keeps firing.
   0.8.1: the icon shows that wait as a cooldown sweep; the owner saw the same lock on spells, so
   the spell icon borrows the last short item cooldown for its sweep (spell cooldowns are secret
-  in combat) and Spells.lua ignores read spell cooldowns of 5 s or less; the limit is 5 s (untested whether bows,
-  guns or melee swings put such a cooldown on items too; a hunter or paladin log would tell).
+  in combat) and Spells.lua ignores read spell cooldowns of 5 s or less; the limit is 5 s (owner, 0.8.1: melee
+  swings with a dagger on a priest put no cooldown on items; bows and guns still untested).
 - 0.8.1 review: unverified in game — whether `C_Spell.GetSpellCooldown` reports `isEnabled =
   false` for Inner Focus while its buff is up (the addon also waits for the next mana spell
   itself). Ley Line reading: 2 min cooldown (owner, from the game tooltip), now `cd = 120` in
