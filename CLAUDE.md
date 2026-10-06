@@ -1,8 +1,8 @@
 # Working on Full Mana Forever
 
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
-Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Core.lua → Options.lua →
-Library.lua → Diag.lua. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
+Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Core.lua →
+Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).
 
 ## Rules
@@ -29,10 +29,10 @@ and `/fmf log` (kept in releases for bug reports).
 ## Releases
 
 - The owner uploads to CurseForge by hand, release type **Release**.
-- CurseForge summary (short description): at most 256 characters. Current one (since 0.7.0,
-  206): "Shows a mana potion, rune or mana item the moment it is ready and your missing mana is big
-  enough that nothing is wasted. Plus a mana bar with the five-second rule and your live mana
-  regen. For WoW Forever."
+- CurseForge summary (short description): at most 256 characters. Since 0.8.0 (226): "Shows a
+  mana potion, rune, mana item or your own mana spell (Evocation, Innervate, Eureka! ...) the
+  moment it is ready and nothing is wasted. Plus a mana bar with the five-second rule and your
+  live mana regen. For WoW Forever." Gallery image descriptions: also at most 256.
 - GitHub release: tag `vX.Y.Z` on the release commit, not a pre-release, same changelog text
   and zip. This session cannot push tags; the owner creates the tag with the release.
 
@@ -103,6 +103,10 @@ and `/fmf log` (kept in releases for bug reports).
   column), mana text, item list, unlocked frame. For 0.8.0 (made, hand over with the release
   when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
   replace the 0.7.0 ones on CurseForge.
+- Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
+  progress is already taken off); the addon uses the real value, so an icon lights up only when
+  the cast lands. `UnitPowerPercent(..., predicted=true)` could light it up during the cast;
+  risk: a flicker when the cast is interrupted. Owner decides.
 - Open for 0.8.1 (owner): the auto bar length counts every group the class can use, also groups
   switched off (priest gnome: 5 icons even with only potions on). Idea: count only groups that
   are switched on, minimum 3; lit icons never change it. 0.8.0 keeps the old behaviour.
