@@ -60,4 +60,4 @@ Pre-pull checklist (consumables, buffs), who in your group has Innervate / Mana 
 
 Please include the output of `/fmf probe`, your class and level, and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
-For the five-second rule or the regen display: `/fmf log on`, play until it happens, `/fmf log off`, `/reload`, and attach `WTF\Account\<account>\SavedVariables\FullManaForever.lua` (class, level, casts and regen values, nothing personal).
+For the five-second rule or the regen display: `/fmf log on`, play until it happens, `/fmf log off`, `/reload`, and attach `WTF\Account\ACCOUNTNAME\SavedVariables\FullManaForever.lua` (class, level, casts and regen values, nothing personal).
