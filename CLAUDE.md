@@ -29,6 +29,10 @@ and `/fmf log` (kept in releases for bug reports).
 ## Releases
 
 - The owner uploads to CurseForge by hand, release type **Release**.
+- CurseForge summary (short description): at most 256 characters. Current one (since 0.7.0,
+  206): "Shows a mana potion, rune or mana item the moment it is ready and your missing mana is big
+  enough that nothing is wasted. Plus a mana bar with the five-second rule and your live mana
+  regen. For WoW Forever."
 - GitHub release: tag `vX.Y.Z` on the release commit, not a pre-release, same changelog text
   and zip. This session cannot push tags; the owner creates the tag with the release.
 
