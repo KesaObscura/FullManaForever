@@ -896,3 +896,15 @@ test("the spell threshold has its own marker on the mana bar", function()
   ok(math.abs(p[4] - len * 0.3) < 0.01, "marker not at 30 %: " .. tostring(p[4]) .. " of " .. tostring(len))
   noSpellApis()
 end)
+
+test("a global cooldown (cast, wand shot) does not hide the potions", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 99.5, 1.5 } -- every wand shot / cast starts this on items too
+  M.tick()
+  ok(buttons(ns)[1].outer.shown, "potion hidden by the global cooldown")
+  ok(bar(ns).ticks[1][1].front.shown, "potion marker hidden by the global cooldown")
+  M.state.cooldowns[3385] = { 90, 120 } -- the potion's own cooldown still hides it
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion shown on its own cooldown")
+end)

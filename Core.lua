@@ -267,12 +267,16 @@ local function OwnedItem(i)
 end
 
 -- returns ready, secondsLeft
+local SHORT_CD = 3 -- seconds; anything this short is a global cooldown
 CooldownState = function(id)
   local s, d, enable = C_Container.GetItemCooldown(id)
   if IsSecret(s) or IsSecret(d) or IsSecret(enable) then
     Debug("cdsecret", "item cooldown is secret - treating as ready")
     return true, 0
   end
+  -- a few seconds: the global cooldown of a cast or a wand shot, not the item's own
+  -- cooldown (mana items have minutes); counting it hid every potion while wanding
+  if d and d > 0 and d <= SHORT_CD then return true, 0 end
   -- enable 0: the cooldown waits for something (e.g. the end of combat) before it runs
   if enable == 0 or enable == false then return false, (d and d > 0) and d or 0 end
   if not s or not d or d == 0 then return true, 0 end
