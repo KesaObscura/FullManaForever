@@ -105,7 +105,10 @@ and `/fmf log` (kept in releases for bug reports).
   screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
   column), mana text, item list, unlocked frame. For 0.8.0 (made, hand over with the release
   when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
-  replace the 0.7.0 ones on CurseForge.
+  replace the 0.7.0 ones on CurseForge. The row images 01_hero, 03_five_second_rule_row and
+  05_mana_text still show the 0.7.0 bar (numbers inside the bar, seconds at its right end; since
+  0.7.1 numbers sit outside, seconds left of the bar): kept for the 0.7.1 upload (owner), to be
+  re-shot for 0.8.x. The column images (02, 03 column) are current.
 - Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
   progress is already taken off); the addon uses the real value, so an icon lights up only when
   the cast lands. `UnitPowerPercent(..., predicted=true)` could light it up during the cast;
