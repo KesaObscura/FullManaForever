@@ -96,7 +96,7 @@ if __name__ == "__main__":
              "Light blue: normal. Green: above normal (drinking, Spirit Tap, ...). Gold: five-second rule.",
              [(crop("images/182.webp", BAR, 1.9), "Normal:\n15.5/s", (153, 217, 255)),
               (crop("images/181.webp", BAR, 1.9), "Drinking:\n23.9/s", (115, 255, 115)),
-              (crop("images/180.webp", BAR, 1.9), "Drinking while casting:\n8.4/s, rule 2.2 s", GOLD)],
+              (crop("images/180.webp", BAR, 1.9), "Drinking right after a spell:\n8.4/s, rule 2.2 s", GOLD)],
              top=170, stack=True)
     if only("07"):
         LIB = (1003, 2, 1557, 600)
