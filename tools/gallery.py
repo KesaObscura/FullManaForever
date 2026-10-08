@@ -40,11 +40,13 @@ def make(out, title, subtitle, panels, top=158, stack=False):
     cap = ImageFont.truetype(BOLD, 22)
     if stack:
         y = top
-        for im, caption in panels:
+        for p in panels:
+            im, caption = p[0], p[1]
+            color = p[2] if len(p) > 2 else GOLD  # optional caption colour
             x = (W - im.width) // 2 - 120
             bg.paste(im, (x, y), rounded(im))
             d.rounded_rectangle((x - 2, y - 2, x + im.width + 1, y + im.height + 1), 15, outline=BLUE, width=2)
-            d.text((x + im.width + 30, y + im.height / 2 - 14), caption, font=cap, fill=GOLD)
+            d.text((x + im.width + 30, y + im.height / 2 - 14), caption, font=cap, fill=color)
             y += im.height + 40
         foot = ImageFont.truetype(REG, 16)
         t = "Full Mana Forever  ·  WoW: Forever"
@@ -88,6 +90,14 @@ if __name__ == "__main__":
              "After a spell: gold strip and seconds. The regen running right now, also in combat.",
              [(crop("images/178.webp", ROW, 1.9), "Casting:\n4.3 s left, regen 0.0/s"),
               (crop("images/179.webp", ROW, 1.9), "Rule over:\nregen 15.5/s")], top=160, stack=True)
+    if only("10"):
+        BAR = (1140, 180, 1430, 222)  # row layout, mana full: bar, numbers, seconds and regen
+        make("10_regen_colors.png", "Your regen at a glance",
+             "Light blue: normal. Green: above normal (drinking, Spirit Tap, ...). Gold: five-second rule.",
+             [(crop("images/182.webp", BAR, 1.9), "Normal:\n15.5/s", (153, 217, 255)),
+              (crop("images/181.webp", BAR, 1.9), "Drinking:\n23.9/s", (115, 255, 115)),
+              (crop("images/180.webp", BAR, 1.9), "Drinking while casting:\n8.4/s, rule 2.2 s", GOLD)],
+             top=170, stack=True)
     if only("07"):
         LIB = (1003, 2, 1557, 600)
         make("07_item_list.png", "Item list",
