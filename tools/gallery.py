@@ -80,16 +80,22 @@ def only(name):
     return not args or name in args
 
 if __name__ == "__main__":
-    ROW = (1140, 128, 1430, 224)  # row layout frame, 0.8.2 (numbers under the bar, seconds left)
+    # 0.8.2 shots: English client, icon size 96, bar 30, text sizes 200 %, over water
+    BIG = (845, 95, 1420, 275)
     if only("01"):
         make("01_hero.png", "Drink at the right moment",
              "Potions light up when they fit into your missing mana, your own mana spells when they are ready.",
-             [(crop("images/177.webp", ROW, 3.2), "")], top=190)
+             [(crop("images/192.webp", BIG, 1.6), "")], top=180)
+    if only("02"):
+        make("02_right_potion.png", "The right potion for your missing mana",
+             "Several potions in your bags: the strongest one that will not overflow lights up.",
+             [(crop("images/195.webp", BIG, 0.95), "82 % mana: small potion"),
+              (crop("images/193.webp", BIG, 0.95), "69 % mana: stronger potion")], top=230)
     if only("03r"):
         make("03_five_second_rule_row.png", "Five-second rule and live mana regen",
              "After a spell: gold strip and seconds. The regen running right now, also in combat.",
-             [(crop("images/178.webp", ROW, 1.9), "Casting:\n4.3 s left, regen 0.0/s"),
-              (crop("images/179.webp", ROW, 1.9), "Rule over:\nregen 15.5/s")], top=160, stack=True)
+             [(crop("images/194.webp", BIG, 0.95), "Casting:\n3.1 s left, regen 0.0/s"),
+              (crop("images/193.webp", BIG, 0.95), "Rule over:\nregen 15.5/s")], top=160, stack=True)
     if only("10"):
         BAR = (1140, 180, 1430, 222)  # row layout, mana full: bar, numbers, seconds and regen
         make("10_regen_colors.png", "Your regen at a glance",
@@ -104,16 +110,12 @@ if __name__ == "__main__":
              "Every supported item with its restore value. Switch single items off or add your own.",
              [(crop("images/111.webp", LIB, 0.78), "Potions and runes"),
               (crop("images/112.webp", LIB, 0.78), "Other consumables and gear")], top=145)
-    COL = (1300, 62, 1440, 372)  # column layout frame in the 1920x1080 shots
-    s = 1.4
-    make("02_right_potion.png", "The right potion for your missing mana",
-         "Several potions in your bags: the strongest one that will not overflow lights up.",
-         [(crop("images/108.webp", COL, s), "72 % mana: small potion"),
-          (crop("images/107.webp", COL, s), "35 % mana: stronger potion")])
-    make("03_five_second_rule.png", "Five-second rule and live mana regen",
-         "After a spell: gold strip and seconds. The regen running right now, also in combat.",
-         [(crop("images/107.webp", COL, s), "Casting: 4.4 s, regen 0.0/s"),
-          (crop("images/106.webp", COL, s), "Rule over: regen 15.3/s")])
+    if only("03c"):
+        COL = (1300, 62, 1440, 372)  # column layout frame in the 0.7 shots (to be re-shot)
+        make("03_five_second_rule.png", "Five-second rule and live mana regen",
+             "After a spell: gold strip and seconds. The regen running right now, also in combat.",
+             [(crop("images/107.webp", COL, 1.4), "Casting: 4.4 s, regen 0.0/s"),
+              (crop("images/106.webp", COL, 1.4), "Rule over: regen 15.3/s")])
     if only("08"):
         make("08_unlocked.png", "Easy to place",
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
