@@ -373,12 +373,27 @@ Build = function()
   sep:SetPoint("TOP", win, "TOPLEFT", W, -44)
   sep:SetPoint("BOTTOM", win, "BOTTOMLEFT", W, 12)
 
-  -- shows/hides rows that only matter while the mana bar is on
-  local function BarOnly(...)
+  -- settings that only matter while a switch is on stay in place but are greyed out and
+  -- cannot be used while it is off. Registered after the widgets, so this runs after their
+  -- own Refresh (a stepper greys its own buttons at the limits).
+  local function ActiveIf(cond, ...)
     local list = { ... }
     registry[#registry + 1] = { Refresh = function()
-      local on = db.showBar and true or false
-      for _, f in ipairs(list) do f:SetShown(on) end
+      local on = cond() and true or false
+      for _, w in ipairs(list) do
+        if w.minus then -- stepper: label, value and both buttons
+          w.label:SetTextColor(on and 1 or 0.5, on and 1 or 0.5, on and 1 or 0.5)
+          w.value:SetTextColor(on and 1 or 0.5, on and 0.82 or 0.5, on and 0 or 0.5)
+          if not on then
+            for _, b in ipairs({ w.minus, w.plus }) do b:SetEnabled(false); b:SetAlpha(0.3) end
+          end
+        elseif w.SetEnabled then -- dropdown or button
+          w:SetEnabled(on)
+          w:SetAlpha(on and 1 or 0.5)
+        else -- a label
+          w:SetTextColor(on and 1 or 0.5, on and 1 or 0.5, on and 1 or 0.5)
+        end
+      end
     end }
   end
 
@@ -392,14 +407,15 @@ Build = function()
   -- mana numbers, rule seconds and regen: each can be dragged on its own, only while unlocked
   c.Row(Check(col, L.optTextFree, function() return db.textFree end,
     function(v) db.textFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipTextFree,
-    function() return not db.locked end), PAD + 26, 26)
-  -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
+    function() return not db.locked end))
+  -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults.
+  -- Reset size lines up with the dropdowns below
   local reset = Button(col, L.optReset, 150)
   c.Row(reset, PAD + 4, 34)
   reset:SetScript("OnClick", function() ns.ResetPosition() end)
   Tip(reset, L.optReset, L.tipReset)
-  local resetSize = Button(col, L.optResetSize, 150)
-  resetSize:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+  local resetSize = Button(col, L.optResetSize, DD_W)
+  resetSize:SetPoint("TOPRIGHT", col, "TOPRIGHT", -PAD, c.y + 34)
   resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
   Tip(resetSize, L.optResetSize, L.tipResetSize)
   local langLabel = Label(col, L.optLang .. ":")
@@ -493,8 +509,7 @@ Build = function()
     })
   c.Row(blen.label, PAD + 30, 32)
   -- the bar's own look only matters while it is on
-  BarOnly(bpLabel, bp, colLabel, colDD, thick.label, thick.value, thick.minus, thick.plus,
-    blen.label, blen.value, blen.minus, blen.plus)
+  ActiveIf(function() return db.showBar end, bpLabel, bp, colLabel, colDD, thick, blen)
   -- the three texts: each has its own switch and text size and also shows without the bar
   -- (the size on its own row below: long names would run into the value)
   local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
@@ -515,13 +530,13 @@ Build = function()
   function(v) db.manaText = v; ns.RefreshOptions() end)
   c.Right(mtDD)
   c.Row(manaCb, PAD, 30)
-  SizeStepper("manaScale")
+  ActiveIf(function() return db.manaTextOn end, mtDD, SizeStepper("manaScale"))
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
-  SizeStepper("fsrScale")
+  ActiveIf(function() return db.fsr end, SizeStepper("fsrScale"))
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
-  SizeStepper("regenScale")
+  ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))
 
   ------------------------------------------------------------ right column
   c = right

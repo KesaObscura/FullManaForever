@@ -6,7 +6,7 @@
 - The mana numbers, the five-second seconds and the regen also show with the mana bar switched off
 - New setting "Move texts freely" (under "Unlock frame", usable while the frame is unlocked): drag the mana numbers, the five-second seconds and the regen anywhere, each on its own; `/fmf reset` puts them back at the bar
 - The mana numbers have their own switch and text size, like the five-second rule and the regen; "None" left the list (an old "None" becomes the switched-off mana numbers)
-- Settings: "Reset size" sits next to "Reset position"
+- Settings: "Reset size" sits next to "Reset position"; settings of a part that is switched off (mana bar, mana numbers, five-second rule, regen) stay in place, greyed out
 
 **Full Mana Forever 0.8.1**
 

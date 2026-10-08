@@ -345,5 +345,38 @@ test("options: 'Move texts freely' sits under unlock and only works while unlock
     if f.kind == "Button" and f.text == ns.L.optResetSize then resetSize = f end
   end
   ok(reset and resetSize, "reset buttons not found")
-  eq(resetSize.points[1][1], "LEFT"); eq(resetSize.points[1][2], reset, "reset size not next to reset position")
+  -- same row as Reset position, lined up with the language dropdown (right column edge, same width)
+  local lang
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1] and w.entries[1].value == "auto" then lang = w end
+  end
+  local rp, sp, lp = reset.points[1], resetSize.points[1], lang.points[1]
+  eq(sp[1], lp[1]); eq(sp[3], lp[3]); eq(sp[4], lp[4], "reset size not lined up with the dropdown")
+  eq(resetSize.w, lang.w, "reset size not as wide as the dropdown")
+  eq(sp[5], rp[5], "reset size not on the row of reset position")
+  eq(freeCb.points[1][4], unlockCb.points[1][4], "free text switch not at the level of unlock")
+end)
+
+
+test("options: settings of a switched-off part stay in place, greyed out", function()
+  local ns = M.load({ showBar = false, manaTextOn = false, fsr = false })
+  ns.ToggleOptions(true)
+  local barDD, manaDD, sizes = nil, nil, {}
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1] and w.entries[1].value == "below" then barDD = w end
+    if w.entries and w.entries[1] and w.entries[1].value == "number" then manaDD = w end
+    if w.minus and w.label and w.label.text == ns.L.optTextSize .. ":" then sizes[#sizes + 1] = w end
+  end
+  ok(barDD and barDD.shown, "bar position hidden instead of greyed out")
+  ok(not barDD:IsEnabled(), "bar position usable with the bar off")
+  ok(not manaDD:IsEnabled(), "mana text list usable with the mana numbers off")
+  ok(not sizes[1].plus:IsEnabled() and not sizes[1].minus:IsEnabled(), "mana size usable while off")
+  ok(not sizes[2].plus:IsEnabled(), "rule size usable while off")
+  ok(sizes[3].plus:IsEnabled(), "regen size greyed out although the regen is on")
+  eq(sizes[1].label.color[1], 0.5, "label of a switched-off size not grey")
+  ns.db.showBar, ns.db.manaTextOn = true, true
+  ns.RefreshOptions()
+  ok(barDD:IsEnabled() and manaDD:IsEnabled(), "settings stay grey after switching on")
+  ok(sizes[1].plus:IsEnabled(), "mana size stays grey after switching on")
+  eq(sizes[1].label.color[1], 1, "label stays grey after switching on")
 end)
