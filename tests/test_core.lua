@@ -1324,3 +1324,22 @@ test("regen text can be dragged on its own and goes back with /fmf reset", funct
   ok(box.points[1][2] ~= UIParent, "reset did not put the text back at the bar")
   noRegenApis()
 end)
+
+test("a dragged regen text stays in place when its text size changes", function()
+  local ns = M.load({ regenFree = true, regenScale = 1.5 }, { bags = POT })
+  regenApis(14.75, 0)
+  local box = bar(ns).regenBox
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  M.cx, M.cy = 400, 200 -- the frame's own units at 150 %
+  box.scripts.OnDragStop(box)
+  M.cx, M.cy = nil, nil
+  eq(ns.db.regenPoint[1], 600); eq(ns.db.regenPoint[2], 300)
+  -- the same screen spot at any size: offset x scale stays 600 / 300
+  for _, scale in ipairs({ 1, 1.5, 2 }) do
+    ns.db.regenScale = scale; ns.PositionBar()
+    local p = box.points[1]
+    eq(p[4] * box:GetScale(), 600, "x moved at scale " .. scale)
+    eq(p[5] * box:GetScale(), 300, "y moved at scale " .. scale)
+  end
+  noRegenApis()
+end)

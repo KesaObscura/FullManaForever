@@ -31,7 +31,7 @@ local DEFAULTS = {
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,    -- current mana regen next to the mana bar (also without the bar)
   regenFree  = false,   -- regen text can be dragged away from the bar (frame unlocked)
-  regenPoint = nil,     -- { x, y }: center of the dragged regen text (UIParent BOTTOMLEFT)
+  regenPoint = nil,     -- { x, y }: center of the dragged regen text, UIParent units from BOTTOMLEFT
   manaText   = "number", -- mana numbers on the bar: "number" / "percent" / "both" / "none"
   fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
   regenScale = 1,       -- text size of the regen number
@@ -691,8 +691,10 @@ local function CreateBar()
   bar.regenBox:SetScript("OnDragStart", bar.regenBox.StartMoving)
   bar.regenBox:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
+    -- saved in screen (UIParent) units: the frame's own units change with the text size
     local x, y = self:GetCenter()
-    if x and y then db.regenPoint = { x, y } end
+    local scale = self:GetScale() or 1
+    if x and y then db.regenPoint = { x * scale, y * scale } end
     ns.PositionBar()
   end)
   bar.regenBox.bg = bar.regenBox:CreateTexture(nil, "BACKGROUND")
@@ -896,10 +898,11 @@ function ns.PositionBar()
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
   end
-  -- a dragged regen text keeps its own place
+  -- a dragged regen text keeps its own place (its center stays put when the text size changes)
   if db.regenFree and db.regenPoint then
+    local scale = db.regenScale or 1
     bar.regenBox:ClearAllPoints()
-    bar.regenBox:SetPoint("CENTER", UIParent, "BOTTOMLEFT", db.regenPoint[1], db.regenPoint[2])
+    bar.regenBox:SetPoint("CENTER", UIParent, "BOTTOMLEFT", db.regenPoint[1] / scale, db.regenPoint[2] / scale)
     bar.regen:ClearAllPoints()
     bar.regen:SetPoint("CENTER", bar.regenBox, "CENTER", 0, 0)
   end
