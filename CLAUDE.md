@@ -109,6 +109,11 @@ and `/fmf log` (kept in releases for bug reports).
   05_mana_text still show the 0.7.0 bar (numbers inside the bar, seconds at its right end; since
   0.7.1 numbers sit outside, seconds left of the bar): kept for the 0.7.1 upload (owner), to be
   re-shot for 0.8.x. The column images (02, 03 column) are current.
+- Gallery workflow (owner): images are updated as the addon changes. When a change alters what
+  a gallery image shows, ask the owner for screenshots during development or at the latest with
+  the GitHub release, and prepare the images (`tools/gallery.py`, descriptions <= 256) then.
+  On CurseForge since 0.8.0: 9 images (hero, right potion, rule column, rule row, mana text, item
+  list, unlocked, own spells, settings).
 - Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
   progress is already taken off); the addon uses the real value, so an icon lights up only when
   the cast lands. `UnitPowerPercent(..., predicted=true)` could light it up during the cast;
