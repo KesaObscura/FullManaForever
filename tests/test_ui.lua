@@ -345,16 +345,14 @@ test("options: 'Move texts freely' sits under unlock and only works while unlock
     if f.kind == "Button" and f.text == ns.L.optResetSize then resetSize = f end
   end
   ok(reset and resetSize, "reset buttons not found")
-  -- same row as Reset position, lined up with the language dropdown (right column edge, same width)
-  local lang
-  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
-    if w.entries and w.entries[1] and w.entries[1].value == "auto" then lang = w end
-  end
-  local rp, sp, lp = reset.points[1], resetSize.points[1], lang.points[1]
-  eq(sp[1], lp[1]); eq(sp[3], lp[3]); eq(sp[4], lp[4], "reset size not lined up with the dropdown")
-  eq(resetSize.w, lang.w, "reset size not as wide as the dropdown")
+  -- equal halves side by side, together as wide as the column; the switches above them
+  local rp, sp = reset.points[1], resetSize.points[1]
+  eq(reset.w, resetSize.w, "reset buttons differ in width")
   eq(sp[5], rp[5], "reset size not on the row of reset position")
-  eq(freeCb.points[1][4], unlockCb.points[1][4], "free text switch not at the level of unlock")
+  eq(rp[4] + reset.w + 8, sp[4], "gap between the reset buttons")
+  eq(sp[4] + resetSize.w, 440 - rp[4], "reset buttons do not fill the row")
+  eq(freeCb.points[1][5], unlockCb.points[1][5], "free text switch not on the row of unlock")
+  eq(freeCb.points[1][4], sp[4], "free text switch not above reset size")
 end)
 
 
@@ -379,4 +377,17 @@ test("options: settings of a switched-off part stay in place, greyed out", funct
   ok(barDD:IsEnabled() and manaDD:IsEnabled(), "settings stay grey after switching on")
   ok(sizes[1].plus:IsEnabled(), "mana size stays grey after switching on")
   eq(sizes[1].label.color[1], 1, "label stays grey after switching on")
+end)
+
+
+test("options: a long unlock label pushes 'Move texts freely' one row down instead of covering it", function()
+  local ns = M.load({ language = "ruRU" })
+  ns.ToggleOptions(true)
+  local unlockCb, freeCb
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optUnlock then unlockCb = w end
+    if w.label and w.label.text == ns.L.optTextFree then freeCb = w end
+  end
+  eq(freeCb.points[1][4], unlockCb.points[1][4], "free text switch not under unlock")
+  ok(freeCb.points[1][5] < unlockCb.points[1][5], "free text switch not one row down")
 end)

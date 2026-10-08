@@ -402,20 +402,32 @@ Build = function()
   local col = c.frame
   c.Row(Header(col, L.optDisplay), PAD, 24)
   -- one switch for placing: unlocked = movable and showing everything that is switched on
-  c.Row(Check(col, L.optUnlock, function() return not db.locked end,
-    function(v) db.locked = not v; ns.ApplyLock() end, L.tipUnlock))
+  -- two equal halves: unlock and "Move texts freely" side by side, the two reset buttons
+  -- below them, together as wide as the column
+  local HALF = math.floor((W - 2 * PAD - 8) / 2)
+  local X2 = PAD + HALF + 8
+  local unlockCb = Check(col, L.optUnlock, function() return not db.locked end,
+    function(v) db.locked = not v; ns.ApplyLock() end, L.tipUnlock)
+  c.Row(unlockCb)
   -- mana numbers, rule seconds and regen: each can be dragged on its own, only while unlocked
-  c.Row(Check(col, L.optTextFree, function() return db.textFree end,
+  local freeCb = Check(col, L.optTextFree, function() return db.textFree end,
     function(v) db.textFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipTextFree,
-    function() return not db.locked end))
-  -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults.
-  -- Reset size lines up with the dropdowns below
-  local reset = Button(col, L.optReset, 150)
-  c.Row(reset, PAD + 4, 34)
+    function() return not db.locked end)
+  -- a long "Unlock frame" label (some languages) would run into it: then it goes one row down
+  if PAD + 28 + math.ceil(unlockCb.label:GetStringWidth() or 0) + 8 <= X2 then
+    freeCb:SetPoint("TOPLEFT", col, "TOPLEFT", X2, c.y + 26)
+  else
+    c.Row(freeCb)
+  end
+  -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
+  local reset = Button(col, L.optReset, HALF)
+  reset:SetWidth(HALF)
+  c.Row(reset, PAD, 34)
   reset:SetScript("OnClick", function() ns.ResetPosition() end)
   Tip(reset, L.optReset, L.tipReset)
-  local resetSize = Button(col, L.optResetSize, DD_W)
-  resetSize:SetPoint("TOPRIGHT", col, "TOPRIGHT", -PAD, c.y + 34)
+  local resetSize = Button(col, L.optResetSize, HALF)
+  resetSize:SetWidth(HALF)
+  resetSize:SetPoint("TOPLEFT", col, "TOPLEFT", X2, c.y + 34)
   resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
   Tip(resetSize, L.optResetSize, L.tipResetSize)
   local langLabel = Label(col, L.optLang .. ":")
