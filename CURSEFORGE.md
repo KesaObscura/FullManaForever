@@ -4,7 +4,7 @@
 
 Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules. Made for healers first, useful for every mana user.
 
-> **Tested so far:** works in combat; tested in Forever at low level (priest 16–20, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat; Ley Line reading on a Skyborne mage). Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested yet. Please report anything odd — see *Bug reports* below.
+> **Tested so far:** works in combat; tested in Forever at low level (priest 16–20, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat; Ley Line reading on a Skyborne mage; the regen colours while drinking, with Spirit Tap and after Ley Line reading). Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested yet. Please report anything odd — see *Bug reports* below.
 
 ## What it does
 
