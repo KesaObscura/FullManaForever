@@ -78,16 +78,16 @@ def only(name):
     return not args or name in args
 
 if __name__ == "__main__":
-    ROW = (1150, 135, 1480, 255)  # row layout frame (bar under the icons)
+    ROW = (1140, 128, 1430, 224)  # row layout frame, 0.8.2 (numbers under the bar, seconds left)
     if only("01"):
         make("01_hero.png", "Drink at the right moment",
-             "The icon lights up when the potion is ready and fits into your missing mana: nothing wasted.",
-             [(crop("images/113.webp", ROW, 3.2), "")], top=190)
+             "Potions light up when they fit into your missing mana, your own mana spells when they are ready.",
+             [(crop("images/177.webp", ROW, 3.2), "")], top=190)
     if only("03r"):
         make("03_five_second_rule_row.png", "Five-second rule and live mana regen",
              "After a spell: gold strip and seconds. The regen running right now, also in combat.",
-             [(crop("images/114.webp", ROW, 1.85), "Casting:\n4.0 s left, regen 0.0/s"),
-              (crop("images/113.webp", ROW, 1.85), "Rule over:\nregen 15.3/s")], top=160, stack=True)
+             [(crop("images/178.webp", ROW, 1.9), "Casting:\n4.3 s left, regen 0.0/s"),
+              (crop("images/179.webp", ROW, 1.9), "Rule over:\nregen 15.5/s")], top=160, stack=True)
     if only("07"):
         LIB = (1003, 2, 1557, 600)
         make("07_item_list.png", "Item list",
