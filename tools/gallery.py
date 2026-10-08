@@ -40,11 +40,13 @@ def make(out, title, subtitle, panels, top=158, stack=False):
     cap = ImageFont.truetype(BOLD, 22)
     if stack:
         y = top
-        for im, caption in panels:
+        for p in panels:
+            im, caption = p[0], p[1]
+            color = p[2] if len(p) > 2 else GOLD  # optional caption colour
             x = (W - im.width) // 2 - 120
             bg.paste(im, (x, y), rounded(im))
             d.rounded_rectangle((x - 2, y - 2, x + im.width + 1, y + im.height + 1), 15, outline=BLUE, width=2)
-            d.text((x + im.width + 30, y + im.height / 2 - 14), caption, font=cap, fill=GOLD)
+            d.text((x + im.width + 30, y + im.height / 2 - 14), caption, font=cap, fill=color)
             y += im.height + 40
         foot = ImageFont.truetype(REG, 16)
         t = "Full Mana Forever  ·  WoW: Forever"
@@ -73,53 +75,86 @@ def make(out, title, subtitle, panels, top=158, stack=False):
     d.text((W - 40 - d.textlength(t, font=foot), H - 36), t, font=foot, fill=(120, 136, 170))
     bg.save(BASE + "gallery/out/" + out, optimize=True)
 
+def hide_name(im):
+    # the player frame's name (a real character) is blurred out
+    box = (500, 290, 760, 320)
+    im.paste(im.crop(box).filter(ImageFilter.GaussianBlur(8)), box[:2])
+    return im
+
 def only(name):
     args = [a for a in sys.argv[1:] if not a.endswith("/")]
     return not args or name in args
 
 if __name__ == "__main__":
-    ROW = (1150, 135, 1480, 255)  # row layout frame (bar under the icons)
+    # 0.8.2 shots: English client, icon size 96, bar 30, text sizes 200 %, over water
+    BIG = (845, 95, 1420, 275)
     if only("01"):
         make("01_hero.png", "Drink at the right moment",
-             "The icon lights up when the potion is ready and fits into your missing mana: nothing wasted.",
-             [(crop("images/113.webp", ROW, 3.2), "")], top=190)
+             "Potions light up when they fit into your missing mana, your own mana spells when they are ready.",
+             [(crop("images/192.webp", BIG, 1.6), "")], top=180)
+    if only("02"):
+        make("02_right_potion.png", "The right potion for your missing mana",
+             "Several potions in your bags: the strongest one that will not overflow lights up.",
+             [(crop("images/195.webp", BIG, 0.95), "82 % mana:\nsmall potion"),
+              (crop("images/193.webp", BIG, 0.95), "69 % mana:\nstronger potion")], top=160, stack=True)
     if only("03r"):
         make("03_five_second_rule_row.png", "Five-second rule and live mana regen",
              "After a spell: gold strip and seconds. The regen running right now, also in combat.",
-             [(crop("images/114.webp", ROW, 1.85), "Casting:\n4.0 s left, regen 0.0/s"),
-              (crop("images/113.webp", ROW, 1.85), "Rule over:\nregen 15.3/s")], top=160, stack=True)
+             [(crop("images/194.webp", BIG, 0.95), "Casting:\n3.1 s left, regen 0.0/s"),
+              (crop("images/193.webp", BIG, 0.95), "Rule over:\nregen 15.5/s")], top=160, stack=True)
+    if only("10"):
+        BAR = (1140, 180, 1430, 222)  # row layout, mana full: bar, numbers, seconds and regen
+        make("10_regen_colors.png", "Your regen at a glance",
+             "Light blue: normal. Green: above normal (drinking, Spirit Tap, ...). Gold: five-second rule.",
+             [(crop("images/182.webp", BAR, 1.9), "Normal:\n15.5/s", (153, 217, 255)),
+              (crop("images/181.webp", BAR, 1.9), "Drinking:\n23.9/s", (115, 255, 115)),
+              (crop("images/180.webp", BAR, 1.9), "Drinking right after a spell:\n8.4/s, rule 2.2 s", GOLD)],
+             top=170, stack=True)
     if only("07"):
         LIB = (1003, 2, 1557, 600)
         make("07_item_list.png", "Item list",
              "Every supported item with its restore value. Switch single items off or add your own.",
              [(crop("images/111.webp", LIB, 0.78), "Potions and runes"),
               (crop("images/112.webp", LIB, 0.78), "Other consumables and gear")], top=145)
-    COL = (1300, 62, 1440, 372)  # column layout frame in the 1920x1080 shots
-    s = 1.4
-    make("02_right_potion.png", "The right potion for your missing mana",
-         "Several potions in your bags: the strongest one that will not overflow lights up.",
-         [(crop("images/108.webp", COL, s), "72 % mana: small potion"),
-          (crop("images/107.webp", COL, s), "35 % mana: stronger potion")])
-    make("03_five_second_rule.png", "Five-second rule and live mana regen",
-         "After a spell: gold strip and seconds. The regen running right now, also in combat.",
-         [(crop("images/107.webp", COL, s), "Casting: 4.4 s, regen 0.0/s"),
-          (crop("images/106.webp", COL, s), "Rule over: regen 15.3/s")])
+    if only("03c"):
+        COL = (1060, 52, 1290, 595)  # 0.8.2 big shots, icons in a column
+        make("03_five_second_rule.png", "Icons in a column",
+             "The same in a column: seconds above the bar, mana and regen below it.",
+             [(crop("images/210.webp", COL, 0.85), "Casting: 3.2 s, regen 0.0/s"),
+              (crop("images/209.webp", COL, 0.85), "Rule over: regen 15.5/s")], top=140)
     if only("08"):
         make("08_unlocked.png", "Easy to place",
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
-             [(crop("images/117.webp", (1165, 128, 1485, 250), 3.0), "")], top=190)
+             [(crop("images/215.webp", (770, 195, 1460, 385), 1.5), "")], top=180)
+    if only("11"):
+        make("11_move_texts.png", "Move texts anywhere",
+             "Move texts freely: drag the mana numbers, the seconds and the regen, each on its own.",
+             [(crop("images/214.webp", (820, 105, 1390, 355), 1.6), "")], top=170)
+    if only("12"):
+        make("12_just_regen.png", "Just the regen, if you like",
+             "Switch off the bar, mana text and five-second rule; drag the regen wherever you want it.",
+             [(hide_name(crop("images/213.webp", (380, 340, 780, 575), 2.0)), "")], top=160)
     if only("05"):
-        BAR = (1178, 216, 1474, 241)
+        BAR = (935, 326, 1510, 392)  # 0.8.2 big shots: bar, seconds, regen, mana text below
         make("05_mana_text.png", "Mana text like the game's Status Text",
-             "Number, percentage, both or nothing on the bar, plus the regen next to it.",
-             [(crop("images/121.webp", BAR, 2.5), "Number"),
-              (crop("images/120.webp", BAR, 2.5), "Percentage"),
-              (crop("images/119.webp", BAR, 2.5), "Both"),
-              (crop("images/118.webp", BAR, 2.5), "None")], top=170, stack=True)
+             "Its own switch and text size: number, percentage or both, or switched off.",
+             [(crop("images/205.webp", BAR, 0.95), "Number"),
+              (crop("images/204.webp", BAR, 0.95), "Percentage"),
+              (crop("images/197.webp", BAR, 0.95), "Both"),
+              (crop("images/199.webp", BAR, 0.95), "Switched off")], top=150, stack=True)
+    if only("05old"):
+        # the same frames for 0.8.1, where "None" is still a choice in the list
+        BAR = (935, 326, 1510, 392)
+        make("05_mana_text_0.8.1.png", "Mana text like the game's Status Text",
+             "Number, percentage, both or none, plus the regen next to the bar.",
+             [(crop("images/205.webp", BAR, 0.95), "Number"),
+              (crop("images/204.webp", BAR, 0.95), "Percentage"),
+              (crop("images/197.webp", BAR, 0.95), "Both"),
+              (crop("images/199.webp", BAR, 0.95), "None")], top=150, stack=True)
     if only("06"):
         make("06_settings.png", "Settings that explain themselves",
-             "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
-             [(crop("images/111.webp", (80, 2, 960, 626), 0.83), "")], top=150)
+             "Every part has its own switch and text size. Hover any option for a short explanation.",
+             [(crop("images/211.webp", (347, 72, 1227, 665), 0.88), "")], top=140)
     if only("09"):
         make("09_own_spells.png", "Your own mana spells too",
              "Eureka!, Evocation, Innervate, Mana Tide, Inner Focus, Life Tap: lit when ready and your mana is low.",
@@ -129,8 +164,8 @@ if __name__ == "__main__":
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
              [(crop("images/141.webp", (1150, 132, 1480, 240), 2.9), "")], top=190)
     if only("06n"):
-        S = (196, 168, 1076, 772)
+        # 0.8.2 window: every part has its own switch, switched-off settings stay greyed out
         make("06_settings.png", "Settings that explain themselves",
-             "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
-             [(crop("images/141.webp", (196, 168, 636, 772), 0.8), "Display and look"),
-              (crop("images/141.webp", (636, 168, 1076, 772), 0.8), "Visibility, drinking, own spells")], top=145)
+             "Every part has its own switch and text size. Hover any option for a short explanation.",
+             [(crop("images/187.webp", (520, 242, 960, 838), 0.8), "Display and look"),
+              (crop("images/187.webp", (960, 242, 1400, 838), 0.8), "Visibility, drinking, own spells")], top=145)

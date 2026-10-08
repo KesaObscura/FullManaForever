@@ -1,5 +1,13 @@
 # Changelog
 
+**Full Mana Forever 0.8.2**
+
+- Mana regen turns green when it is above your normal rate: out of combat it is compared with your lowest normal regen since the last level-up or gear change (drinking, Spirit Tap, buffs, ...); in combat Forever hides the value from addons, so only your own Evocation (8 s) and Ley Line reading (15 s) count
+- The mana numbers, the five-second seconds and the regen also show with the mana bar switched off
+- New setting "Move texts freely" (next to "Unlock frame", usable while the frame is unlocked): drag the mana numbers, the five-second seconds and the regen anywhere, each on its own; `/fmf reset` puts them back at the bar
+- The mana numbers have their own switch and text size, like the five-second rule and the regen; "None" left the list (an old "None" becomes the switched-off mana numbers)
+- Settings: "Reset size" sits next to "Reset position"; settings of a part that is switched off (mana bar, mana numbers, five-second rule, regen) stay in place, greyed out
+
 **Full Mana Forever 0.8.1**
 
 - While you shoot a wand the game blocks items for a moment after each shot: the potion icon now stays lit and shows that short wait as a sweep, like the action bar (the potion fits, stop shooting and drink). The spell icon shows the same wait (the game locks spells too) and no longer hides for it out of combat. Only wands do this; bows and melee swings put no wait on items

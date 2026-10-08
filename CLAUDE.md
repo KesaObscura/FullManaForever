@@ -105,7 +105,15 @@ and `/fmf log` (kept in releases for bug reports).
   screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
   column), mana text, item list, unlocked frame. For 0.8.0 (made, hand over with the release
   when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
-  replace the 0.7.0 ones on CurseForge.
+  replace the 0.7.0 ones on CurseForge. The row images 01_hero, 03_five_second_rule_row and
+  05_mana_text still show the 0.7.0 bar (numbers inside the bar, seconds at its right end; since
+  0.7.1 numbers sit outside, seconds left of the bar): kept for the 0.7.1 upload (owner), to be
+  re-shot for 0.8.x. The column images (02, 03 column) are current.
+- Gallery workflow (owner): images are updated as the addon changes. When a change alters what
+  a gallery image shows, ask the owner for screenshots during development or at the latest with
+  the GitHub release, and prepare the images (`tools/gallery.py`, descriptions <= 256) then.
+  On CurseForge since 0.8.0: 9 images (hero, right potion, rule column, rule row, mana text, item
+  list, unlocked, own spells, settings).
 - Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
   progress is already taken off); the addon uses the real value, so an icon lights up only when
   the cast lands. `UnitPowerPercent(..., predicted=true)` could light it up during the cast;
@@ -128,3 +136,18 @@ and `/fmf log` (kept in releases for bug reports).
   Data.lua (kept as a fallback). Seventh log (0.8.1, Skyborne mage 5): `GetSpellBaseCooldown`
   reports 120 for it; cast in combat with no cost, cooldown SECRET in combat; the icon hid after
   the cast. The racial "Walk on Air" 1259416 (120) has nothing to do with mana.
+- 0.8.2 (user request on CurseForge, owner: "do all"): regen text green when above normal
+  (out of combat vs the lowest normal regen since the last level-up or gear change, +10 %; in
+  combat only own Evocation 8 s and Ley Line reading 15 s, Innervate left out because its
+  target is unknown). All three texts (mana numbers, rule seconds, regen) show without the bar
+  and can each be dragged (`textFree`, `textPoints[mana|fsr|regen]` in screen units, reset by
+  `/fmf reset`); the owner read the request as "move all texts".
+- Eighth log (0.8.2, gnome priest 20): drinking (Drink 431) IS part of `GetPowerRegen` (base 15.50
+  -> 36.30, casting 0.00 -> 20.80), so the regen turns green while drinking. In game (owner):
+  Refreshing Spring Water (145 mana / 18 s) showed 23.9/s green (15.5 + 8.4), and 8.4/s gold when
+  sitting down to drink right after a spell (casting itself stands you up and ends the drink):
+  the drink adds to the regen and keeps running during the five-second rule. The Forever buff
+  "Adventurous thrill" 1261483 is NOT part of it (36.30 with and without it). It comes from a
+  passive talent of the new "Adventures" tree: after a kill that gives XP or honor, 1 % of max
+  health and mana over 10 s at rank 1/5 (2 % at rank 2), not in dungeons, raids or battlegrounds.
+  Not coloured (green would then show a normal number); maybe later a "+x" out of combat.

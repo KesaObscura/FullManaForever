@@ -146,7 +146,7 @@ test("old saved data: the macro cleanup flag and the old test mode are dropped",
   local ns = M.load({ dbVersion = 6, cleanMacros = true, test = false })
   eq(ns.db.cleanMacros, nil, "macro flag kept")
   eq(ns.db.test, nil, "test key kept")
-  eq(ns.db.dbVersion, 7)
+  eq(ns.db.dbVersion, 8)
 end)
 
 -- performance ------------------------------------------------------------------
@@ -404,7 +404,7 @@ test("five-second rule and regen text can be switched off", function()
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
   M.tick()
   ok(not bar(ns).fsr.shown, "strip shown while off")
-  ok(not bar(ns).regen.shown, "regen text shown while off")
+  ok(not (bar(ns).regen.shown and bar(ns).regenBox.shown), "regen text shown while off")
   noRegenApis()
 end)
 
@@ -434,7 +434,7 @@ local function withScale100(fn)
   _G.CurveConstants, M.SCALE100 = nil, nil
 end
 
-test("mana text: number, percentage, both and none", function()
+test("mana text: number, percentage, both, or switched off", function()
   withScale100(function()
     local ns = M.load({ manaText = "percent" }, { bags = POT })
     M.state.manaPct = 0.89; M.tick()
@@ -443,9 +443,10 @@ test("mana text: number, percentage, both and none", function()
     eq(bar(ns).text.text, "89%   890 / 1000")
     ns.db.vertical = true; M.tick()
     eq(bar(ns).text.text, "89%\n890 / 1000", "column: two lines")
-    ns.db.manaText = "none"; M.tick()
-    eq(bar(ns).text.text, "")
-    ns.db.manaText = "number"; M.tick()
+    ns.db.manaTextOn = false; M.tick()
+    ok(not bar(ns).manaBox.shown, "mana numbers shown while switched off")
+    ns.db.manaTextOn = true; ns.db.manaText = "number"; M.tick()
+    ok(bar(ns).manaBox.shown, "mana numbers not back")
     eq(bar(ns).text.text, "890 / 1000")
   end)
 end)
@@ -543,11 +544,11 @@ end)
 
 test("row: mana numbers outside the bar, on the side away from the icons", function()
   local ns = M.load({ vertical = false, barPosition = "below" }, { bags = POT })
-  local p = bar(ns).text.points[1]
-  eq(p[1], "TOP"); eq(p[3], "BOTTOM", "bar under the icons: numbers not below it")
+  local p = bar(ns).manaBox.points[1]
+  eq(p[1], "TOP"); eq(p[2], bar(ns)); eq(p[3], "BOTTOM", "bar under the icons: numbers not below it")
   ns.db.barPosition = "above"; ns.Layout(true)
-  p = bar(ns).text.points[1]
-  eq(p[1], "BOTTOM"); eq(p[3], "TOP", "bar above the icons: numbers not above it")
+  p = bar(ns).manaBox.points[1]
+  eq(p[1], "BOTTOM"); eq(p[2], bar(ns)); eq(p[3], "TOP", "bar above the icons: numbers not above it")
   local label = M.upvalue(ns.ApplyLock, "anchor").label
   eq(label.points[1][2], bar(ns).text, "frame label not above the numbers")
 end)
@@ -589,18 +590,27 @@ end)
 
 test("a new install has nothing to migrate", function()
   local ns = M.load(nil)
-  eq(ns.db.dbVersion, 7)
+  eq(ns.db.dbVersion, 8)
   eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
+  eq(ns.db.manaTextOn, true, "mana numbers off on a new install")
 end)
 
-test("switching the mana text off clears it even after format failures", function()
+test("switching the mana text off hides it even after format failures", function()
   local ns = M.load(nil, { bags = POT })
   _G.UnitPower = function() return {} end -- "%d" cannot format a table
   for _ = 1, 25 do M.tick() end
-  ns.db.manaText = "none"
+  ns.db.manaTextOn = false
   bar(ns).text.text = "stale"
   M.tick()
-  eq(bar(ns).text.text, "", "mana text not cleared")
+  ok(not bar(ns).manaBox.shown, "stale mana text still shown")
+end)
+
+test("old saved data: mana text 'none' becomes the switched-off mana numbers", function()
+  local ns = M.load({ dbVersion = 7, manaText = "none" })
+  eq(ns.db.manaTextOn, false, "mana numbers back on")
+  eq(ns.db.manaText, "number", "'none' left in the list setting")
+  ns = M.load({ dbVersion = 7, manaText = "both" })
+  eq(ns.db.manaTextOn, true); eq(ns.db.manaText, "both")
 end)
 
 test("item ids out of range are rejected", function()
@@ -1210,4 +1220,186 @@ test("a wand shot's lock shows on the spell icon too, and never hides it", funct
   _G.GetTime = real
   eq(l.sweep.cdStart, nil, "spell sweep left on after the wait")
   noSpellApis()
+end)
+
+-- regen text on its own (0.8.2) --------------------------------------------------------
+local function regenShown(ns) return bar(ns).regen.shown and bar(ns).regenBox.shown end
+
+test("regen text shows without the mana bar", function()
+  local ns = M.load({ showBar = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.tick()
+  ok(not bar(ns).shown, "bar shown although switched off")
+  ok(regenShown(ns), "regen text hidden with the bar")
+  eq(bar(ns).regen.text, "14.8/s")
+  ns.db.regenText = false; M.tick()
+  ok(not bar(ns).regenBox.shown, "regen text shown while off")
+  ns.db.regenText = true
+  M.state.raid, M.state.group = true, true; ns.db.showRaid = false; M.tick()
+  ok(not bar(ns).regenBox.shown, "regen text ignores the solo/party/raid filter")
+  noRegenApis()
+end)
+
+test("regen text is hidden while dead", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(14.75, 0)
+  M.tick(); ok(regenShown(ns), "regen text missing")
+  _G.UnitIsDeadOrGhost = function() return true end
+  M.tick()
+  _G.UnitIsDeadOrGhost = nil
+  ok(not bar(ns).regenBox.shown, "regen text shown while dead")
+  noRegenApis()
+end)
+
+test("regen above normal turns green out of combat; own Evocation also in combat", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  local base = 14.75
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "normal regen not light blue")
+  base = 23.25 -- Spirit Tap
+  M.state.now = (M.state.now or 100)
+  local real = GetTime
+  _G.GetTime = function() return 101 end
+  M.tick()
+  eq(bar(ns).regen.color[2], 1, "raised regen not green"); eq(bar(ns).regen.color[1], 0.45)
+  base = 15.0 -- within 10 %: still normal
+  _G.GetTime = function() return 102 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "small change turned green")
+  -- in combat the value is secret: only an own Evocation counts, for 8 s
+  base = M.secret(80)
+  M.state.combat = true
+  _G.GetTime = function() return 103 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "secret regen guessed as raised")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051)
+  _G.GetTime = function() return 104 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.45, "Evocation not green")
+  _G.GetTime = function() return 112 end
+  M.tick()
+  _G.GetTime = real
+  eq(bar(ns).regen.color[1], 0.6, "still green after Evocation ended")
+  noRegenApis()
+end)
+
+test("a new level or other gear learns the normal regen again", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  local base = 14.75
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  M.tick()
+  base = 20
+  local real = GetTime
+  _G.GetTime = function() return 101 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.45, "raised regen not green")
+  M.Fire("PLAYER_LEVEL_UP", 21)
+  _G.GetTime = function() return 102 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "regen after a level-up counted as raised")
+  base = 30
+  _G.GetTime = function() return 103 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.45, "raised regen after the level-up not green")
+  M.Fire("PLAYER_EQUIPMENT_CHANGED", 5, true)
+  _G.GetTime = function() return 104 end
+  M.tick()
+  _G.GetTime = real
+  eq(bar(ns).regen.color[1], 0.6, "regen after a gear change counted as raised")
+  noRegenApis()
+end)
+
+test("regen text can be dragged on its own and goes back with /fmf reset", function()
+  local ns = M.load({ textFree = true }, { bags = POT })
+  regenApis(14.75, 0)
+  local box = bar(ns).regenBox
+  M.tick()
+  ok(not box.mouse, "regen text takes the mouse while locked")
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  ok(box.mouse, "regen text cannot be dragged while unlocked")
+  M.cx, M.cy = 700, 300
+  box.scripts.OnDragStop(box)
+  M.cx, M.cy = nil, nil
+  eq(ns.db.textPoints.regen[1], 700); eq(ns.db.textPoints.regen[2], 300)
+  local p = box.points[1]
+  eq(p[1], "CENTER"); eq(p[3], "BOTTOMLEFT"); eq(p[4], 700); eq(p[5], 300)
+  ns.db.textFree = false; ns.PositionBar()
+  ok(box.points[1][2] ~= UIParent, "attached text still at its own place")
+  ns.db.textFree = true
+  SlashCmdList.FULLMANAFOREVER("reset")
+  eq(ns.db.textPoints.regen, nil, "reset kept the regen position")
+  ok(box.points[1][2] ~= UIParent, "reset did not put the text back at the bar")
+  noRegenApis()
+end)
+
+test("a dragged regen text stays in place when its text size changes", function()
+  local ns = M.load({ textFree = true, regenScale = 1.5 }, { bags = POT })
+  regenApis(14.75, 0)
+  local box = bar(ns).regenBox
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  M.cx, M.cy = 400, 200 -- the frame's own units at 150 %
+  box.scripts.OnDragStop(box)
+  M.cx, M.cy = nil, nil
+  eq(ns.db.textPoints.regen[1], 600); eq(ns.db.textPoints.regen[2], 300)
+  -- the same screen spot at any size: offset x scale stays 600 / 300
+  for _, scale in ipairs({ 1, 1.5, 2 }) do
+    ns.db.regenScale = scale; ns.PositionBar()
+    local p = box.points[1]
+    eq(p[4] * box:GetScale(), 600, "x moved at scale " .. scale)
+    eq(p[5] * box:GetScale(), 300, "y moved at scale " .. scale)
+  end
+  noRegenApis()
+end)
+
+test("mana numbers and the rule's seconds also show without the mana bar", function()
+  local ns = M.load({ showBar = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.state.manaPct = 0.89; M.tick()
+  ok(bar(ns).manaBox.shown, "mana numbers hidden with the bar")
+  eq(bar(ns).text.text, "890 / 1000")
+  ok(not bar(ns).fsrBox.shown, "seconds shown without a cast")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  ok(bar(ns).fsrBox.shown and bar(ns).fsrText.shown, "rule's seconds hidden with the bar")
+  ok(not bar(ns).fsr.shown, "strip shown without the bar")
+  ns.db.manaTextOn = false; M.tick()
+  ok(not bar(ns).manaBox.shown, "mana numbers shown although switched off")
+  noRegenApis()
+end)
+
+test("each text can be dragged on its own; the others stay with the bar", function()
+  local ns = M.load({ textFree = true, vertical = true, fsrScale = 2 }, { bags = POT })
+  regenApis(14.75, 0)
+  local b = bar(ns)
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  ok(b.manaBox.mouse and b.fsrBox.mouse and b.regenBox.mouse, "a text cannot be dragged")
+  -- the mana numbers leave: the regen moves up under the bar instead of following them
+  M.cx, M.cy = 100, 50
+  b.manaBox.scripts.OnDragStop(b.manaBox)
+  eq(ns.db.textPoints.mana[1], 100)
+  eq(b.manaBox.points[1][1], "CENTER"); eq(b.manaBox.points[1][2], UIParent)
+  eq(b.regenBox.points[1][2], b, "regen follows the dragged mana numbers")
+  -- the seconds at 200 %: saved in screen units
+  M.cx, M.cy = 30, 40
+  b.fsrBox.scripts.OnDragStop(b.fsrBox)
+  M.cx, M.cy = nil, nil
+  eq(ns.db.textPoints.fsr[1], 60); eq(ns.db.textPoints.fsr[2], 80)
+  eq(b.fsrBox.points[1][4], 30); eq(b.fsrBox.points[1][5], 40)
+  SlashCmdList.FULLMANAFOREVER("reset")
+  eq(next(ns.db.textPoints), nil, "reset kept a text position")
+  ok(b.manaBox.points[1][2] == b and b.fsrBox.points[1][2] == b, "texts not back at the bar")
+  SlashCmdList.FULLMANAFOREVER("lock")
+  ok(not (b.manaBox.mouse or b.fsrBox.mouse or b.regenBox.mouse), "a text takes the mouse while locked")
+  noRegenApis()
+end)
+
+test("row above the icons: the frame label leaves dragged mana numbers alone", function()
+  local ns = M.load({ textFree = true, barPosition = "above" }, { bags = POT })
+  local label = M.upvalue(ns.ApplyLock, "anchor").label
+  eq(label.points[1][2], bar(ns).text)
+  ns.db.textPoints.mana = { 300, 300 }; ns.PositionBar()
+  eq(label.points[1][2], bar(ns), "label follows the dragged mana numbers")
 end)

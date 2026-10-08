@@ -4,7 +4,7 @@
 
 Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules. Made for healers first, useful for every mana user.
 
-> **Tested so far:** works in combat; tested in Forever at low level (priest 16–20, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat; Ley Line reading on a Skyborne mage). Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested yet. Please report anything odd — see *Bug reports* below.
+> **Tested so far:** works in combat; tested in Forever at low level (priest 16–20, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat; Ley Line reading on a Skyborne mage; the regen colours while drinking, with Spirit Tap and after Ley Line reading). Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested yet. Please report anything odd — see *Bug reports* below.
 
 ## What it does
 
@@ -16,7 +16,8 @@ Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules
 - **Made for wanding.** Each wand shot blocks potions and spells for a moment. The icon stays lit and shows that short wait as a sweep, like the action bar: the potion fits, stop shooting and drink.
 - **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
 - **Five-second rule and mana regen.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it). Next to the mana bar (under the numbers when the icons are in a column) you see the regen running right now, per second — also in combat, and including talents like Spirit Tap or Innervate.
-- **Mana text** like the game's status text: numeric value, percentage, both or none.
+- **Regen your way.** The regen turns green when it is above your normal rate (drinking, Spirit Tap, ... out of combat, and in combat after your own Evocation or Ley Line reading — Forever hides the value from addons in combat). The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
+- **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
 - **Item list.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.

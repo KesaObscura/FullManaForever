@@ -237,22 +237,26 @@ test("text with letters keeps the game's font family (no boxes for other alphabe
   eq(regen.font, nil, "the regen text was switched to a single font file")
 end)
 
-test("options: text size of the rule's seconds and of the regen can be changed", function()
+test("options: text size of the mana numbers, the rule's seconds and the regen can be changed", function()
   local ns = M.load(nil)
   ns.ToggleOptions(true)
   local b = M.upvalue(ns.PositionBar, "bar")
-  eq(b.fsrBox.scale, 1); eq(b.regenBox.scale, 1)
+  eq(b.manaBox.scale, 1); eq(b.fsrBox.scale, 1); eq(b.regenBox.scale, 1)
   local sizes = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.minus and w.label and w.label.text == ns.L.optTextSize .. ":" then sizes[#sizes + 1] = w end
   end
-  eq(#sizes, 2, "size steppers")
+  eq(#sizes, 3, "size steppers")
   sizes[1].plus.scripts.OnClick(sizes[1].plus)
-  sizes[2].minus.scripts.OnClick(sizes[2].minus)
-  eq(ns.db.fsrScale, 1.1); eq(ns.db.regenScale, 0.9)
+  sizes[2].plus.scripts.OnClick(sizes[2].plus)
+  sizes[3].minus.scripts.OnClick(sizes[3].minus)
+  eq(ns.db.manaScale, 1.1); eq(ns.db.fsrScale, 1.1); eq(ns.db.regenScale, 0.9)
+  eq(b.manaBox.scale, 1.1, "mana numbers not resized")
   eq(b.fsrBox.scale, 1.1, "seconds not resized")
   eq(b.regenBox.scale, 0.9, "regen not resized")
   eq(sizes[1].value.text, "110%")
+  ns.ResetSize()
+  eq(ns.db.manaScale, 1, "reset size kept the mana text size")
 end)
 
 test("options: + on a bar shorter than an icon grows it instead of going to auto", function()
@@ -302,4 +306,88 @@ test("options: switching a group off shortens the auto bar at once", function()
   cb:SetChecked(false); cb.scripts.OnClick(cb)
   eq(ns.db.enabled.rune, false)
   eq(bar.h, h1 - 48 - 6, "bar length after switching runes off")
+end)
+
+test("options: regen settings stay when the bar is off; the free regen text can be switched on", function()
+  local ns = M.load({ showBar = false })
+  ns.ToggleOptions(true)
+  local regenCb, freeCb
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optRegen and w.GetChecked then regenCb = w end
+    if w.label and w.label.text == ns.L.optTextFree and w.GetChecked then freeCb = w end
+  end
+  ok(regenCb and regenCb.shown, "regen checkbox hidden with the bar off")
+  ok(freeCb and freeCb.shown, "free regen checkbox missing")
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  local box = M.upvalue(ns.PositionBar, "bar").regenBox
+  ok(not box.mouse, "regen text draggable before the switch")
+  freeCb:SetChecked(true); freeCb.scripts.OnClick(freeCb)
+  eq(ns.db.textFree, true)
+  ok(box.mouse, "regen text not draggable after the switch")
+end)
+
+test("options: 'Move texts freely' sits under unlock and only works while unlocked; resets side by side", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local unlockCb, freeCb, reset, resetSize
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optUnlock then unlockCb = w end
+    if w.label and w.label.text == ns.L.optTextFree then freeCb = w end
+  end
+  ok(unlockCb and freeCb, "unlock or free text switch missing")
+  ok(freeCb.points[1][5] > -120, "free text switch not near the top")
+  ok(not freeCb:IsEnabled(), "free text switch usable while locked")
+  unlockCb:SetChecked(true); unlockCb.scripts.OnClick(unlockCb)
+  eq(ns.db.locked, false)
+  ok(freeCb:IsEnabled(), "free text switch greyed out while unlocked")
+  for _, f in ipairs(M.all) do
+    if f.kind == "Button" and f.text == ns.L.optReset then reset = f end
+    if f.kind == "Button" and f.text == ns.L.optResetSize then resetSize = f end
+  end
+  ok(reset and resetSize, "reset buttons not found")
+  -- equal halves side by side, together as wide as the column; the switches above them
+  local rp, sp = reset.points[1], resetSize.points[1]
+  eq(reset.w, resetSize.w, "reset buttons differ in width")
+  eq(sp[5], rp[5], "reset size not on the row of reset position")
+  eq(rp[4] + reset.w + 8, sp[4], "gap between the reset buttons")
+  eq(sp[4] + resetSize.w, 440 - rp[4], "reset buttons do not fill the row")
+  eq(freeCb.points[1][5], unlockCb.points[1][5], "free text switch not on the row of unlock")
+  eq(freeCb.points[1][4], sp[4], "free text switch not above reset size")
+end)
+
+
+test("options: settings of a switched-off part stay in place, greyed out", function()
+  local ns = M.load({ showBar = false, manaTextOn = false, fsr = false })
+  ns.ToggleOptions(true)
+  local barDD, manaDD, sizes = nil, nil, {}
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1] and w.entries[1].value == "below" then barDD = w end
+    if w.entries and w.entries[1] and w.entries[1].value == "number" then manaDD = w end
+    if w.minus and w.label and w.label.text == ns.L.optTextSize .. ":" then sizes[#sizes + 1] = w end
+  end
+  ok(barDD and barDD.shown, "bar position hidden instead of greyed out")
+  ok(not barDD:IsEnabled(), "bar position usable with the bar off")
+  ok(not manaDD:IsEnabled(), "mana text list usable with the mana numbers off")
+  ok(not sizes[1].plus:IsEnabled() and not sizes[1].minus:IsEnabled(), "mana size usable while off")
+  ok(not sizes[2].plus:IsEnabled(), "rule size usable while off")
+  ok(sizes[3].plus:IsEnabled(), "regen size greyed out although the regen is on")
+  eq(sizes[1].label.color[1], 0.5, "label of a switched-off size not grey")
+  ns.db.showBar, ns.db.manaTextOn = true, true
+  ns.RefreshOptions()
+  ok(barDD:IsEnabled() and manaDD:IsEnabled(), "settings stay grey after switching on")
+  ok(sizes[1].plus:IsEnabled(), "mana size stays grey after switching on")
+  eq(sizes[1].label.color[1], 1, "label stays grey after switching on")
+end)
+
+
+test("options: a long unlock label pushes 'Move texts freely' one row down instead of covering it", function()
+  local ns = M.load({ language = "ruRU" })
+  ns.ToggleOptions(true)
+  local unlockCb, freeCb
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optUnlock then unlockCb = w end
+    if w.label and w.label.text == ns.L.optTextFree then freeCb = w end
+  end
+  eq(freeCb.points[1][4], unlockCb.points[1][4], "free text switch not under unlock")
+  ok(freeCb.points[1][5] < unlockCb.points[1][5], "free text switch not one row down")
 end)
