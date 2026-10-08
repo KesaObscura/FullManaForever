@@ -75,6 +75,12 @@ def make(out, title, subtitle, panels, top=158, stack=False):
     d.text((W - 40 - d.textlength(t, font=foot), H - 36), t, font=foot, fill=(120, 136, 170))
     bg.save(BASE + "gallery/out/" + out, optimize=True)
 
+def hide_name(im):
+    # the player frame's name (a real character) is blurred out
+    box = (500, 290, 760, 320)
+    im.paste(im.crop(box).filter(ImageFilter.GaussianBlur(8)), box[:2])
+    return im
+
 def only(name):
     args = [a for a in sys.argv[1:] if not a.endswith("/")]
     return not args or name in args
@@ -119,7 +125,15 @@ if __name__ == "__main__":
     if only("08"):
         make("08_unlocked.png", "Easy to place",
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
-             [(crop("images/117.webp", (1165, 128, 1485, 250), 3.0), "")], top=190)
+             [(crop("images/215.webp", (770, 195, 1460, 385), 1.5), "")], top=180)
+    if only("11"):
+        make("11_move_texts.png", "Move texts anywhere",
+             "Move texts freely: drag the mana numbers, the seconds and the regen, each on its own.",
+             [(crop("images/214.webp", (820, 105, 1390, 355), 1.6), "")], top=170)
+    if only("12"):
+        make("12_just_regen.png", "Just the regen, if you like",
+             "Switch off the bar, mana text and five-second rule; drag the regen wherever you want it.",
+             [(hide_name(crop("images/213.webp", (380, 340, 780, 575), 2.0)), "")], top=160)
     if only("05"):
         BAR = (935, 326, 1510, 392)  # 0.8.2 big shots: bar, seconds, regen, mana text below
         make("05_mana_text.png", "Mana text like the game's Status Text",
@@ -130,8 +144,8 @@ if __name__ == "__main__":
               (crop("images/199.webp", BAR, 0.95), "Switched off")], top=150, stack=True)
     if only("06"):
         make("06_settings.png", "Settings that explain themselves",
-             "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
-             [(crop("images/111.webp", (80, 2, 960, 626), 0.83), "")], top=150)
+             "Every part has its own switch and text size. Hover any option for a short explanation.",
+             [(crop("images/211.webp", (347, 72, 1227, 665), 0.88), "")], top=140)
     if only("09"):
         make("09_own_spells.png", "Your own mana spells too",
              "Eureka!, Evocation, Innervate, Mana Tide, Inner Focus, Life Tap: lit when ready and your mana is low.",
