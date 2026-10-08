@@ -139,8 +139,8 @@ if __name__ == "__main__":
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
              [(crop("images/141.webp", (1150, 132, 1480, 240), 2.9), "")], top=190)
     if only("06n"):
-        S = (196, 168, 1076, 772)
+        # 0.8.2 window: every part has its own switch, switched-off settings stay greyed out
         make("06_settings.png", "Settings that explain themselves",
-             "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
-             [(crop("images/141.webp", (196, 168, 636, 772), 0.8), "Display and look"),
-              (crop("images/141.webp", (636, 168, 1076, 772), 0.8), "Visibility, drinking, own spells")], top=145)
+             "Every part has its own switch and text size. Hover any option for a short explanation.",
+             [(crop("images/187.webp", (520, 242, 960, 838), 0.8), "Display and look"),
+              (crop("images/187.webp", (960, 242, 1400, 838), 0.8), "Visibility, drinking, own spells")], top=145)
