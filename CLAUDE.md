@@ -141,5 +141,9 @@ and `/fmf log` (kept in releases for bug reports).
   combat only own Evocation 8 s and Ley Line reading 15 s, Innervate left out because its
   target is unknown). All three texts (mana numbers, rule seconds, regen) show without the bar
   and can each be dragged (`textFree`, `textPoints[mana|fsr|regen]` in screen units, reset by
-  `/fmf reset`); the owner read the request as "move all texts". Unknown: whether drinking shows up in `GetPowerRegen` (a log while
-  drinking answers it).
+  `/fmf reset`); the owner read the request as "move all texts".
+- Eighth log (0.8.2, gnome priest 20): drinking (Drink 431) IS part of `GetPowerRegen` (base 15.50
+  -> 36.30, casting 0.00 -> 20.80), so the regen turns green while drinking. The Forever buff
+  "Adventurous thrill" 1261483 (3 mana every 2 s, after kills) is NOT part of it (36.30 with and
+  without it); decision pending, the recommendation is not to colour it (green would then show a
+  normal number).
