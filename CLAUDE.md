@@ -144,6 +144,7 @@ and `/fmf log` (kept in releases for bug reports).
   `/fmf reset`); the owner read the request as "move all texts".
 - Eighth log (0.8.2, gnome priest 20): drinking (Drink 431) IS part of `GetPowerRegen` (base 15.50
   -> 36.30, casting 0.00 -> 20.80), so the regen turns green while drinking. The Forever buff
-  "Adventurous thrill" 1261483 (3 mana every 2 s, after kills) is NOT part of it (36.30 with and
-  without it); decision pending, the recommendation is not to colour it (green would then show a
-  normal number).
+  "Adventurous thrill" 1261483 is NOT part of it (36.30 with and without it). It comes from a
+  passive talent of the new "Adventures" tree: after a kill that gives XP or honor, 1 % of max
+  health and mana over 10 s at rank 1/5 (2 % at rank 2), not in dungeons, raids or battlegrounds.
+  Not coloured (green would then show a normal number); maybe later a "+x" out of combat.
