@@ -37,7 +37,8 @@ when the icon lights up.
   stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.
 - **Five-second rule and mana regen** on the bar: a gold strip and the seconds after a spell
-  that costs mana, and the regen running right now ("14.8/s"), also in combat.
+  that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns
+  green when it is above your normal rate, shows without the bar too and can be dragged anywhere.
 - **Mana text** like the game's status text: number, percentage, both or none.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
 - **Item list** (`/fmf items`): every supported item, on/off per item, add your own.

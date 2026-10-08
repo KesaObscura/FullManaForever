@@ -500,15 +500,18 @@ Build = function()
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr)
   c.Row(fsrCb, PAD + 26, 26)
   local fsrSize = SizeStepper("fsrScale")
+  -- the regen text also shows without the bar, and can be dragged away from it
   local regenCb = Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen)
   c.Row(regenCb, PAD + 26, 26)
   local regenSize = SizeStepper("regenScale")
+  local regenFree = Check(col, L.optRegenFree, function() return db.regenFree end,
+    function(v) db.regenFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipRegenFree)
+  c.Row(regenFree, PAD + 56, 26)
   c.y = c.y - 4
   BarOnly(bpLabel, bp, colLabel, colDD, mtLabel, mtDD, thick.label, thick.value, thick.minus, thick.plus,
-    blen.label, blen.value, blen.minus, blen.plus, fsrCb, fsrCb.label, regenCb, regenCb.label,
-    fsrSize.label, fsrSize.value, fsrSize.minus, fsrSize.plus,
-    regenSize.label, regenSize.value, regenSize.minus, regenSize.plus)
+    blen.label, blen.value, blen.minus, blen.plus, fsrCb, fsrCb.label,
+    fsrSize.label, fsrSize.value, fsrSize.minus, fsrSize.plus)
   local resetSize = Button(col, L.optResetSize, 150)
   c.Row(resetSize, PAD + 4, 34)
   resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)

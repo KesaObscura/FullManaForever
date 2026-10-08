@@ -9,6 +9,16 @@ local _, ns = ...
 local FSR = 5           -- seconds of the five-second rule
 local MANA = 0          -- Enum.PowerType.Mana
 local fsrUntil = 0
+-- regen above normal ("boosted", shown green): out of combat the value is compared with the
+-- lowest normal regen seen since the last level-up or gear change; in combat the value is
+-- secret, so only own spells that raise regen count, for their known duration
+local BOOST_RATIO = 1.1       -- 10 % above normal, so small rounding never turns it green
+local BOOST_SPELLS = {        -- [spell] = seconds of raised regen (own casts only)
+  [12051] = 8,                -- Evocation (channel)
+  [1259705] = 15,             -- Ley Line reading (15 s without a ley line nearby, else 15 min)
+}
+local baseline
+local boostUntil = 0
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
 
@@ -40,15 +50,22 @@ if frame.RegisterUnitEvent then
 else
   frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 end
-frame:SetScript("OnEvent", function(_, _, unit, _, spellID)
-  if unit == "player" and CostsMana(spellID) then fsrUntil = GetTime() + FSR end
+-- a new level or other gear changes the normal regen: it is learned again
+frame:RegisterEvent("PLAYER_LEVEL_UP")
+frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
+  if event ~= "UNIT_SPELLCAST_SUCCEEDED" then baseline = nil return end
+  if unit ~= "player" then return end
+  if CostsMana(spellID) then fsrUntil = GetTime() + FSR end
+  local boost = not IsSecret(spellID) and BOOST_SPELLS[spellID]
+  if boost then boostUntil = math.max(boostUntil, GetTime() + boost) end
 end)
 
 -- text for the mana bar: the regen that is running right now, per second ("14.8/s").
 -- During the rule that is the casting rate: 0 without talents, more with talents,
 -- Innervate or gear (the game includes all of it). In combat the value is secret: it can
 -- only be formatted, never compared or multiplied, which is why there is no mp5 here.
--- Returns text, inRule; nil when there is nothing to show.
+-- Returns text, inRule, boosted; nil when there is nothing to show.
 function ns.RegenText()
   if not GetPowerRegen then return nil end
   local ok, base, casting = pcall(GetPowerRegen)
@@ -60,7 +77,12 @@ function ns.RegenText()
   -- the unit is part of the pattern; "%" in a unit would have to be escaped
   local okF, text = pcall(string.format, "%.1f" .. ns.L.regenUnit, value)
   if not okF then return nil end
-  return text, inRule
+  local boosted = GetTime() < boostUntil
+  if not inRule and not IsSecret(base) and type(base) == "number" and base > 0 then
+    if not baseline or base < baseline then baseline = base end
+    boosted = boosted or base > baseline * BOOST_RATIO + 0.05
+  end
+  return text, inRule, boosted
 end
 
 -- for tests and the bar strip

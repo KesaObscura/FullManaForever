@@ -303,3 +303,21 @@ test("options: switching a group off shortens the auto bar at once", function()
   eq(ns.db.enabled.rune, false)
   eq(bar.h, h1 - 48 - 6, "bar length after switching runes off")
 end)
+
+test("options: regen settings stay when the bar is off; the free regen text can be switched on", function()
+  local ns = M.load({ showBar = false })
+  ns.ToggleOptions(true)
+  local regenCb, freeCb
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optRegen and w.GetChecked then regenCb = w end
+    if w.label and w.label.text == ns.L.optRegenFree and w.GetChecked then freeCb = w end
+  end
+  ok(regenCb and regenCb.shown, "regen checkbox hidden with the bar off")
+  ok(freeCb and freeCb.shown, "free regen checkbox missing")
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  local box = M.upvalue(ns.PositionBar, "bar").regenBox
+  ok(not box.mouse, "regen text draggable before the switch")
+  freeCb:SetChecked(true); freeCb.scripts.OnClick(freeCb)
+  eq(ns.db.regenFree, true)
+  ok(box.mouse, "regen text not draggable after the switch")
+end)

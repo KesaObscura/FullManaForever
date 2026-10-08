@@ -1,5 +1,11 @@
 # Changelog
 
+**Full Mana Forever 0.8.2**
+
+- Mana regen turns green when it is above your normal rate: out of combat it is compared with your lowest normal regen since the last level-up or gear change (Spirit Tap, buffs, ...); in combat Forever hides the value from addons, so only your own Evocation (8 s) and Ley Line reading (15 s) count
+- The mana regen also shows with the mana bar switched off
+- New setting "Move regen text freely": unlock the frame and drag the regen text anywhere; `/fmf reset` puts it back next to the bar
+
 **Full Mana Forever 0.8.1**
 
 - While you shoot a wand the game blocks items for a moment after each shot: the potion icon now stays lit and shows that short wait as a sweep, like the action bar (the potion fits, stop shooting and drink). The spell icon shows the same wait (the game locks spells too) and no longer hides for it out of combat. Only wands do this; bows and melee swings put no wait on items

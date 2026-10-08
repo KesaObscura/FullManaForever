@@ -404,7 +404,7 @@ test("five-second rule and regen text can be switched off", function()
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
   M.tick()
   ok(not bar(ns).fsr.shown, "strip shown while off")
-  ok(not bar(ns).regen.shown, "regen text shown while off")
+  ok(not (bar(ns).regen.shown and bar(ns).regenBox.shown), "regen text shown while off")
   noRegenApis()
 end)
 
@@ -1210,4 +1210,117 @@ test("a wand shot's lock shows on the spell icon too, and never hides it", funct
   _G.GetTime = real
   eq(l.sweep.cdStart, nil, "spell sweep left on after the wait")
   noSpellApis()
+end)
+
+-- regen text on its own (0.8.2) --------------------------------------------------------
+local function regenShown(ns) return bar(ns).regen.shown and bar(ns).regenBox.shown end
+
+test("regen text shows without the mana bar", function()
+  local ns = M.load({ showBar = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.tick()
+  ok(not bar(ns).shown, "bar shown although switched off")
+  ok(regenShown(ns), "regen text hidden with the bar")
+  eq(bar(ns).regen.text, "14.8/s")
+  ns.db.regenText = false; M.tick()
+  ok(not bar(ns).regenBox.shown, "regen text shown while off")
+  ns.db.regenText = true
+  M.state.raid, M.state.group = true, true; ns.db.showRaid = false; M.tick()
+  ok(not bar(ns).regenBox.shown, "regen text ignores the solo/party/raid filter")
+  noRegenApis()
+end)
+
+test("regen text is hidden while dead", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(14.75, 0)
+  M.tick(); ok(regenShown(ns), "regen text missing")
+  _G.UnitIsDeadOrGhost = function() return true end
+  M.tick()
+  _G.UnitIsDeadOrGhost = nil
+  ok(not bar(ns).regenBox.shown, "regen text shown while dead")
+  noRegenApis()
+end)
+
+test("regen above normal turns green out of combat; own Evocation also in combat", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  local base = 14.75
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "normal regen not light blue")
+  base = 23.25 -- Spirit Tap
+  M.state.now = (M.state.now or 100)
+  local real = GetTime
+  _G.GetTime = function() return 101 end
+  M.tick()
+  eq(bar(ns).regen.color[2], 1, "raised regen not green"); eq(bar(ns).regen.color[1], 0.45)
+  base = 15.0 -- within 10 %: still normal
+  _G.GetTime = function() return 102 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "small change turned green")
+  -- in combat the value is secret: only an own Evocation counts, for 8 s
+  base = M.secret(80)
+  M.state.combat = true
+  _G.GetTime = function() return 103 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "secret regen guessed as raised")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051)
+  _G.GetTime = function() return 104 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.45, "Evocation not green")
+  _G.GetTime = function() return 112 end
+  M.tick()
+  _G.GetTime = real
+  eq(bar(ns).regen.color[1], 0.6, "still green after Evocation ended")
+  noRegenApis()
+end)
+
+test("a new level or other gear learns the normal regen again", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  local base = 14.75
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  M.tick()
+  base = 20
+  local real = GetTime
+  _G.GetTime = function() return 101 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.45, "raised regen not green")
+  M.Fire("PLAYER_LEVEL_UP", 21)
+  _G.GetTime = function() return 102 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "regen after a level-up counted as raised")
+  base = 30
+  _G.GetTime = function() return 103 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.45, "raised regen after the level-up not green")
+  M.Fire("PLAYER_EQUIPMENT_CHANGED", 5, true)
+  _G.GetTime = function() return 104 end
+  M.tick()
+  _G.GetTime = real
+  eq(bar(ns).regen.color[1], 0.6, "regen after a gear change counted as raised")
+  noRegenApis()
+end)
+
+test("regen text can be dragged on its own and goes back with /fmf reset", function()
+  local ns = M.load({ regenFree = true }, { bags = POT })
+  regenApis(14.75, 0)
+  local box = bar(ns).regenBox
+  M.tick()
+  ok(not box.mouse, "regen text takes the mouse while locked")
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  ok(box.mouse, "regen text cannot be dragged while unlocked")
+  M.cx, M.cy = 700, 300
+  box.scripts.OnDragStop(box)
+  M.cx, M.cy = nil, nil
+  eq(ns.db.regenPoint[1], 700); eq(ns.db.regenPoint[2], 300)
+  local p = box.points[1]
+  eq(p[1], "CENTER"); eq(p[3], "BOTTOMLEFT"); eq(p[4], 700); eq(p[5], 300)
+  ns.db.regenFree = false; ns.PositionBar()
+  ok(box.points[1][2] ~= UIParent, "attached text still at its own place")
+  ns.db.regenFree = true
+  SlashCmdList.FULLMANAFOREVER("reset")
+  eq(ns.db.regenPoint, nil, "reset kept the regen position")
+  ok(box.points[1][2] ~= UIParent, "reset did not put the text back at the bar")
+  noRegenApis()
 end)

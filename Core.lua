@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.1"
+ns.VERSION = "0.8.2"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -29,7 +29,9 @@ local DEFAULTS = {
   thresholdMode = "max", -- "max": no waste / "avg": more drinks per fight
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
-  regenText  = true,    -- current mana regen next to the mana bar
+  regenText  = true,    -- current mana regen next to the mana bar (also without the bar)
+  regenFree  = false,   -- regen text can be dragged away from the bar (frame unlocked)
+  regenPoint = nil,     -- { x, y }: center of the dragged regen text (UIParent BOTTOMLEFT)
   manaText   = "number", -- mana numbers on the bar: "number" / "percent" / "both" / "none"
   fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
   regenScale = 1,       -- text size of the regen number
@@ -680,8 +682,24 @@ local function CreateBar()
   -- other alphabets)
   bar.fsrBox = CreateFrame("Frame", nil, top)
   bar.fsrBox:SetSize(1, 1)
-  bar.regenBox = CreateFrame("Frame", nil, top)
-  bar.regenBox:SetSize(1, 1)
+  -- the regen text lives on its own frame: it shows without the bar and can be dragged
+  bar.regenBox = CreateFrame("Frame", nil, UIParent)
+  bar.regenBox:SetSize(60, 16)
+  bar.regenBox:SetMovable(true)
+  bar.regenBox:SetClampedToScreen(true)
+  bar.regenBox:RegisterForDrag("LeftButton")
+  bar.regenBox:SetScript("OnDragStart", bar.regenBox.StartMoving)
+  bar.regenBox:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local x, y = self:GetCenter()
+    if x and y then db.regenPoint = { x, y } end
+    ns.PositionBar()
+  end)
+  bar.regenBox.bg = bar.regenBox:CreateTexture(nil, "BACKGROUND")
+  bar.regenBox.bg:SetAllPoints()
+  bar.regenBox.bg:SetColorTexture(0, 0.4, 1, 0.35)
+  bar.regenBox.bg:Hide()
+  bar.regenBox:Hide()
   -- seconds left of the rule, small and gold at the end of the bar
   bar.fsrText = bar.fsrBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.fsrText, "GameFontHighlightSmall")
@@ -878,6 +896,13 @@ function ns.PositionBar()
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
   end
+  -- a dragged regen text keeps its own place
+  if db.regenFree and db.regenPoint then
+    bar.regenBox:ClearAllPoints()
+    bar.regenBox:SetPoint("CENTER", UIParent, "BOTTOMLEFT", db.regenPoint[1], db.regenPoint[2])
+    bar.regen:ClearAllPoints()
+    bar.regen:SetPoint("CENTER", bar.regenBox, "CENTER", 0, 0)
+  end
   bar.fsrBox:SetScale(db.fsrScale or 1)
   bar.regenBox:SetScale(db.regenScale or 1)
   PaintBar()
@@ -888,6 +913,11 @@ function ns.ApplyLock()
   anchor:EnableMouse(unlocked)
   anchor.bg:SetShown(unlocked)
   anchor.label:SetShown(unlocked)
+  if bar then
+    local drag = unlocked and db.regenFree and true or false
+    bar.regenBox:EnableMouse(drag)
+    bar.regenBox.bg:SetShown(drag)
+  end
 end
 
 function ns.OnLanguageChanged()
@@ -911,9 +941,11 @@ end
 
 function ns.ResetPosition()
   db.point = { unpack(DEFAULTS.point) }
+  db.regenPoint = nil -- the regen text goes back to the bar
   anchor:ClearAllPoints()
   anchor:SetPoint(db.point[1], UIParent, db.point[3], db.point[4], db.point[5])
   PinTopLeft()
+  ns.PositionBar()
 end
 
 -- icon size, spacing, bar thickness/length and bar text sizes back to the defaults (position stays)
@@ -1161,20 +1193,43 @@ local function UpdateRegen()
   elseif bar.fsr:IsShown() then
     bar.fsr:Hide(); bar.fsrText:Hide()
   end
-  if not db.regenText or not ns.RegenText then bar.regen:Hide() return end
+end
+
+-- the regen text has its own visibility: it also shows without the mana bar
+local function RegenVisible()
+  if not db.regenText or not ns.RegenText then return false end
+  if not db.locked then return true end
+  if not groupOK then return false end
+  return not db.onlyCombat or InCombatLockdown()
+end
+
+local function UpdateRegenText()
+  local box = bar.regenBox
+  if not RegenVisible() then
+    if box:IsShown() then box:Hide() end
+    return
+  end
   -- the text shows the casting rate during the rule even when the strip is switched off
   local now, inRule = GetTime(), (ns.FsrLeft and ns.FsrLeft() or 0) > 0
-  if now < regenNext and inRule == regenInRule then return end
+  if box:IsShown() and now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
-  local text
-  text, inRule = ns.RegenText()
+  local text, boosted
+  text, inRule, boosted = ns.RegenText()
   if text then
     bar.regen:SetText(text)
-    -- reduced regen during the rule: gold like the strip; normal regen: light blue
-    if inRule then bar.regen:SetTextColor(1, 0.82, 0.2) else bar.regen:SetTextColor(0.6, 0.85, 1) end
+    -- reduced regen during the rule: gold like the strip; above normal (Spirit Tap,
+    -- Evocation, ...): green; normal regen: light blue
+    if inRule then
+      bar.regen:SetTextColor(1, 0.82, 0.2)
+    elseif boosted then
+      bar.regen:SetTextColor(0.45, 1, 0.45)
+    else
+      bar.regen:SetTextColor(0.6, 0.85, 1)
+    end
     bar.regen:Show()
-  else
-    bar.regen:Hide()
+    box:Show()
+  elseif box:IsShown() then
+    box:Hide()
   end
 end
 
@@ -1234,7 +1289,7 @@ local function Update()
   if isDead or IsSecret(maxMana) or not maxMana or maxMana <= 0 then
     if not isDead then Debug("maxmana", "max mana unavailable or secret") end
     for _, b in ipairs(buttons) do b.outer:Hide() end
-    if bar then bar:Hide() end
+    if bar then bar:Hide(); bar.regenBox:Hide() end
     return
   end
   local maxHP = UnitHealthMax("player")
@@ -1251,6 +1306,7 @@ local function Update()
   end
   ns.Layout()
   UpdateBar(maxMana)
+  if bar then UpdateRegenText() end
 end
 
 local function SafeUpdate()
