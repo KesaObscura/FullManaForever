@@ -124,9 +124,10 @@ if __name__ == "__main__":
         BAR = (935, 326, 1510, 392)  # 0.8.2 big shots: bar, seconds, regen, mana text below
         make("05_mana_text.png", "Mana text like the game's Status Text",
              "Its own switch and text size: number, percentage or both, or switched off.",
-             [(crop("images/197.webp", BAR, 0.95), "Both"),
-              (crop("images/201.webp", BAR, 0.95), "Percentage"),
-              (crop("images/199.webp", BAR, 0.95), "Switched off")], top=170, stack=True)
+             [(crop("images/205.webp", BAR, 0.95), "Number"),
+              (crop("images/204.webp", BAR, 0.95), "Percentage"),
+              (crop("images/197.webp", BAR, 0.95), "Both"),
+              (crop("images/199.webp", BAR, 0.95), "Switched off")], top=150, stack=True)
     if only("06"):
         make("06_settings.png", "Settings that explain themselves",
              "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
