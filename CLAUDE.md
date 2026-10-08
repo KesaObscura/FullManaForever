@@ -136,3 +136,9 @@ and `/fmf log` (kept in releases for bug reports).
   Data.lua (kept as a fallback). Seventh log (0.8.1, Skyborne mage 5): `GetSpellBaseCooldown`
   reports 120 for it; cast in combat with no cost, cooldown SECRET in combat; the icon hid after
   the cast. The racial "Walk on Air" 1259416 (120) has nothing to do with mana.
+- 0.8.2 (user request on CurseForge, owner: "do all"): regen text green when above normal
+  (out of combat vs the lowest normal regen since the last level-up or gear change, +10 %; in
+  combat only own Evocation 8 s and Ley Line reading 15 s, Innervate left out because its
+  target is unknown), shown without the bar, draggable on its own (`regenFree`, `regenPoint`,
+  reset by `/fmf reset`). Unknown: whether drinking shows up in `GetPowerRegen` (a log while
+  drinking answers it).
