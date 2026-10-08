@@ -543,11 +543,11 @@ end)
 
 test("row: mana numbers outside the bar, on the side away from the icons", function()
   local ns = M.load({ vertical = false, barPosition = "below" }, { bags = POT })
-  local p = bar(ns).text.points[1]
-  eq(p[1], "TOP"); eq(p[3], "BOTTOM", "bar under the icons: numbers not below it")
+  local p = bar(ns).manaBox.points[1]
+  eq(p[1], "TOP"); eq(p[2], bar(ns)); eq(p[3], "BOTTOM", "bar under the icons: numbers not below it")
   ns.db.barPosition = "above"; ns.Layout(true)
-  p = bar(ns).text.points[1]
-  eq(p[1], "BOTTOM"); eq(p[3], "TOP", "bar above the icons: numbers not above it")
+  p = bar(ns).manaBox.points[1]
+  eq(p[1], "BOTTOM"); eq(p[2], bar(ns)); eq(p[3], "TOP", "bar above the icons: numbers not above it")
   local label = M.upvalue(ns.ApplyLock, "anchor").label
   eq(label.points[1][2], bar(ns).text, "frame label not above the numbers")
 end)
@@ -1303,7 +1303,7 @@ test("a new level or other gear learns the normal regen again", function()
 end)
 
 test("regen text can be dragged on its own and goes back with /fmf reset", function()
-  local ns = M.load({ regenFree = true }, { bags = POT })
+  local ns = M.load({ textFree = true }, { bags = POT })
   regenApis(14.75, 0)
   local box = bar(ns).regenBox
   M.tick()
@@ -1313,27 +1313,27 @@ test("regen text can be dragged on its own and goes back with /fmf reset", funct
   M.cx, M.cy = 700, 300
   box.scripts.OnDragStop(box)
   M.cx, M.cy = nil, nil
-  eq(ns.db.regenPoint[1], 700); eq(ns.db.regenPoint[2], 300)
+  eq(ns.db.textPoints.regen[1], 700); eq(ns.db.textPoints.regen[2], 300)
   local p = box.points[1]
   eq(p[1], "CENTER"); eq(p[3], "BOTTOMLEFT"); eq(p[4], 700); eq(p[5], 300)
-  ns.db.regenFree = false; ns.PositionBar()
+  ns.db.textFree = false; ns.PositionBar()
   ok(box.points[1][2] ~= UIParent, "attached text still at its own place")
-  ns.db.regenFree = true
+  ns.db.textFree = true
   SlashCmdList.FULLMANAFOREVER("reset")
-  eq(ns.db.regenPoint, nil, "reset kept the regen position")
+  eq(ns.db.textPoints.regen, nil, "reset kept the regen position")
   ok(box.points[1][2] ~= UIParent, "reset did not put the text back at the bar")
   noRegenApis()
 end)
 
 test("a dragged regen text stays in place when its text size changes", function()
-  local ns = M.load({ regenFree = true, regenScale = 1.5 }, { bags = POT })
+  local ns = M.load({ textFree = true, regenScale = 1.5 }, { bags = POT })
   regenApis(14.75, 0)
   local box = bar(ns).regenBox
   SlashCmdList.FULLMANAFOREVER("unlock")
   M.cx, M.cy = 400, 200 -- the frame's own units at 150 %
   box.scripts.OnDragStop(box)
   M.cx, M.cy = nil, nil
-  eq(ns.db.regenPoint[1], 600); eq(ns.db.regenPoint[2], 300)
+  eq(ns.db.textPoints.regen[1], 600); eq(ns.db.textPoints.regen[2], 300)
   -- the same screen spot at any size: offset x scale stays 600 / 300
   for _, scale in ipairs({ 1, 1.5, 2 }) do
     ns.db.regenScale = scale; ns.PositionBar()
@@ -1342,4 +1342,54 @@ test("a dragged regen text stays in place when its text size changes", function(
     eq(p[5] * box:GetScale(), 300, "y moved at scale " .. scale)
   end
   noRegenApis()
+end)
+
+test("mana numbers and the rule's seconds also show without the mana bar", function()
+  local ns = M.load({ showBar = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.state.manaPct = 0.89; M.tick()
+  ok(bar(ns).manaBox.shown, "mana numbers hidden with the bar")
+  eq(bar(ns).text.text, "890 / 1000")
+  ok(not bar(ns).fsrBox.shown, "seconds shown without a cast")
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  ok(bar(ns).fsrBox.shown and bar(ns).fsrText.shown, "rule's seconds hidden with the bar")
+  ok(not bar(ns).fsr.shown, "strip shown without the bar")
+  ns.db.manaText = "none"; M.tick()
+  ok(not bar(ns).manaBox.shown, "mana numbers shown although set to none")
+  noRegenApis()
+end)
+
+test("each text can be dragged on its own; the others stay with the bar", function()
+  local ns = M.load({ textFree = true, vertical = true, fsrScale = 2 }, { bags = POT })
+  regenApis(14.75, 0)
+  local b = bar(ns)
+  SlashCmdList.FULLMANAFOREVER("unlock")
+  ok(b.manaBox.mouse and b.fsrBox.mouse and b.regenBox.mouse, "a text cannot be dragged")
+  -- the mana numbers leave: the regen moves up under the bar instead of following them
+  M.cx, M.cy = 100, 50
+  b.manaBox.scripts.OnDragStop(b.manaBox)
+  eq(ns.db.textPoints.mana[1], 100)
+  eq(b.manaBox.points[1][1], "CENTER"); eq(b.manaBox.points[1][2], UIParent)
+  eq(b.regenBox.points[1][2], b, "regen follows the dragged mana numbers")
+  -- the seconds at 200 %: saved in screen units
+  M.cx, M.cy = 30, 40
+  b.fsrBox.scripts.OnDragStop(b.fsrBox)
+  M.cx, M.cy = nil, nil
+  eq(ns.db.textPoints.fsr[1], 60); eq(ns.db.textPoints.fsr[2], 80)
+  eq(b.fsrBox.points[1][4], 30); eq(b.fsrBox.points[1][5], 40)
+  SlashCmdList.FULLMANAFOREVER("reset")
+  eq(next(ns.db.textPoints), nil, "reset kept a text position")
+  ok(b.manaBox.points[1][2] == b and b.fsrBox.points[1][2] == b, "texts not back at the bar")
+  SlashCmdList.FULLMANAFOREVER("lock")
+  ok(not (b.manaBox.mouse or b.fsrBox.mouse or b.regenBox.mouse), "a text takes the mouse while locked")
+  noRegenApis()
+end)
+
+test("row above the icons: the frame label leaves dragged mana numbers alone", function()
+  local ns = M.load({ textFree = true, barPosition = "above" }, { bags = POT })
+  local label = M.upvalue(ns.ApplyLock, "anchor").label
+  eq(label.points[1][2], bar(ns).text)
+  ns.db.textPoints.mana = { 300, 300 }; ns.PositionBar()
+  eq(label.points[1][2], bar(ns), "label follows the dragged mana numbers")
 end)

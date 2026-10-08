@@ -310,7 +310,7 @@ test("options: regen settings stay when the bar is off; the free regen text can 
   local regenCb, freeCb
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.label and w.label.text == ns.L.optRegen and w.GetChecked then regenCb = w end
-    if w.label and w.label.text == ns.L.optRegenFree and w.GetChecked then freeCb = w end
+    if w.label and w.label.text == ns.L.optTextFree and w.GetChecked then freeCb = w end
   end
   ok(regenCb and regenCb.shown, "regen checkbox hidden with the bar off")
   ok(freeCb and freeCb.shown, "free regen checkbox missing")
@@ -318,6 +318,6 @@ test("options: regen settings stay when the bar is off; the free regen text can 
   local box = M.upvalue(ns.PositionBar, "bar").regenBox
   ok(not box.mouse, "regen text draggable before the switch")
   freeCb:SetChecked(true); freeCb.scripts.OnClick(freeCb)
-  eq(ns.db.regenFree, true)
+  eq(ns.db.textFree, true)
   ok(box.mouse, "regen text not draggable after the switch")
 end)

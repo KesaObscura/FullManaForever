@@ -505,13 +505,14 @@ Build = function()
     function(v) db.regenText = v end, L.tipRegen)
   c.Row(regenCb, PAD + 26, 26)
   local regenSize = SizeStepper("regenScale")
-  local regenFree = Check(col, L.optRegenFree, function() return db.regenFree end,
-    function(v) db.regenFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipRegenFree)
-  c.Row(regenFree, PAD + 56, 26)
+  -- mana numbers, rule seconds and regen: each can be dragged on its own
+  local textFree = Check(col, L.optTextFree, function() return db.textFree end,
+    function(v) db.textFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipTextFree)
+  c.Row(textFree, PAD + 26, 26)
   c.y = c.y - 4
-  BarOnly(bpLabel, bp, colLabel, colDD, mtLabel, mtDD, thick.label, thick.value, thick.minus, thick.plus,
-    blen.label, blen.value, blen.minus, blen.plus, fsrCb, fsrCb.label,
-    fsrSize.label, fsrSize.value, fsrSize.minus, fsrSize.plus)
+  -- the texts also show without the bar; only the bar's own look depends on it
+  BarOnly(bpLabel, bp, colLabel, colDD, thick.label, thick.value, thick.minus, thick.plus,
+    blen.label, blen.value, blen.minus, blen.plus)
   local resetSize = Button(col, L.optResetSize, 150)
   c.Row(resetSize, PAD + 4, 34)
   resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)

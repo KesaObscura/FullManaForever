@@ -30,8 +30,8 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,    -- current mana regen next to the mana bar (also without the bar)
-  regenFree  = false,   -- regen text can be dragged away from the bar (frame unlocked)
-  regenPoint = nil,     -- { x, y }: center of the dragged regen text, UIParent units from BOTTOMLEFT
+  textFree   = false,   -- mana numbers, rule seconds and regen can be dragged (frame unlocked)
+  textPoints = {},      -- [mana|fsr|regen] = { x, y }: dragged text centers, UIParent units
   manaText   = "number", -- mana numbers on the bar: "number" / "percent" / "both" / "none"
   fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
   regenScale = 1,       -- text size of the regen number
@@ -635,6 +635,39 @@ end
 -- mana bar next to the icons, drawn by the engine from the secret value, with ticks.
 -- Vertical: the fill stands on the bottom, so spending mana lowers it from the top.
 local bar
+-- a frame for one text around the bar; dragged centers are saved in screen (UIParent) units,
+-- because the frame's own units change with the text size
+local TEXT_KEYS = { mana = "manaBox", fsr = "fsrBox", regen = "regenBox" }
+local function TextScale(key)
+  if key == "fsr" then return db.fsrScale or 1 end
+  if key == "regen" then return db.regenScale or 1 end
+  return 1
+end
+
+local function CreateTextBox(key, width)
+  local box = CreateFrame("Frame", nil, UIParent)
+  box:SetSize(width, 16)
+  box:SetMovable(true)
+  box:SetClampedToScreen(true)
+  box:RegisterForDrag("LeftButton")
+  box:SetScript("OnDragStart", box.StartMoving)
+  box:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local x, y = self:GetCenter()
+    local scale = self:GetScale() or 1
+    if x and y then db.textPoints[key] = { x * scale, y * scale } end
+    ns.PositionBar()
+  end)
+  box.bg = box:CreateTexture(nil, "BACKGROUND")
+  box.bg:SetAllPoints()
+  box.bg:SetColorTexture(0, 0.4, 1, 0.35)
+  box.bg:Hide()
+  box:Hide()
+  return box
+end
+
+local function TextFree(key) return db.textFree and db.textPoints[key] ~= nil end
+
 local function CreateBar()
   bar = CreateFrame("StatusBar", nil, anchor)
   bar:SetHeight(14)
@@ -669,39 +702,21 @@ local function CreateBar()
       bar.ticks[i][k] = t
     end
   end
-  bar.text = top:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  OutlineFont(bar.text, "GameFontHighlightSmall")
   -- five-second rule: a thin gold strip along the bar that runs out in 5 s
   bar.fsr = CreateFrame("StatusBar", nil, top)
   bar.fsr:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
   bar.fsr:SetStatusBarColor(1, 0.82, 0.2)
   bar.fsr:SetMinMaxValues(0, ns.FSR_SECONDS or 5)
   bar.fsr:Hide()
-  -- texts that can be resized live in their own small frames: scaling the frame changes
-  -- the text size and keeps the game's font family (a font file set by hand would lose
-  -- other alphabets)
-  bar.fsrBox = CreateFrame("Frame", nil, top)
-  bar.fsrBox:SetSize(1, 1)
-  -- the regen text lives on its own frame: it shows without the bar and can be dragged
-  bar.regenBox = CreateFrame("Frame", nil, UIParent)
-  bar.regenBox:SetSize(60, 16)
-  bar.regenBox:SetMovable(true)
-  bar.regenBox:SetClampedToScreen(true)
-  bar.regenBox:RegisterForDrag("LeftButton")
-  bar.regenBox:SetScript("OnDragStart", bar.regenBox.StartMoving)
-  bar.regenBox:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    -- saved in screen (UIParent) units: the frame's own units change with the text size
-    local x, y = self:GetCenter()
-    local scale = self:GetScale() or 1
-    if x and y then db.regenPoint = { x * scale, y * scale } end
-    ns.PositionBar()
-  end)
-  bar.regenBox.bg = bar.regenBox:CreateTexture(nil, "BACKGROUND")
-  bar.regenBox.bg:SetAllPoints()
-  bar.regenBox.bg:SetColorTexture(0, 0.4, 1, 0.35)
-  bar.regenBox.bg:Hide()
-  bar.regenBox:Hide()
+  -- the three texts (mana numbers, the rule's seconds, the regen) live on their own frames:
+  -- they show without the bar and can be dragged ("Move texts freely"). Scaling a frame
+  -- changes the text size and keeps the game's font family (a font file set by hand would
+  -- lose other alphabets)
+  bar.manaBox = CreateTextBox("mana", 120)
+  bar.fsrBox = CreateTextBox("fsr", 30)
+  bar.regenBox = CreateTextBox("regen", 60)
+  bar.text = bar.manaBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.text, "GameFontHighlightSmall")
   -- seconds left of the rule, small and gold at the end of the bar
   bar.fsrText = bar.fsrBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.fsrText, "GameFontHighlightSmall")
@@ -779,8 +794,8 @@ end
 -- so no empty gaps appear for groups you have nothing for. The mana check itself is
 -- secret, so a ready item below its threshold still keeps its (invisible) slot.
 -- Settings changes call Layout(true); every tick only the set of shown icons is compared
--- auto bar length is fixed: room for every group this class can ever show (priest 4, mage 5,
--- one more with an own mana spell). It does not follow lit icons or groups switched off.
+-- auto bar length: room for every group that is switched on and this class can show (at least
+-- 3 icons). It does not follow lit icons, so the bar stays still.
 function ns.AutoBarLength()
   local size, gap = db.iconSize, db.iconGap or 6
   local slots = 0
@@ -837,8 +852,10 @@ end
 function ns.PositionBar()
   if not bar or not anchor then return end
   local vertical = db.vertical
+  local manaFree = TextFree("mana")
   bar:ClearAllPoints()
   anchor.label:ClearAllPoints()
+  bar.manaBox:ClearAllPoints()
   bar.text:ClearAllPoints()
   bar.gloss:ClearAllPoints()
   bar:SetOrientation(vertical and "VERTICAL" or "HORIZONTAL")
@@ -851,9 +868,15 @@ function ns.PositionBar()
     -- the rule's seconds sit above the bar: the frame label (unlocked) goes above them
     local fsrRoom = db.fsr and (math.ceil(14 * (db.fsrScale or 1)) + 4) or 0
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8 + fsrRoom)
-    bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+    bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+    bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
+    -- the regen sits under the mana numbers, or under the bar when they were dragged away
     bar.regenBox:ClearAllPoints()
-    bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
+    if manaFree then
+      bar.regenBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+    else
+      bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
+    end
     bar.regen:ClearAllPoints()
     bar.regen:SetPoint("TOP", bar.regenBox, "TOP", 0, 0)
     bar.fsr:ClearAllPoints()
@@ -873,11 +896,13 @@ function ns.PositionBar()
     -- markers and the five-second strip made them hard to read
     if db.barPosition == "above" then
       bar:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", 0, 6)
-      bar.text:SetPoint("BOTTOM", bar, "TOP", 0, 3)
-      anchor.label:SetPoint("BOTTOM", bar.text, "TOP", 0, 6)
+      bar.manaBox:SetPoint("BOTTOM", bar, "TOP", 0, 3)
+      bar.text:SetPoint("BOTTOM", bar.manaBox, "BOTTOM", 0, 0)
+      anchor.label:SetPoint("BOTTOM", manaFree and bar or bar.text, "TOP", 0, 6)
     else
       bar:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -6)
-      bar.text:SetPoint("TOP", bar, "BOTTOM", 0, -3)
+      bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -3)
+      bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
       anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8)
     end
     bar.regenBox:ClearAllPoints()
@@ -898,16 +923,19 @@ function ns.PositionBar()
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
   end
-  -- a dragged regen text keeps its own place (its center stays put when the text size changes)
-  if db.regenFree and db.regenPoint then
-    local scale = db.regenScale or 1
-    bar.regenBox:ClearAllPoints()
-    bar.regenBox:SetPoint("CENTER", UIParent, "BOTTOMLEFT", db.regenPoint[1] / scale, db.regenPoint[2] / scale)
-    bar.regen:ClearAllPoints()
-    bar.regen:SetPoint("CENTER", bar.regenBox, "CENTER", 0, 0)
+  -- a dragged text keeps its own place (its center stays put when the text size changes)
+  local texts = { mana = bar.text, fsr = bar.fsrText, regen = bar.regen }
+  for key, field in pairs(TEXT_KEYS) do
+    local box, scale = bar[field], TextScale(key)
+    box:SetScale(scale)
+    if TextFree(key) then
+      local p = db.textPoints[key]
+      box:ClearAllPoints()
+      box:SetPoint("CENTER", UIParent, "BOTTOMLEFT", p[1] / scale, p[2] / scale)
+      texts[key]:ClearAllPoints()
+      texts[key]:SetPoint("CENTER", box, "CENTER", 0, 0)
+    end
   end
-  bar.fsrBox:SetScale(db.fsrScale or 1)
-  bar.regenBox:SetScale(db.regenScale or 1)
   PaintBar()
 end
 
@@ -917,9 +945,11 @@ function ns.ApplyLock()
   anchor.bg:SetShown(unlocked)
   anchor.label:SetShown(unlocked)
   if bar then
-    local drag = unlocked and db.regenFree and true or false
-    bar.regenBox:EnableMouse(drag)
-    bar.regenBox.bg:SetShown(drag)
+    local drag = unlocked and db.textFree and true or false
+    for _, field in pairs(TEXT_KEYS) do
+      bar[field]:EnableMouse(drag)
+      bar[field].bg:SetShown(drag)
+    end
   end
 end
 
@@ -944,7 +974,7 @@ end
 
 function ns.ResetPosition()
   db.point = { unpack(DEFAULTS.point) }
-  db.regenPoint = nil -- the regen text goes back to the bar
+  db.textPoints = {} -- the texts go back to the bar
   anchor:ClearAllPoints()
   anchor:SetPoint(db.point[1], UIParent, db.point[3], db.point[4], db.point[5])
   PinTopLeft()
@@ -1177,39 +1207,51 @@ local function HideTick(t)
   if t.front:IsShown() then t.front:Hide(); t.back:Hide() end
 end
 
--- five-second rule: strip and seconds every tick; regen text twice a second (it builds a
--- new string each time) and at once when the rule starts or ends
-local regenNext, regenInRule = 0, nil
-local function UpdateRegen()
+-- seconds left of the five-second rule to show (0: none). Test mode and the unlocked frame
+-- preview everything that is switched on: the rule runs in a loop so its strip and
+-- seconds can be seen and placed
+local function FsrShown()
   local real = db.fsr and ns.FsrLeft and ns.FsrLeft() or 0
-  local left = real
-  -- test mode and unlocked frame preview everything that is switched on: the rule runs
-  -- in a loop so its strip and seconds can be seen and placed
   if db.fsr and real == 0 and not db.locked then
     local cycle = ns.FSR_SECONDS or 5
-    left = cycle - (GetTime() % cycle)
+    return cycle - (GetTime() % cycle)
   end
+  return real
+end
+
+-- the strip runs along the bar, every tick
+local function UpdateFsrStrip()
+  local left = FsrShown()
   if left > 0 then
     bar.fsr:SetValue(left)
-    bar.fsrText:SetText(("%.1f"):format(left))
-    if not bar.fsr:IsShown() then bar.fsr:Show(); bar.fsrText:Show() end
+    if not bar.fsr:IsShown() then bar.fsr:Show() end
   elseif bar.fsr:IsShown() then
-    bar.fsr:Hide(); bar.fsrText:Hide()
+    bar.fsr:Hide()
   end
 end
 
--- the regen text has its own visibility: it also shows without the mana bar
-local function RegenVisible()
-  if not db.regenText or not ns.RegenText then return false end
+-- the texts have their own visibility: they also show without the mana bar
+local function TextsVisible()
   if not db.locked then return true end
   if not groupOK then return false end
   return not db.onlyCombat or InCombatLockdown()
 end
 
-local function UpdateRegenText()
+local function ShowBox(box, on)
+  if on then
+    if not box:IsShown() then box:Show() end
+  elseif box:IsShown() then
+    box:Hide()
+  end
+end
+
+-- regen text twice a second (it builds a new string each time) and at once when the rule
+-- starts or ends
+local regenNext, regenInRule = 0, nil
+local function UpdateRegenText(visible)
   local box = bar.regenBox
-  if not RegenVisible() then
-    if box:IsShown() then box:Hide() end
+  if not visible or not db.regenText or not ns.RegenText then
+    ShowBox(box, false)
     return
   end
   -- the text shows the casting rate during the rule even when the strip is switched off
@@ -1236,6 +1278,22 @@ local function UpdateRegenText()
   end
 end
 
+-- mana numbers, the rule's seconds and the regen, with or without the bar
+local function UpdateTexts(maxMana)
+  local visible = TextsVisible()
+  if visible then SetBarText(maxMana) end -- "none" clears the text
+  ShowBox(bar.manaBox, visible and (db.manaText or "number") ~= "none")
+  local left = visible and FsrShown() or 0
+  if left > 0 then
+    bar.fsrText:SetText(("%.1f"):format(left))
+    if not bar.fsrText:IsShown() then bar.fsrText:Show() end
+  elseif bar.fsrText:IsShown() then
+    bar.fsrText:Hide()
+  end
+  ShowBox(bar.fsrBox, left > 0)
+  UpdateRegenText(visible)
+end
+
 local function UpdateBar(maxMana)
   if not bar then return end
   if not BarVisible() then bar:Hide() return end
@@ -1248,8 +1306,7 @@ local function UpdateBar(maxMana)
     bar:SetValue(0)
     WarnOnce("barvalue", L.warnPower)
   end
-  SetBarText(maxMana)
-  UpdateRegen()
+  UpdateFsrStrip()
   local vertical = db.vertical and true or false
   local len = (vertical and bar:GetHeight() or bar:GetWidth()) or 0
   local thick = db.barThickness or 14
@@ -1292,7 +1349,10 @@ local function Update()
   if isDead or IsSecret(maxMana) or not maxMana or maxMana <= 0 then
     if not isDead then Debug("maxmana", "max mana unavailable or secret") end
     for _, b in ipairs(buttons) do b.outer:Hide() end
-    if bar then bar:Hide(); bar.regenBox:Hide() end
+    if bar then
+      bar:Hide()
+      for _, field in pairs(TEXT_KEYS) do bar[field]:Hide() end
+    end
     return
   end
   local maxHP = UnitHealthMax("player")
@@ -1309,7 +1369,7 @@ local function Update()
   end
   ns.Layout()
   UpdateBar(maxMana)
-  if bar then UpdateRegenText() end
+  if bar then UpdateTexts(maxMana) end
 end
 
 local function SafeUpdate()

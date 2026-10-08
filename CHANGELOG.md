@@ -3,8 +3,8 @@
 **Full Mana Forever 0.8.2**
 
 - Mana regen turns green when it is above your normal rate: out of combat it is compared with your lowest normal regen since the last level-up or gear change (Spirit Tap, buffs, ...); in combat Forever hides the value from addons, so only your own Evocation (8 s) and Ley Line reading (15 s) count
-- The mana regen also shows with the mana bar switched off
-- New setting "Move regen text freely": unlock the frame and drag the regen text anywhere; `/fmf reset` puts it back next to the bar
+- The mana numbers, the five-second seconds and the regen also show with the mana bar switched off
+- New setting "Move texts freely": unlock the frame and drag the mana numbers, the five-second seconds and the regen anywhere, each on its own; `/fmf reset` puts them back at the bar
 
 **Full Mana Forever 0.8.1**
 

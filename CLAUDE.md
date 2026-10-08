@@ -139,6 +139,7 @@ and `/fmf log` (kept in releases for bug reports).
 - 0.8.2 (user request on CurseForge, owner: "do all"): regen text green when above normal
   (out of combat vs the lowest normal regen since the last level-up or gear change, +10 %; in
   combat only own Evocation 8 s and Ley Line reading 15 s, Innervate left out because its
-  target is unknown), shown without the bar, draggable on its own (`regenFree`, `regenPoint`,
-  reset by `/fmf reset`). Unknown: whether drinking shows up in `GetPowerRegen` (a log while
+  target is unknown). All three texts (mana numbers, rule seconds, regen) show without the bar
+  and can each be dragged (`textFree`, `textPoints[mana|fsr|regen]` in screen units, reset by
+  `/fmf reset`); the owner read the request as "move all texts". Unknown: whether drinking shows up in `GetPowerRegen` (a log while
   drinking answers it).
