@@ -111,11 +111,11 @@ if __name__ == "__main__":
              [(crop("images/111.webp", LIB, 0.78), "Potions and runes"),
               (crop("images/112.webp", LIB, 0.78), "Other consumables and gear")], top=145)
     if only("03c"):
-        COL = (1300, 62, 1440, 372)  # column layout frame in the 0.7 shots (to be re-shot)
-        make("03_five_second_rule.png", "Five-second rule and live mana regen",
-             "After a spell: gold strip and seconds. The regen running right now, also in combat.",
-             [(crop("images/107.webp", COL, 1.4), "Casting: 4.4 s, regen 0.0/s"),
-              (crop("images/106.webp", COL, 1.4), "Rule over: regen 15.3/s")])
+        COL = (1060, 52, 1290, 595)  # 0.8.2 big shots, icons in a column
+        make("03_five_second_rule.png", "Icons in a column",
+             "The same in a column: seconds above the bar, mana and regen below it.",
+             [(crop("images/210.webp", COL, 0.85), "Casting: 3.2 s, regen 0.0/s"),
+              (crop("images/209.webp", COL, 0.85), "Rule over: regen 15.5/s")], top=140)
     if only("08"):
         make("08_unlocked.png", "Easy to place",
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
