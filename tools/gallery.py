@@ -142,6 +142,15 @@ if __name__ == "__main__":
               (crop("images/204.webp", BAR, 0.95), "Percentage"),
               (crop("images/197.webp", BAR, 0.95), "Both"),
               (crop("images/199.webp", BAR, 0.95), "Switched off")], top=150, stack=True)
+    if only("05old"):
+        # the same frames for 0.8.1, where "None" is still a choice in the list
+        BAR = (935, 326, 1510, 392)
+        make("05_mana_text_0.8.1.png", "Mana text like the game's Status Text",
+             "Number, percentage, both or none, plus the regen next to the bar.",
+             [(crop("images/205.webp", BAR, 0.95), "Number"),
+              (crop("images/204.webp", BAR, 0.95), "Percentage"),
+              (crop("images/197.webp", BAR, 0.95), "Both"),
+              (crop("images/199.webp", BAR, 0.95), "None")], top=150, stack=True)
     if only("06"):
         make("06_settings.png", "Settings that explain themselves",
              "Every part has its own switch and text size. Hover any option for a short explanation.",
