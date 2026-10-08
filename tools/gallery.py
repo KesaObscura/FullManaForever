@@ -121,13 +121,12 @@ if __name__ == "__main__":
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
              [(crop("images/117.webp", (1165, 128, 1485, 250), 3.0), "")], top=190)
     if only("05"):
-        BAR = (1178, 216, 1474, 241)
+        BAR = (935, 326, 1510, 392)  # 0.8.2 big shots: bar, seconds, regen, mana text below
         make("05_mana_text.png", "Mana text like the game's Status Text",
-             "Number, percentage, both or nothing on the bar, plus the regen next to it.",
-             [(crop("images/121.webp", BAR, 2.5), "Number"),
-              (crop("images/120.webp", BAR, 2.5), "Percentage"),
-              (crop("images/119.webp", BAR, 2.5), "Both"),
-              (crop("images/118.webp", BAR, 2.5), "None")], top=170, stack=True)
+             "Its own switch and text size: number, percentage or both, or switched off.",
+             [(crop("images/197.webp", BAR, 0.95), "Both"),
+              (crop("images/201.webp", BAR, 0.95), "Percentage"),
+              (crop("images/199.webp", BAR, 0.95), "Switched off")], top=170, stack=True)
     if only("06"):
         make("06_settings.png", "Settings that explain themselves",
              "Hover any option for a short explanation. Reset position and Reset size undo your experiments.",
