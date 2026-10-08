@@ -89,8 +89,8 @@ if __name__ == "__main__":
     if only("02"):
         make("02_right_potion.png", "The right potion for your missing mana",
              "Several potions in your bags: the strongest one that will not overflow lights up.",
-             [(crop("images/195.webp", BIG, 0.95), "82 % mana: small potion"),
-              (crop("images/193.webp", BIG, 0.95), "69 % mana: stronger potion")], top=230)
+             [(crop("images/195.webp", BIG, 0.95), "82 % mana:\nsmall potion"),
+              (crop("images/193.webp", BIG, 0.95), "69 % mana:\nstronger potion")], top=160, stack=True)
     if only("03r"):
         make("03_five_second_rule_row.png", "Five-second rule and live mana regen",
              "After a spell: gold strip and seconds. The regen running right now, also in combat.",
