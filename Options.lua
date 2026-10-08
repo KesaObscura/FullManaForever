@@ -75,7 +75,7 @@ local function Button(parent, text, w, h)
   return b
 end
 
-local function Check(parent, text, get, set, tip)
+local function Check(parent, text, get, set, tip, enabledIf)
   local cb = CreateFrame("CheckButton", nil, parent)
   cb:SetSize(24, 24)
   cb:SetNormalTexture("Interface\\Buttons\\UI-CheckBox-Up")
@@ -91,7 +91,14 @@ local function Check(parent, text, get, set, tip)
     set(self:GetChecked() and true or false)
     ns.RefreshOptions()
   end)
-  cb.Refresh = function() cb:SetChecked(get() and true or false) end
+  cb.Refresh = function()
+    cb:SetChecked(get() and true or false)
+    if enabledIf then
+      local on = enabledIf() and true or false
+      cb:SetEnabled(on)
+      if on then cb.label:SetTextColor(1, 1, 1) else cb.label:SetTextColor(0.5, 0.5, 0.5) end
+    end
+  end
   registry[#registry + 1] = cb
   return cb
 end
@@ -382,11 +389,19 @@ Build = function()
   -- one switch for placing: unlocked = movable and showing everything that is switched on
   c.Row(Check(col, L.optUnlock, function() return not db.locked end,
     function(v) db.locked = not v; ns.ApplyLock() end, L.tipUnlock))
-  -- placing the frame: unlock, then reset if it got lost
+  -- mana numbers, rule seconds and regen: each can be dragged on its own, only while unlocked
+  c.Row(Check(col, L.optTextFree, function() return db.textFree end,
+    function(v) db.textFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipTextFree,
+    function() return not db.locked end), PAD + 26, 26)
+  -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
   local reset = Button(col, L.optReset, 150)
-  c.Row(reset, PAD + 30, 34)
+  c.Row(reset, PAD + 4, 34)
   reset:SetScript("OnClick", function() ns.ResetPosition() end)
   Tip(reset, L.optReset, L.tipReset)
+  local resetSize = Button(col, L.optResetSize, 150)
+  resetSize:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+  resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
+  Tip(resetSize, L.optResetSize, L.tipResetSize)
   local langLabel = Label(col, L.optLang .. ":")
   local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
   for _, l in ipairs(ns.LANGUAGES) do entries[#entries + 1] = { value = l.code, text = l.name } end
@@ -453,16 +468,6 @@ Build = function()
   c.Right(colDD)
   c.Row(colLabel, PAD + 30, 30)
 
-  -- mana numbers, the same four choices as the game's "Status Text"
-  local mtText = { number = L.mtNumber, percent = L.mtPercent, both = L.mtBoth, none = L.mtNone }
-  local mtLabel = Label(col, L.optManaText .. ":")
-  local mtDD = Dropdown(col, DD_W, {
-    { value = "number", text = L.mtNumber }, { value = "percent", text = L.mtPercent },
-    { value = "both", text = L.mtBoth }, { value = "none", text = L.mtNone },
-  }, function() return mtText[db.manaText or "number"] or L.mtNumber end,
-  function(v) db.manaText = v; ns.RefreshOptions() end)
-  c.Right(mtDD)
-  c.Row(mtLabel, PAD + 30, 30)
 
   local thick = Stepper(col, PAD + 30, L.optBarThick, function() return db.barThickness end,
     function(v) db.barThickness = v; ns.Layout(true) end, { step = 2, lo = 6, hi = 40, fmt = num })
@@ -487,36 +492,36 @@ Build = function()
       end,
     })
   c.Row(blen.label, PAD + 30, 32)
-  -- five-second rule and regen live on the mana bar, so they sit with its settings
-  -- each with its text size on its own row below (long names would run into the value)
-  local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
-  local function SizeStepper(key)
-    local st = Stepper(col, PAD + 56, L.optTextSize, function() return db[key] or 1 end,
-      function(v) db[key] = v; ns.Layout(true) end, { step = 0.1, lo = 0.6, hi = 2.0, fmt = pct })
-    c.Row(st.label, PAD + 56, 28)
-    return st
-  end
-  local fsrCb = Check(col, L.optFsr, function() return db.fsr end,
-    function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr)
-  c.Row(fsrCb, PAD + 26, 26)
-  local fsrSize = SizeStepper("fsrScale")
-  -- the regen text also shows without the bar, and can be dragged away from it
-  local regenCb = Check(col, L.optRegen, function() return db.regenText end,
-    function(v) db.regenText = v end, L.tipRegen)
-  c.Row(regenCb, PAD + 26, 26)
-  local regenSize = SizeStepper("regenScale")
-  -- mana numbers, rule seconds and regen: each can be dragged on its own
-  local textFree = Check(col, L.optTextFree, function() return db.textFree end,
-    function(v) db.textFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipTextFree)
-  c.Row(textFree, PAD + 26, 26)
-  c.y = c.y - 4
-  -- the texts also show without the bar; only the bar's own look depends on it
+  -- the bar's own look only matters while it is on
   BarOnly(bpLabel, bp, colLabel, colDD, thick.label, thick.value, thick.minus, thick.plus,
     blen.label, blen.value, blen.minus, blen.plus)
-  local resetSize = Button(col, L.optResetSize, 150)
-  c.Row(resetSize, PAD + 4, 34)
-  resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
-  Tip(resetSize, L.optResetSize, L.tipResetSize)
+  -- the three texts: each has its own switch and text size and also shows without the bar
+  -- (the size on its own row below: long names would run into the value)
+  local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
+  local function SizeStepper(key)
+    local st = Stepper(col, PAD + 30, L.optTextSize, function() return db[key] or 1 end,
+      function(v) db[key] = v; ns.Layout(true) end, { step = 0.1, lo = 0.6, hi = 2.0, fmt = pct })
+    c.Row(st.label, PAD + 30, 28)
+    return st
+  end
+  -- mana numbers like the game's "Status Text": number, percentage or both
+  local mtText = { number = L.mtNumber, percent = L.mtPercent, both = L.mtBoth }
+  local manaCb = Check(col, L.optManaText, function() return db.manaTextOn end,
+    function(v) db.manaTextOn = v end, L.tipManaText)
+  local mtDD = Dropdown(col, DD_W, {
+    { value = "number", text = L.mtNumber }, { value = "percent", text = L.mtPercent },
+    { value = "both", text = L.mtBoth },
+  }, function() return mtText[db.manaText or "number"] or L.mtNumber end,
+  function(v) db.manaText = v; ns.RefreshOptions() end)
+  c.Right(mtDD)
+  c.Row(manaCb, PAD, 30)
+  SizeStepper("manaScale")
+  c.Row(Check(col, L.optFsr, function() return db.fsr end,
+    function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
+  SizeStepper("fsrScale")
+  c.Row(Check(col, L.optRegen, function() return db.regenText end,
+    function(v) db.regenText = v end, L.tipRegen), PAD, 26)
+  SizeStepper("regenScale")
 
   ------------------------------------------------------------ right column
   c = right

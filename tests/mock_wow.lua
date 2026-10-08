@@ -20,10 +20,13 @@ for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDr
 end
 
 M.created = 0
+M.all = {}
 local function new(kind, parent)
   M.created = M.created + 1
-  return setmetatable({ kind = kind, shown = true, w = 0, h = 0, points = {}, scripts = {},
+  local o = setmetatable({ kind = kind, shown = true, w = 0, h = 0, points = {}, scripts = {},
     parent = parent, alpha = 1, mouse = false }, Widget)
+  M.all[#M.all + 1] = o
+  return o
 end
 M.new = new
 
@@ -146,6 +149,7 @@ end
 function M.reset(opts)
   opts = opts or {}
   M.created = 0
+  M.all = {}
   M.calls = {}
   M.eventFrames = {}
   M.left, M.top = 500, 600

@@ -146,7 +146,7 @@ test("old saved data: the macro cleanup flag and the old test mode are dropped",
   local ns = M.load({ dbVersion = 6, cleanMacros = true, test = false })
   eq(ns.db.cleanMacros, nil, "macro flag kept")
   eq(ns.db.test, nil, "test key kept")
-  eq(ns.db.dbVersion, 7)
+  eq(ns.db.dbVersion, 8)
 end)
 
 -- performance ------------------------------------------------------------------
@@ -434,7 +434,7 @@ local function withScale100(fn)
   _G.CurveConstants, M.SCALE100 = nil, nil
 end
 
-test("mana text: number, percentage, both and none", function()
+test("mana text: number, percentage, both, or switched off", function()
   withScale100(function()
     local ns = M.load({ manaText = "percent" }, { bags = POT })
     M.state.manaPct = 0.89; M.tick()
@@ -443,9 +443,10 @@ test("mana text: number, percentage, both and none", function()
     eq(bar(ns).text.text, "89%   890 / 1000")
     ns.db.vertical = true; M.tick()
     eq(bar(ns).text.text, "89%\n890 / 1000", "column: two lines")
-    ns.db.manaText = "none"; M.tick()
-    eq(bar(ns).text.text, "")
-    ns.db.manaText = "number"; M.tick()
+    ns.db.manaTextOn = false; M.tick()
+    ok(not bar(ns).manaBox.shown, "mana numbers shown while switched off")
+    ns.db.manaTextOn = true; ns.db.manaText = "number"; M.tick()
+    ok(bar(ns).manaBox.shown, "mana numbers not back")
     eq(bar(ns).text.text, "890 / 1000")
   end)
 end)
@@ -589,18 +590,27 @@ end)
 
 test("a new install has nothing to migrate", function()
   local ns = M.load(nil)
-  eq(ns.db.dbVersion, 7)
+  eq(ns.db.dbVersion, 8)
   eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
+  eq(ns.db.manaTextOn, true, "mana numbers off on a new install")
 end)
 
-test("switching the mana text off clears it even after format failures", function()
+test("switching the mana text off hides it even after format failures", function()
   local ns = M.load(nil, { bags = POT })
   _G.UnitPower = function() return {} end -- "%d" cannot format a table
   for _ = 1, 25 do M.tick() end
-  ns.db.manaText = "none"
+  ns.db.manaTextOn = false
   bar(ns).text.text = "stale"
   M.tick()
-  eq(bar(ns).text.text, "", "mana text not cleared")
+  ok(not bar(ns).manaBox.shown, "stale mana text still shown")
+end)
+
+test("old saved data: mana text 'none' becomes the switched-off mana numbers", function()
+  local ns = M.load({ dbVersion = 7, manaText = "none" })
+  eq(ns.db.manaTextOn, false, "mana numbers back on")
+  eq(ns.db.manaText, "number", "'none' left in the list setting")
+  ns = M.load({ dbVersion = 7, manaText = "both" })
+  eq(ns.db.manaTextOn, true); eq(ns.db.manaText, "both")
 end)
 
 test("item ids out of range are rejected", function()
@@ -1355,8 +1365,8 @@ test("mana numbers and the rule's seconds also show without the mana bar", funct
   M.tick()
   ok(bar(ns).fsrBox.shown and bar(ns).fsrText.shown, "rule's seconds hidden with the bar")
   ok(not bar(ns).fsr.shown, "strip shown without the bar")
-  ns.db.manaText = "none"; M.tick()
-  ok(not bar(ns).manaBox.shown, "mana numbers shown although set to none")
+  ns.db.manaTextOn = false; M.tick()
+  ok(not bar(ns).manaBox.shown, "mana numbers shown although switched off")
   noRegenApis()
 end)
 

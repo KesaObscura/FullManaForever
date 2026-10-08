@@ -40,7 +40,8 @@ when the icon lights up.
   that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns
   green when it is above your normal rate. The mana numbers, the seconds and the regen also show
   without the bar, and each can be dragged anywhere ("Move texts freely").
-- **Mana text** like the game's status text: number, percentage, both or none.
+- **Mana text** like the game's status text: number, percentage or both, with its own switch
+  and text size.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
 - **Item list** (`/fmf items`): every supported item, on/off per item, add your own.
 - 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português,

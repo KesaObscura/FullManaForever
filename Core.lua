@@ -32,7 +32,9 @@ local DEFAULTS = {
   regenText  = true,    -- current mana regen next to the mana bar (also without the bar)
   textFree   = false,   -- mana numbers, rule seconds and regen can be dragged (frame unlocked)
   textPoints = {},      -- [mana|fsr|regen] = { x, y }: dragged text centers, UIParent units
-  manaText   = "number", -- mana numbers on the bar: "number" / "percent" / "both" / "none"
+  manaTextOn = true,    -- mana numbers at the bar (also without the bar)
+  manaText   = "number", -- how: "number" / "percent" / "both"
+  manaScale  = 1,       -- text size of the mana numbers
   fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
   regenScale = 1,       -- text size of the regen number
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
@@ -641,7 +643,7 @@ local TEXT_KEYS = { mana = "manaBox", fsr = "fsrBox", regen = "regenBox" }
 local function TextScale(key)
   if key == "fsr" then return db.fsrScale or 1 end
   if key == "regen" then return db.regenScale or 1 end
-  return 1
+  return db.manaScale or 1
 end
 
 local function CreateTextBox(key, width)
@@ -767,7 +769,6 @@ ns.ManaPercent = ManaPercent
 local textFails = 0
 local function SetBarText(maxMana)
   local mode = db.manaText or "number"
-  if mode == "none" then bar.text:SetText("") return end
   if textFails > 20 then return end -- given up until the next loading screen
   local pct = (mode == "percent" or mode == "both") and ManaPercent() or nil
   local ok, text
@@ -982,7 +983,7 @@ function ns.ResetPosition()
 end
 
 -- icon size, spacing, bar thickness/length and bar text sizes back to the defaults (position stays)
-local SIZE_KEYS = { "iconSize", "iconGap", "barThickness", "barLength", "fsrScale", "regenScale" }
+local SIZE_KEYS = { "iconSize", "iconGap", "barThickness", "barLength", "manaScale", "fsrScale", "regenScale" }
 function ns.ResetSize()
   for _, k in ipairs(SIZE_KEYS) do db[k] = DEFAULTS[k] end
   ns.Layout(true)
@@ -1281,8 +1282,9 @@ end
 -- mana numbers, the rule's seconds and the regen, with or without the bar
 local function UpdateTexts(maxMana)
   local visible = TextsVisible()
-  if visible then SetBarText(maxMana) end -- "none" clears the text
-  ShowBox(bar.manaBox, visible and (db.manaText or "number") ~= "none")
+  local manaOn = visible and db.manaTextOn
+  if manaOn then SetBarText(maxMana) end
+  ShowBox(bar.manaBox, manaOn)
   local left = visible and FsrShown() or 0
   if left > 0 then
     bar.fsrText:SetText(("%.1f"):format(left))
@@ -1526,7 +1528,7 @@ end
 ------------------------------------------------------------------------
 -- boot
 ------------------------------------------------------------------------
-local DB_VERSION = 7 -- the last migration below
+local DB_VERSION = 8 -- the last migration below
 
 local function InitDB()
   -- a new install has nothing to migrate
@@ -1561,6 +1563,11 @@ local function InitDB()
     db.cleanMacros = nil
     db.test = nil
     db.dbVersion = 7
+  end
+  if db.dbVersion < 8 then
+    -- 0.8.2: the mana numbers have their own switch; "none" was the old way to hide them
+    if db.manaText == "none" then db.manaTextOn, db.manaText = false, "number" end
+    db.dbVersion = 8
   end
   ns.SetLanguage(db.language)
   ns.db = db

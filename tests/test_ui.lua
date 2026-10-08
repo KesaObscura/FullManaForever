@@ -237,22 +237,26 @@ test("text with letters keeps the game's font family (no boxes for other alphabe
   eq(regen.font, nil, "the regen text was switched to a single font file")
 end)
 
-test("options: text size of the rule's seconds and of the regen can be changed", function()
+test("options: text size of the mana numbers, the rule's seconds and the regen can be changed", function()
   local ns = M.load(nil)
   ns.ToggleOptions(true)
   local b = M.upvalue(ns.PositionBar, "bar")
-  eq(b.fsrBox.scale, 1); eq(b.regenBox.scale, 1)
+  eq(b.manaBox.scale, 1); eq(b.fsrBox.scale, 1); eq(b.regenBox.scale, 1)
   local sizes = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.minus and w.label and w.label.text == ns.L.optTextSize .. ":" then sizes[#sizes + 1] = w end
   end
-  eq(#sizes, 2, "size steppers")
+  eq(#sizes, 3, "size steppers")
   sizes[1].plus.scripts.OnClick(sizes[1].plus)
-  sizes[2].minus.scripts.OnClick(sizes[2].minus)
-  eq(ns.db.fsrScale, 1.1); eq(ns.db.regenScale, 0.9)
+  sizes[2].plus.scripts.OnClick(sizes[2].plus)
+  sizes[3].minus.scripts.OnClick(sizes[3].minus)
+  eq(ns.db.manaScale, 1.1); eq(ns.db.fsrScale, 1.1); eq(ns.db.regenScale, 0.9)
+  eq(b.manaBox.scale, 1.1, "mana numbers not resized")
   eq(b.fsrBox.scale, 1.1, "seconds not resized")
   eq(b.regenBox.scale, 0.9, "regen not resized")
   eq(sizes[1].value.text, "110%")
+  ns.ResetSize()
+  eq(ns.db.manaScale, 1, "reset size kept the mana text size")
 end)
 
 test("options: + on a bar shorter than an icon grows it instead of going to auto", function()
@@ -320,4 +324,26 @@ test("options: regen settings stay when the bar is off; the free regen text can 
   freeCb:SetChecked(true); freeCb.scripts.OnClick(freeCb)
   eq(ns.db.textFree, true)
   ok(box.mouse, "regen text not draggable after the switch")
+end)
+
+test("options: 'Move texts freely' sits under unlock and only works while unlocked; resets side by side", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local unlockCb, freeCb, reset, resetSize
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optUnlock then unlockCb = w end
+    if w.label and w.label.text == ns.L.optTextFree then freeCb = w end
+  end
+  ok(unlockCb and freeCb, "unlock or free text switch missing")
+  ok(freeCb.points[1][5] > -120, "free text switch not near the top")
+  ok(not freeCb:IsEnabled(), "free text switch usable while locked")
+  unlockCb:SetChecked(true); unlockCb.scripts.OnClick(unlockCb)
+  eq(ns.db.locked, false)
+  ok(freeCb:IsEnabled(), "free text switch greyed out while unlocked")
+  for _, f in ipairs(M.all) do
+    if f.kind == "Button" and f.text == ns.L.optReset then reset = f end
+    if f.kind == "Button" and f.text == ns.L.optResetSize then resetSize = f end
+  end
+  ok(reset and resetSize, "reset buttons not found")
+  eq(resetSize.points[1][1], "LEFT"); eq(resetSize.points[1][2], reset, "reset size not next to reset position")
 end)
