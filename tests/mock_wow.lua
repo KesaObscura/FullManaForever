@@ -162,6 +162,7 @@ function M.reset(opts)
     bags = opts.bags or {}, cooldowns = {}, class = opts.class or "PRIEST",
     raid = false, group = false, combat = false, instance = "none",
     powerFails = false, locale = opts.locale or "enUS",
+    name = opts.name, realm = opts.realm, now = opts.now,
     level = opts.level or 60, minLevel = opts.minLevel or {}, uncached = opts.uncached or {},
   }
   local S = M.state
@@ -207,6 +208,9 @@ function M.reset(opts)
   _G.UnitHealthMax = function() return S.maxHP end
   _G.UnitClass = function() return "Class", S.class end
   _G.UnitLevel = function() return S.level end
+  _G.UnitName = function(u) if u == "player" then return S.name or "Kesa" end end
+  _G.GetRealmName = function() return S.realm or "Forever" end
+  _G.time = function() return S.now or 1000000 end
   _G.UnitIsDeadOrGhost = function() return S.dead or false end
   _G.issecretvalue = isSecret
   _G.C_Item = {

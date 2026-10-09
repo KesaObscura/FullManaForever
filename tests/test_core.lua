@@ -89,7 +89,7 @@ test("custom item amount is validated", function()
     ok(not ns.AddCustom(4242, bad, "potion"), "accepted " .. tostring(bad))
   end
   ok(ns.AddCustom(4242, 250.7, "potion"), "valid amount rejected")
-  eq(ns.db.custom[1].max, 250)
+  eq(ns.acct.custom[1].max, 250)
 end)
 
 test("custom entry for a built-in item replaces it instead of doubling", function()
@@ -146,7 +146,7 @@ test("old saved data: the macro cleanup flag and the old test mode are dropped",
   local ns = M.load({ dbVersion = 6, cleanMacros = true, test = false })
   eq(ns.db.cleanMacros, nil, "macro flag kept")
   eq(ns.db.test, nil, "test key kept")
-  eq(ns.db.dbVersion, 8)
+  eq(ns.acct.dbVersion, 9)
 end)
 
 -- performance ------------------------------------------------------------------
@@ -592,7 +592,7 @@ end)
 
 test("a new install has nothing to migrate", function()
   local ns = M.load(nil)
-  eq(ns.db.dbVersion, 8)
+  eq(ns.acct.dbVersion, 9)
   eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
   eq(ns.db.manaTextOn, true, "mana numbers off on a new install")
 end)
@@ -891,7 +891,7 @@ test("no mana spells: no slot, no room on the bar; spells are not items", functi
   ns.Spells.Rebuild()
   ok(ns.AutoBarLength() > before, "no bar room for Inner Focus")
   ns.AddCustom(4242, 300, "spell")
-  for _, c in ipairs(ns.db.custom) do eq(c.group, "potion", "own item went into the spell slot") end
+  for _, c in ipairs(ns.acct.custom) do eq(c.group, "potion", "own item went into the spell slot") end
   noSpellApis()
 end)
 
@@ -1460,7 +1460,7 @@ test("login: a short tip only the first time, the version line only when it chan
   end
   local ns, out = logins(nil)
   ok(out:find("unlock", 1, true), "no first-run tip: " .. out)
-  eq(ns.db.seenVersion, ns.VERSION)
+  eq(ns.acct.seenVersion, ns.VERSION)
   ns, out = logins({ seenVersion = ns.VERSION })
   ok(not out:find(ns.VERSION, 1, true) and not out:find("unlock", 1, true), "login message on every login: " .. out)
   ns, out = logins({ seenVersion = "0.0.1" })

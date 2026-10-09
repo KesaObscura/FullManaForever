@@ -44,6 +44,8 @@ when the icon lights up.
   and text size.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
 - **Item list** (`/fmf items`): every supported item, on/off per item, add your own.
+- **Profiles**: one shared set of settings or own settings per character; copy another
+  character's settings, reset, delete old ones ("Profiles..." in the settings, `/fmf profile`).
 - 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português,
   繁體中文, 简体中文.
 
@@ -67,6 +69,7 @@ otherwise the game does not load it.
 |---|---|
 | `/fmf` | open the settings (also in Options → AddOns and the addon menu at the minimap) |
 | `/fmf items` | open the item list |
+| `/fmf profile` | profile in use and characters with own settings; `/fmf profile shared` / `own` switches, `copy <name>` takes over another character's settings, `undo` takes back the last copy |
 | `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |
 | `/fmf unlock` / `/fmf lock` | move the icons |
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |

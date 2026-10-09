@@ -7,7 +7,7 @@ function T.eq(a, b, msg) if a ~= b then error((msg or "") .. " expected " .. tos
 function T.ok(v, msg) if not v then error(msg or "expected true", 2) end end
 _G.T = T
 local dir = arg[0]:match("^(.*)run%.lua$") or "./"
-for _, f in ipairs({ "test_core.lua", "test_ui.lua", "test_locale.lua" }) do
+for _, f in ipairs({ "test_core.lua", "test_ui.lua", "test_profiles.lua", "test_locale.lua" }) do
   local chunk = loadfile(dir .. f)
   if chunk then chunk() end
 end

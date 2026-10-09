@@ -368,6 +368,26 @@ Build = function()
   close:SetScript("OnClick", function() win:Hide() end)
   Tip(close, L.optClose, L.tipClose)
 
+  -- profile in use: Shared or this character's own; rare actions in "Profiles..."
+  local P = ns.Profiles
+  local profBtn = Button(win, L.optProfiles, 120)
+  profBtn:SetPoint("RIGHT", close, "LEFT", -12, 0)
+  profBtn:SetScript("OnClick", function() ns.ToggleProfiles(true) end)
+  Tip(profBtn, L.optProfiles, L.tipProfiles)
+  local prof = Dropdown(win, 190, {
+    { value = "shared", text = L.profShared }, { value = "own", text = L.profOwn },
+  }, function() return P.IsOwn() and L.profOwn or L.profShared end,
+  function(v)
+    if (v == "own") == P.IsOwn() then return end -- rebuilding creates new frames: only on a change
+    P.Use(v)
+  end)
+  prof:SetPoint("RIGHT", profBtn, "LEFT", -8, 0)
+  Tip(prof, L.profLabel, L.tipProfile)
+  local profLabel = Label(win, L.profLabel .. ":")
+  profLabel:SetPoint("RIGHT", prof, "LEFT", -8, 0)
+  TipArea(win, profLabel, L.profLabel, L.tipProfile)
+  if not P.Me() then prof:SetEnabled(false); prof:SetAlpha(0.5) end -- name not known yet
+
   -- two columns: display + look on the left, consumables on the right
   local function Column(index)
     local col = CreateFrame("Frame", nil, win)
@@ -451,11 +471,11 @@ Build = function()
   local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
   for _, l in ipairs(ns.LANGUAGES) do entries[#entries + 1] = { value = l.code, text = l.name } end
   local lang = Dropdown(col, DD_W, entries, function()
-    if db.language == "auto" then return L.langAuto end
-    return ns.LanguageName(db.language, true)
+    if ns.acct.language == "auto" then return L.langAuto end
+    return ns.LanguageName(ns.acct.language, true)
   end, function(code)
-    if code == db.language then return end -- rebuilding creates new frames: only on a change
-    db.language = code
+    if code == ns.acct.language then return end -- rebuilding creates new frames: only on a change
+    ns.acct.language = code
     ns.SetLanguage(code)
     ns.OnLanguageChanged()
     if panelButton then panelButton:SetText(L.optOpen); FitWidth(panelButton, 220) end
@@ -742,6 +762,197 @@ function ns.ToggleOptions(forceShow)
   else
     win:Hide()
   end
+end
+
+------------------------------------------------------------------------
+-- profiles window: copy from another character, reset, delete, undo
+------------------------------------------------------------------------
+local pwin, RefreshProfiles
+local PW = 480
+
+local function ClassHex(class)
+  local c = RAID_CLASS_COLORS and class and RAID_CLASS_COLORS[class]
+  if c and c.colorStr then return c.colorStr end
+  if c and c.r then return ("ff%02x%02x%02x"):format(c.r * 255, c.g * 255, c.b * 255) end
+  return "ffffffff"
+end
+
+local function SeenText(t)
+  if not t or t == 0 then return "" end
+  local d = math.floor(((time and time() or t) - t) / 86400)
+  if d <= 0 then return L.seenToday end
+  return L.seenDays:format(d)
+end
+
+local function BuildProfiles()
+  local P = ns.Profiles
+  pwin = CreateFrame("Frame", "FullManaForeverProfiles", UIParent)
+  pwin:SetPoint("CENTER", 0, 40)
+  pwin:SetWidth(PW)
+  pwin:SetFrameStrata("DIALOG")
+  pwin:SetToplevel(true)
+  pwin:SetMovable(true)
+  pwin:EnableMouse(true)
+  pwin:SetClampedToScreen(true)
+  pwin:RegisterForDrag("LeftButton")
+  pwin:SetScript("OnDragStart", pwin.StartMoving)
+  pwin:SetScript("OnDragStop", pwin.StopMovingOrSizing)
+  pwin:Hide()
+  if UISpecialFrames then
+    local listed = false
+    for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverProfiles" then listed = true end end
+    if not listed then table.insert(UISpecialFrames, "FullManaForeverProfiles") end
+  end
+  local bg = pwin:CreateTexture(nil, "BACKGROUND")
+  bg:SetAllPoints()
+  bg:SetColorTexture(0.05, 0.06, 0.09, 1)
+  local top = pwin:CreateTexture(nil, "ARTWORK")
+  top:SetPoint("TOPLEFT")
+  top:SetPoint("TOPRIGHT")
+  top:SetHeight(2)
+  top:SetColorTexture(0.3, 0.55, 1, 0.9)
+  local title = Label(pwin, L.profTitle, "GameFontNormalLarge")
+  title:SetPoint("TOPLEFT", PAD, -12)
+  local close = Button(pwin, "X", 22)
+  close:SetPoint("TOPRIGHT", -8, -8)
+  close:SetScript("OnClick", function() pwin:Hide() end)
+  Tip(close, L.optClose, L.tipClose)
+
+  local uses = Label(pwin, "")
+  uses:SetPoint("TOPLEFT", PAD, -44)
+  local header = Header(pwin, L.profCopyFrom)
+  header:SetPoint("TOPLEFT", PAD, -72)
+  local none = Label(pwin, L.profNone, "GameFontDisableSmall")
+  none:SetPoint("TOPLEFT", PAD + 4, -98)
+
+  -- a small question over the window before anything is replaced or deleted
+  local confirm = CreateFrame("Frame", nil, pwin)
+  confirm:SetAllPoints()
+  confirm:SetFrameLevel((pwin:GetFrameLevel() or 1) + 20)
+  confirm:EnableMouse(true) -- nothing behind it can be clicked meanwhile
+  local cbg = confirm:CreateTexture(nil, "BACKGROUND")
+  cbg:SetAllPoints()
+  cbg:SetColorTexture(0, 0, 0, 0.85)
+  local ctext = Label(confirm, "", "GameFontHighlight")
+  ctext:SetPoint("CENTER", 0, 18)
+  ctext:SetWidth(PW - 4 * PAD)
+  ctext:SetJustifyH("CENTER")
+  local yes = Button(confirm, L.yes, 100)
+  yes:SetPoint("TOPRIGHT", ctext, "BOTTOM", -6, -14)
+  local no = Button(confirm, L.no, 100)
+  no:SetPoint("TOPLEFT", ctext, "BOTTOM", 6, -14)
+  no:SetScript("OnClick", function() confirm:Hide() end)
+  Tip(no, L.no, L.tipNo)
+  confirm:Hide()
+  local function Ask(text, tip, action)
+    ctext:SetText(text)
+    yes:SetScript("OnClick", function()
+      confirm:Hide()
+      action()
+      RefreshProfiles()
+    end)
+    Tip(yes, L.yes, tip)
+    confirm:Show()
+  end
+  pwin.confirm, pwin.yes, pwin.no = confirm, yes, no
+
+  local rows = {}
+  local function Row(i)
+    if rows[i] then return rows[i] end
+    local r = CreateFrame("Frame", nil, pwin)
+    r:SetSize(PW - 2 * PAD, 24)
+    r.name = Label(r, "")
+    r.name:SetPoint("LEFT", 4, 0)
+    r.name:SetWidth(200)
+    if r.name.SetWordWrap then r.name:SetWordWrap(false) end
+    r.info = Label(r, "", "GameFontHighlightSmall")
+    r.info:SetPoint("LEFT", 210, 0)
+    r.info:SetTextColor(0.7, 0.7, 0.7)
+    r.del = Button(r, L.profDelete, 80)
+    r.del:SetPoint("RIGHT", 0, 0)
+    Tip(r.del, L.profDelete, L.tipProfDelete)
+    r.copy = Button(r, L.profCopy, 80)
+    r.copy:SetPoint("RIGHT", r.del, "LEFT", -6, 0)
+    Tip(r.copy, L.profCopy, L.tipProfCopy)
+    rows[i] = r
+    return r
+  end
+
+  local reset = Button(pwin, L.profReset, 160)
+  Tip(reset, L.profReset, L.tipProfReset)
+  local undoBtn = Button(pwin, L.profUndo, 120)
+  Tip(undoBtn, L.profUndo, L.tipProfUndo)
+  reset:SetScript("OnClick", function()
+    Ask(P.IsOwn() and L.profConfirmReset or L.profConfirmResetShared, L.tipProfReset, P.Reset)
+  end)
+  undoBtn:SetScript("OnClick", function() P.Undo(); RefreshProfiles() end)
+
+  RefreshProfiles = function()
+    if not pwin then return end
+    uses:SetText(L.profUses:format("|cffffd100" .. (P.IsOwn() and L.profOwn or L.profShared) .. "|r"))
+    -- what can be copied: Shared (only onto an own profile) and every other character's own
+    local list = {}
+    if P.IsOwn() then list[1] = { key = P.SHARED, shared = true } end
+    local myRealm = (P.Me() or ""):match("%-(.*)$")
+    for _, o in ipairs(P.Others()) do list[#list + 1] = o end
+    for i, o in ipairs(list) do
+      local r = Row(i)
+      r:ClearAllPoints()
+      r:SetPoint("TOPLEFT", PAD, -96 - (i - 1) * 28)
+      if o.shared then
+        r.name:SetText("|cffffd100" .. L.profShared .. "|r")
+        r.info:SetText("")
+        r.del:Hide()
+      else
+        local shown = o.name .. ((o.realm and o.realm ~= myRealm) and ("-" .. o.realm) or "")
+        r.name:SetText("|c" .. ClassHex(o.class) .. shown .. "|r")
+        r.info:SetText(o.level and L.profInfo:format(o.level, SeenText(o.seen)) or SeenText(o.seen))
+        r.del:Show()
+        r.del:SetScript("OnClick", function()
+          Ask(L.profConfirmDelete:format(shown), L.tipProfDelete, function() P.Delete(o.key) end)
+        end)
+      end
+      local label = o.shared and L.profShared or o.name
+      r.copy:SetScript("OnClick", function()
+        Ask(L.profConfirmCopy:format(label), L.tipProfCopy, function() P.CopyFrom(o.key) end)
+      end)
+      r:Show()
+    end
+    for i = #list + 1, #rows do rows[i]:Hide() end
+    none:SetShown(#list == 0)
+    local y = -96 - math.max(1, #list) * 28 - 12
+    reset:ClearAllPoints()
+    reset:SetPoint("TOPLEFT", PAD, y)
+    undoBtn:ClearAllPoints()
+    undoBtn:SetPoint("LEFT", reset, "RIGHT", 8, 0)
+    local canUndo = P.CanUndo()
+    undoBtn:SetEnabled(canUndo)
+    undoBtn:SetAlpha(canUndo and 1 or 0.5)
+    pwin:SetHeight(-y + 22 + 16)
+  end
+  pwin:SetScript("OnShow", function() RefreshProfiles() end)
+  pwin:SetScript("OnHide", function() confirm:Hide() end) -- a question never waits for later
+end
+
+function ns.ToggleProfiles(forceShow)
+  if not pwin then BuildProfiles() end
+  if forceShow or not pwin:IsShown() then
+    pwin:Show()
+    RefreshProfiles()
+  else
+    pwin:Hide()
+  end
+end
+
+-- another profile is in use: the settings window shows its values (built anew, its widgets
+-- hold the old profile), the profiles window its state
+function ns.OnProfileChanged()
+  if win then
+    local shown = win:IsShown()
+    Rebuild()
+    if not shown then win:Hide() end
+  end
+  if pwin and pwin:IsShown() then RefreshProfiles() end
 end
 
 ------------------------------------------------------------------------

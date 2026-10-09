@@ -40,7 +40,7 @@ test("options: choosing the current layout or language does not rebuild the wind
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.Select and w.entries then
       if w.entries[1].value == false then w.Select(ns.db.vertical); picked = picked + 1 end
-      if w.entries[1].value == "auto" then w.Select(ns.db.language); picked = picked + 1 end
+      if w.entries[1].value == "auto" then w.Select(ns.acct.language); picked = picked + 1 end
     end
   end
   eq(picked, 2, "dropdowns found")
@@ -100,7 +100,8 @@ test("options: stepper buttons and dropdowns line up in fixed columns", function
   eq(cols, 1, "different -/+ columns")
   local widths = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
-    if w.entries then widths[w.w] = true end
+    -- the profile switch sits in the title row, not in a column
+    if w.entries and w.entries[1].value ~= "shared" then widths[w.w] = true end
   end
   local nw = 0
   for _ in pairs(widths) do nw = nw + 1 end

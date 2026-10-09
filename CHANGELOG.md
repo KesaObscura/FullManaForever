@@ -2,6 +2,7 @@
 
 **Full Mana Forever 0.8.3**
 
+- Profiles: all characters share one set of settings ("Shared"), or a character uses its own ("This character", switch at the top of the settings). Its own settings start as a copy of the shared ones and are kept when it switches back. "Profiles..." copies another character's settings (with class colour, level and last login), resets the profile in use or deletes the settings of characters you no longer play; each asks first, and the last change can be undone until you log out. Also `/fmf profile`. Your settings so far become "Shared", so nothing changes until you choose. Language and own items stay the same for every character; switched-off items belong to the profile
 - `/fmf hold` now holds mana potions only until the end of the next fight (or the one you are in) and then releases them by itself, with a chat line. While held, the potion icon is grey and says "HOLD" (shrunk to fit the icon) instead of disappearing; the settings show "on hold" for the potion group. The unlocked frame shows the potion without it. Tip: put `/fmf hold` in a macro. The old `/fmf hold` switched the "Mana potions" group off; if it is still off, switch it on in the settings
 - `/fmf test` does the same as `/fmf unlock` (before, it switched a separate test view on and off)
 - Switched-off settings show a grey tick instead of a gold one; "Min HP left after rune" and "Spells at mana <=" are greyed out while their group is off
