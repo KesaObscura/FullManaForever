@@ -1419,6 +1419,10 @@ test("/fmf hold keeps the potion switch, shows the potion grey with HOLD, ends a
   ok(slotVisible(ns, 1), "held potion hidden instead of grey")
   ok(b.layers[1].icon.desaturated, "held potion not grey")
   ok(b.holdText.shown, "no HOLD text"); eq(b.holdText.text, ns.L.holdLabel)
+  -- a long word (RESERVA) on a small icon shrinks to fit
+  b.holdText.textScale = nil; b.holdFitW = nil; b.holdText:SetText("RESERVA"); b.outer:SetSize(30, 30)
+  M.tick()
+  ok(b.holdText.textScale and b.holdText.textScale < 1 and 42 * b.holdText.textScale <= 27.01, "word does not fit: " .. tostring(b.holdText.textScale))
   ok(not b.layers[1].glow.shown, "held potion still glows")
   -- out of combat nothing ends it; the end of a fight does
   M.Fire("PLAYER_REGEN_ENABLED"); eq(ns.IsHeld(), true, "hold ended without a fight")

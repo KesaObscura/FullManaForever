@@ -60,6 +60,7 @@ function methods:CreateAnimation() return new("Animation", self) end
 function methods:SetText(t) self.text = t end
 function methods:GetText() return self.text end
 function methods:GetStringWidth() return #(tostring(self.text or "")) * 6 end
+function methods:SetTextScale(s) self.textScale = s end
 function methods:GetStringHeight() return 12 end
 function methods:GetFontString() self.fs = self.fs or new("FontString", self); return self.fs end
 function methods:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end

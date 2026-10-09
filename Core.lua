@@ -1200,6 +1200,17 @@ local function UpdateButton(i, b, maxMana, maxHP)
     b.holdShown = hold
     b.holdText:SetText(L.holdLabel)
     b.holdText:SetShown(hold)
+    b.holdFitW = nil
+  end
+  if hold then
+    -- the word shrinks to fit the icon (RESERVA, small icons); measured at scale 1
+    local w = b.outer:GetWidth() or 0
+    if w > 0 and b.holdFitW ~= w and b.holdText.SetTextScale then
+      b.holdFitW = w
+      b.holdText:SetTextScale(1)
+      local tw = b.holdText:GetStringWidth() or 0
+      b.holdText:SetTextScale(tw > w * 0.9 and w * 0.9 / tw or 1)
+    end
   end
   for k, c in ipairs(cands) do
     local l = b.layers[k]
