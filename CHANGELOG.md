@@ -2,10 +2,10 @@
 
 **Full Mana Forever 0.8.3**
 
-- `/fmf hold` now holds mana potions only until the end of the next fight (or the one you are in) and then releases them by itself, with a chat line. While held, the potion icon is grey and says "HOLD" (shrunk to fit the icon) instead of disappearing; the settings show "on hold" for the potion group. Tip: put `/fmf hold` in a macro. The old `/fmf hold` switched the "Mana potions" group off; if it is still off, switch it on in the settings
+- `/fmf hold` now holds mana potions only until the end of the next fight (or the one you are in) and then releases them by itself, with a chat line. While held, the potion icon is grey and says "HOLD" (shrunk to fit the icon) instead of disappearing; the settings show "on hold" for the potion group. The unlocked frame shows the potion without it. Tip: put `/fmf hold` in a macro. The old `/fmf hold` switched the "Mana potions" group off; if it is still off, switch it on in the settings
 - `/fmf test` does the same as `/fmf unlock` (before, it switched a separate test view on and off)
 - Switched-off settings show a grey tick instead of a gold one; "Min HP left after rune" and "Spells at mana <=" are greyed out while their group is off
-- Each icon group in the settings has a tooltip that says what it shows
+- Every control in the settings and the item list has a tooltip (each icon group, dropdowns, -/+ buttons, close buttons), also while it is greyed out
 - The tip at login appears only on a new install; after an update one line names the new version, otherwise the addon stays silent
 
 **Full Mana Forever 0.8.2**

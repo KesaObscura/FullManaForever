@@ -1427,6 +1427,11 @@ test("/fmf hold keeps the potion switch, shows the potion grey with HOLD, ends a
   M.tick()
   ok(ht.textScale and ht.textScale < 1 and 42 * ht.textScale <= 27.01, "word does not fit: " .. tostring(ht.textScale))
   ok(not b.layers[1].glow.shown, "held potion still glows")
+  -- the unlocked frame shows the potion as it looks when lit, without HOLD
+  ns.db.locked = false; M.tick()
+  ok(not ht.shown and not b.layers[1].icon.desaturated, "HOLD on the unlocked frame")
+  ns.db.locked = true; M.tick()
+  ok(ht.shown, "HOLD not back after locking")
   -- out of combat nothing ends it; the end of a fight does
   M.Fire("PLAYER_REGEN_ENABLED"); eq(ns.IsHeld(), true, "hold ended without a fight")
   M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")

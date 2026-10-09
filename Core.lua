@@ -1095,6 +1095,27 @@ local function HideLayers(b, from)
   end
 end
 
+-- "/fmf hold" on one layer: no glow, the word on it (the grey comes from the caller)
+local function ShowHeld(b, l, hold)
+  if l.held ~= hold then
+    l.held = hold
+    l.glow:SetShown(not hold)
+    l.holdText:SetText(L.holdLabel)
+    l.holdText:SetShown(hold)
+    l.holdFitW = nil
+  end
+  if hold then
+    -- the word shrinks to fit the icon (RESERVA, small icons); measured at scale 1
+    local w = b.outer:GetWidth() or 0
+    if w > 0 and l.holdFitW ~= w and l.holdText.SetTextScale then
+      l.holdFitW = w
+      l.holdText:SetTextScale(1)
+      local tw = l.holdText:GetStringWidth() or 0
+      l.holdText:SetTextScale(tw > w * 0.9 and w * 0.9 / tw or 1)
+    end
+  end
+end
+
 local function ShowPreview(i, b, item, n)
   local l = b.layers[1]
   local ph
@@ -1106,6 +1127,7 @@ local function ShowPreview(i, b, item, n)
     ph = first and C_Item.GetItemIconByID(first.id) or PLACEHOLDER[ns.GROUPS[i].key]
   end
   SetLayer(l, item and item.id, n, ph)
+  ShowHeld(b, l, false) -- the preview shows the icon as it looks when lit
   l:SetAlpha(1)
   l.hi = nil
   l:Show()
@@ -1195,28 +1217,13 @@ local function UpdateButton(i, b, maxMana, maxHP)
 
   local hpCost
   -- on hold: the potion is shown grey with "HOLD" exactly where it would light up
-  local hold = held and group.key == "potion"
+  -- (not on the unlocked frame: that one shows every icon as it looks when lit)
+  local hold = held and group.key == "potion" and db.locked
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
     if hold then l.icon:SetDesaturated(true) end
-    if l.held ~= hold then
-      l.held = hold
-      l.glow:SetShown(not hold)
-      l.holdText:SetText(L.holdLabel)
-      l.holdText:SetShown(hold)
-      l.holdFitW = nil
-    end
-    if hold then
-      -- the word shrinks to fit the icon (RESERVA, small icons); measured at scale 1
-      local w = b.outer:GetWidth() or 0
-      if w > 0 and l.holdFitW ~= w and l.holdText.SetTextScale then
-        l.holdFitW = w
-        l.holdText:SetTextScale(1)
-        local tw = l.holdText:GetStringWidth() or 0
-        l.holdText:SetTextScale(tw > w * 0.9 and w * 0.9 / tw or 1)
-      end
-    end
+    ShowHeld(b, l, hold)
     ApplySweep(l, c.it.id)
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil

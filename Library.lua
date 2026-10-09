@@ -51,7 +51,7 @@ local function NewRow()
 
   ui.WithRegistry(rowReg, function()
     r.cb = ui.Check(row, "", function() return ns.IsItemEnabled(row.it) end,
-      function(v) ns.SetItemEnabled(row.it.id, v) end)
+      function(v) ns.SetItemEnabled(row.it.id, v) end, L.tipItemCb)
   end)
   r.cb:SetPoint("LEFT", 0, 0)
   r.cb.label:Hide()
@@ -79,6 +79,7 @@ local function NewRow()
   r.del = ui.Button(row, "x", 20, 18)
   r.del:SetPoint("RIGHT", row, "RIGHT", -EDGE, 0)
   r.del:SetScript("OnClick", function() ns.RemoveCustom(row.it.id) end)
+  ui.Tip(r.del, L.libRemove, L.tipItemDel)
 
   r.frame = row
   return r
@@ -204,6 +205,7 @@ local function Build(point)
   local close = ui.Button(lib, "X", 22)
   close:SetPoint("TOPRIGHT", -8, -8)
   close:SetScript("OnClick", function() lib:Hide() end)
+  ui.Tip(close, L.optClose, L.tipClose)
 
   -- scrolling list
   scroll = CreateFrame("ScrollFrame", nil, lib)
@@ -262,6 +264,8 @@ local function Build(point)
   local amBox = ui.Edit(lib, 70)
   amBox:SetPoint("RIGHT", lib, "RIGHT", -PAD, 0)
   amBox:SetPoint("TOP", idBox, "TOP", 0, 0)
+  ui.TipBoth(lib, idLabel, idBox, L.optId, L.tipItemId)
+  ui.TipBoth(lib, amLabel, amBox, L.optAmount, L.tipItemAmount)
 
   local catLabel = ui.Label(lib, L.libCategory, "GameFontHighlightSmall")
   catLabel:SetPoint("BOTTOMLEFT", lib, "BOTTOMLEFT", PAD, 18)
@@ -277,6 +281,7 @@ local function Build(point)
       function(v) chosen = v; RefreshRows() end)
   end)
   cat:SetPoint("LEFT", catLabel, "LEFT", 100, 0)
+  ui.TipBoth(lib, catLabel, cat, L.libCategory, L.tipItemCat)
   cat.Refresh()
 
   local add = ui.Button(lib, L.optAdd, 100)
@@ -291,6 +296,7 @@ local function Build(point)
     end
   end
   add:SetScript("OnClick", DoAdd)
+  ui.Tip(add, L.optAdd, L.tipItemAdd)
   idBox:SetScript("OnEnterPressed", function() amBox:SetFocus() end)
   amBox:SetScript("OnEnterPressed", DoAdd)
 

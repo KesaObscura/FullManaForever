@@ -380,6 +380,33 @@ test("options: settings of a switched-off part stay in place, greyed out", funct
 end)
 
 
+test("every control in the settings and the item list has a tooltip, also while greyed out", function()
+  local ns = M.load({ custom = { { id = 12345, max = 500, group = "potion" } } })
+  ns.ToggleOptions(true)
+  ns.ToggleLibrary(true)
+  local roots = { [_G.FullManaForeverOptions] = true, [_G.FullManaForeverItems] = true }
+  local clickable = { Button = true, CheckButton = true, EditBox = true }
+  local seen = 0
+  for _, f in ipairs(M.all) do
+    if clickable[f.kind] then
+      local p, inList, inWin = f.parent, false, false
+      while p do
+        if p.ddList then inList = true end
+        if roots[p] then inWin = true end
+        p = p.parent
+      end
+      if inWin and not inList then
+        seen = seen + 1
+        local name = f.text or (f.label and f.label.text) or f.kind
+        ok(f.scripts.OnEnter, "no tooltip on " .. tostring(name))
+        if f.kind ~= "EditBox" then ok(f.motionWhileDisabled, "no tooltip while greyed out: " .. tostring(name)) end
+      end
+    end
+  end
+  ok(seen > 30, "too few controls found: " .. seen)
+end)
+
+
 test("options: the rune and spell thresholds are greyed out while their group is off", function()
   local ns = M.load({ enabled = { rune = false } })
   ns.ToggleOptions(true)

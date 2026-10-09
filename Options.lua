@@ -37,9 +37,11 @@ local function FitWidth(b, minW)
   end
 end
 
--- tooltip on hover: title in white, explanation wrapped below
+-- tooltip on hover: title in white, explanation wrapped below. Also on greyed-out
+-- buttons: the tooltip says what the setting does even while it cannot be used
 local function Tip(frame, title, text)
   if not text then return end
+  if frame.SetMotionScriptsWhileDisabled then frame:SetMotionScriptsWhileDisabled(true) end
   frame:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText(title, 1, 1, 1)
@@ -56,6 +58,12 @@ local function TipArea(parent, fs, title, text)
   f:EnableMouse(true)
   Tip(f, title, text)
   return f
+end
+
+-- the same tooltip on a setting's label and on its control (dropdown, ...)
+local function TipBoth(parent, label, widget, title, text)
+  TipArea(parent, label, title, text)
+  Tip(widget, title, text)
 end
 
 local function Button(parent, text, w, h)
@@ -134,7 +142,11 @@ local function Stepper(parent, x, text, get, set, o)
   s.value:SetPoint("LEFT", s.label, "LEFT", VALUE_X - x, 0)
   s.minus:SetPoint("LEFT", s.label, "LEFT", BTN_X - x, 0)
   s.plus:SetPoint("LEFT", s.minus, "RIGHT", 4, 0)
-  if o.tip then TipArea(parent, s.label, text, o.tip) end
+  if o.tip then
+    TipArea(parent, s.label, text, o.tip)
+    Tip(s.minus, text, o.tip)
+    Tip(s.plus, text, o.tip)
+  end
   local function step(v, dir)
     if o.next then return o.next(v, dir) end
     return tonumber(("%.2f"):format(math.min(o.hi, math.max(o.lo, v + dir * o.step))))
@@ -182,6 +194,7 @@ local function Dropdown(parent, width, entries, getText, onPick)
   arrow:SetRotation(-math.pi / 2)
 
   local list = CreateFrame("Frame", nil, dd)
+  list.ddList = true -- its rows are the choices; the dropdown itself carries the tooltip
   list:SetFrameStrata("FULLSCREEN_DIALOG")
   list:SetPoint("TOPRIGHT", dd, "BOTTOMRIGHT", 0, -2)
   list:SetClampedToScreen(true) -- near the bottom of the screen the list moves up
@@ -262,7 +275,7 @@ local function WithRegistry(t, fn)
 end
 
 ns.UI = {
-  Label = Label, Button = Button, Check = Check, Edit = Edit, Dropdown = Dropdown,
+  Label = Label, Button = Button, Check = Check, Edit = Edit, Dropdown = Dropdown, Tip = Tip, TipBoth = TipBoth,
   ItemName = ItemName, WithRegistry = WithRegistry,
 }
 
@@ -353,6 +366,7 @@ Build = function()
   local close = Button(win, "X", 22)
   close:SetPoint("TOPRIGHT", -8, -8)
   close:SetScript("OnClick", function() win:Hide() end)
+  Tip(close, L.optClose, L.tipClose)
 
   -- two columns: display + look on the left, consumables on the right
   local function Column(index)
@@ -450,6 +464,7 @@ Build = function()
   end)
   c.Right(lang)
   c.Row(langLabel, PAD + 4, 34)
+  TipBoth(col, langLabel, lang, L.optLang, L.tipLang)
 
   -- look
   c.Row(Header(col, L.optAppearance), PAD, 26)
@@ -463,13 +478,14 @@ Build = function()
   end)
   c.Right(lay)
   c.Row(layLabel, PAD + 4, 30)
+  TipBoth(col, layLabel, lay, L.optLayout, L.tipLayout)
 
   local function num(v) return tostring(v) end
   local size = Stepper(col, PAD + 4, L.optSize, function() return db.iconSize end,
-    function(v) db.iconSize = v; ns.Layout(true) end, { step = 4, lo = 24, hi = 96, fmt = num })
+    function(v) db.iconSize = v; ns.Layout(true) end, { step = 4, lo = 24, hi = 96, fmt = num, tip = L.tipSize })
   c.Row(size.label, PAD + 4, 28)
   local gap = Stepper(col, PAD + 4, L.optGap, function() return db.iconGap end,
-    function(v) db.iconGap = v; ns.Layout(true) end, { step = 2, lo = 0, hi = 24, fmt = num })
+    function(v) db.iconGap = v; ns.Layout(true) end, { step = 2, lo = 0, hi = 24, fmt = num, tip = L.tipGap })
   c.Row(gap.label, PAD + 4, 30)
 
   c.Row(Check(col, L.optBar, function() return db.showBar end, function(v) db.showBar = v end, L.tipBar))
@@ -488,6 +504,7 @@ Build = function()
   end
   c.Right(bp)
   c.Row(bpLabel, PAD + 30, 30)
+  TipBoth(col, bpLabel, bp, L.optBarPos, L.tipBarPos)
 
   local colorEntries = {}
   for _, bc in ipairs(ns.BAR_COLORS) do
@@ -498,10 +515,11 @@ Build = function()
     function(v) db.barColor = v; ns.Layout(true); ns.RefreshOptions() end)
   c.Right(colDD)
   c.Row(colLabel, PAD + 30, 30)
+  TipBoth(col, colLabel, colDD, L.optBarColor, L.tipBarColor)
 
 
   local thick = Stepper(col, PAD + 30, L.optBarThick, function() return db.barThickness end,
-    function(v) db.barThickness = v; ns.Layout(true) end, { step = 2, lo = 6, hi = 40, fmt = num })
+    function(v) db.barThickness = v; ns.Layout(true) end, { step = 2, lo = 6, hi = 40, fmt = num, tip = L.tipBarThick })
   c.Row(thick.label, PAD + 30, 28)
   -- length: 0 = auto. Leaving auto starts at the auto length; going below one icon
   -- (a bar shorter than an icon is useless) returns to auto.
@@ -530,7 +548,7 @@ Build = function()
   local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
   local function SizeStepper(key)
     local st = Stepper(col, PAD + 30, L.optTextSize, function() return db[key] or 1 end,
-      function(v) db[key] = v; ns.Layout(true) end, { step = 0.1, lo = 0.6, hi = 2.0, fmt = pct })
+      function(v) db[key] = v; ns.Layout(true) end, { step = 0.1, lo = 0.6, hi = 2.0, fmt = pct, tip = L.tipTextSize })
     c.Row(st.label, PAD + 30, 28)
     return st
   end
@@ -545,6 +563,7 @@ Build = function()
   function(v) db.manaText = v; ns.RefreshOptions() end)
   c.Right(mtDD)
   c.Row(manaCb, PAD, 30)
+  Tip(mtDD, L.optManaText, L.tipManaFmt)
   ActiveIf(function() return db.manaTextOn end, mtDD, SizeStepper("manaScale"))
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
@@ -593,6 +612,12 @@ Build = function()
   end)
   c.Right(strat)
   c.Row(stLabel, PAD + 4, 28)
+  -- the tooltip lists all three choices; the line below the list explains the chosen one
+  local stratTip = {}
+  for _, k in ipairs({ "safe", "often", "strong" }) do
+    stratTip[#stratTip + 1] = "|cffffd100" .. stratText[k] .. ":|r " .. stratDesc[k]
+  end
+  TipBoth(col, stLabel, strat, L.optStrategy, table.concat(stratTip, "\n\n"))
   local desc = Label(col, "", "GameFontHighlightSmall")
   desc:SetTextColor(0.74, 0.78, 0.88)
   desc:SetWidth(W - 2 * PAD - 8)
@@ -729,6 +754,7 @@ function ns.InitOptions()
   t:SetPoint("TOPLEFT", 16, -16)
   panelButton = Button(panel, L.optOpen, 220, 26)
   panelButton:SetPoint("TOPLEFT", 16, -50)
+  Tip(panelButton, L.optOpen, L.tipOpen)
   panelButton:SetScript("OnClick", function()
     -- closing Blizzard's panel from addon code is only safe out of combat
     if SettingsPanel and not InCombatLockdown() then pcall(HideUIPanel, SettingsPanel) end
