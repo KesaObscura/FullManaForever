@@ -12,6 +12,9 @@ and `/fmf log` (kept in releases for bug reports).
   the change only.
 - **Every user-visible text in all 9 locale tables** of `Locale.lua` (esMX falls back to
   esES). `lua5.1 tests/run.lua` checks keys and placeholders.
+- **Every control that can be clicked has a tooltip** (owner, 0.8.3), also while greyed out
+  (`Tip` sets `SetMotionScriptsWhileDisabled`); a test walks all controls of the settings and
+  the item list.
 - **Run the tests after every change:** `lua5.1 tests/run.lua` must end with `0 failed`.
 - **After every change, hand the owner a test zip** built from the committed state:
   `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
