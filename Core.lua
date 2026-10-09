@@ -592,6 +592,15 @@ local function CreateLayer(parent)
     if sweep.SetDrawBling then sweep:SetDrawBling(false) end -- no flash after every shot
     l.sweep = sweep
   end
+  -- "/fmf hold": the word on a held potion. Inside the layer, so the mana band hides it
+  -- together with the icon; its own frame, so the sweep cannot cover it
+  local holdTop = CreateFrame("Frame", nil, l)
+  holdTop:SetAllPoints()
+  holdTop:SetFrameLevel((l:GetFrameLevel() or 1) + 3)
+  l.holdText = holdTop:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  OutlineFont(l.holdText, "GameFontNormal", true)
+  l.holdText:SetPoint("CENTER")
+  l.holdText:Hide()
   -- soft light from the top that fades out downwards: a slightly "glassy" icon. A flat
   -- strip left a hard line in the middle that looked like a half-full icon
   l.shine = l:CreateTexture(nil, "ARTWORK", nil, 2)
@@ -630,15 +639,6 @@ local function CreateButton()
   b.hp:SetAllPoints()
   b.layers = {}
   for k = 1, MAX_LAYERS do b.layers[k] = CreateLayer(b.hp) end  -- gate 3: mana band per item
-  -- "/fmf hold": the potion stays visible, grey, with this word on it (own frame above
-  -- the layers, which are child frames and would cover a text of b.hp)
-  local holdTop = CreateFrame("Frame", nil, b.hp)
-  holdTop:SetAllPoints()
-  holdTop:SetFrameLevel((b.hp:GetFrameLevel() or 1) + MAX_LAYERS + 5)
-  b.holdText = holdTop:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-  OutlineFont(b.holdText, "GameFontNormal", true)
-  b.holdText:SetPoint("CENTER")
-  b.holdText:Hide()
   b.outer:Hide()
   return b
 end
@@ -1196,27 +1196,27 @@ local function UpdateButton(i, b, maxMana, maxHP)
   local hpCost
   -- on hold: the potion is shown grey with "HOLD" exactly where it would light up
   local hold = held and group.key == "potion"
-  if b.holdShown ~= hold then
-    b.holdShown = hold
-    b.holdText:SetText(L.holdLabel)
-    b.holdText:SetShown(hold)
-    b.holdFitW = nil
-  end
-  if hold then
-    -- the word shrinks to fit the icon (RESERVA, small icons); measured at scale 1
-    local w = b.outer:GetWidth() or 0
-    if w > 0 and b.holdFitW ~= w and b.holdText.SetTextScale then
-      b.holdFitW = w
-      b.holdText:SetTextScale(1)
-      local tw = b.holdText:GetStringWidth() or 0
-      b.holdText:SetTextScale(tw > w * 0.9 and w * 0.9 / tw or 1)
-    end
-  end
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
     if hold then l.icon:SetDesaturated(true) end
-    if l.held ~= hold then l.held = hold; l.glow:SetShown(not hold) end
+    if l.held ~= hold then
+      l.held = hold
+      l.glow:SetShown(not hold)
+      l.holdText:SetText(L.holdLabel)
+      l.holdText:SetShown(hold)
+      l.holdFitW = nil
+    end
+    if hold then
+      -- the word shrinks to fit the icon (RESERVA, small icons); measured at scale 1
+      local w = b.outer:GetWidth() or 0
+      if w > 0 and l.holdFitW ~= w and l.holdText.SetTextScale then
+        l.holdFitW = w
+        l.holdText:SetTextScale(1)
+        local tw = l.holdText:GetStringWidth() or 0
+        l.holdText:SetTextScale(tw > w * 0.9 and w * 0.9 / tw or 1)
+      end
+    end
     ApplySweep(l, c.it.id)
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil

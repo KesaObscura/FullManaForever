@@ -1418,11 +1418,14 @@ test("/fmf hold keeps the potion switch, shows the potion grey with HOLD, ends a
   M.tick()
   ok(slotVisible(ns, 1), "held potion hidden instead of grey")
   ok(b.layers[1].icon.desaturated, "held potion not grey")
-  ok(b.holdText.shown, "no HOLD text"); eq(b.holdText.text, ns.L.holdLabel)
+  local ht = b.layers[1].holdText
+  ok(ht.shown, "no HOLD text"); eq(ht.text, ns.L.holdLabel)
+  -- the word lives inside the layer, so the mana band (layer alpha) hides it with the icon
+  ok(ht.parent.parent == b.layers[1], "HOLD text outside the potion layer")
   -- a long word (RESERVA) on a small icon shrinks to fit
-  b.holdText.textScale = nil; b.holdFitW = nil; b.holdText:SetText("RESERVA"); b.outer:SetSize(30, 30)
+  ht.textScale = nil; b.layers[1].holdFitW = nil; ht:SetText("RESERVA"); b.outer:SetSize(30, 30)
   M.tick()
-  ok(b.holdText.textScale and b.holdText.textScale < 1 and 42 * b.holdText.textScale <= 27.01, "word does not fit: " .. tostring(b.holdText.textScale))
+  ok(ht.textScale and ht.textScale < 1 and 42 * ht.textScale <= 27.01, "word does not fit: " .. tostring(ht.textScale))
   ok(not b.layers[1].glow.shown, "held potion still glows")
   -- out of combat nothing ends it; the end of a fight does
   M.Fire("PLAYER_REGEN_ENABLED"); eq(ns.IsHeld(), true, "hold ended without a fight")
@@ -1430,7 +1433,7 @@ test("/fmf hold keeps the potion switch, shows the potion grey with HOLD, ends a
   M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
   eq(ns.IsHeld(), false, "hold still on after the fight")
   M.tick()
-  ok(not b.layers[1].icon.desaturated, "potion stays grey"); ok(not b.holdText.shown, "HOLD text stays")
+  ok(not b.layers[1].icon.desaturated, "potion stays grey"); ok(not ht.shown, "HOLD text stays")
   ok(b.layers[1].glow.shown, "glow not back")
   -- a second /fmf hold ends it early
   SlashCmdList.FULLMANAFOREVER("hold"); eq(ns.IsHeld(), true)
