@@ -380,6 +380,24 @@ test("options: settings of a switched-off part stay in place, greyed out", funct
 end)
 
 
+test("options: the rune and spell thresholds are greyed out while their group is off", function()
+  local ns = M.load({ enabled = { rune = false } })
+  ns.ToggleOptions(true)
+  local margin, spellThr
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == ns.L.optMargin .. ":" then margin = w end
+    if w.minus and w.label and w.label.text == ns.L.optSpellThr then spellThr = w end
+  end
+  ok(margin and spellThr, "thresholds not found")
+  ok(not margin.plus:IsEnabled(), "rune threshold usable with runes off")
+  ok(spellThr.plus:IsEnabled(), "spell threshold greyed out although spells are on")
+  ns.db.enabled.rune, ns.db.enabled.spell = true, false
+  ns.RefreshOptions()
+  ok(margin.plus:IsEnabled(), "rune threshold stays grey after switching on")
+  ok(not spellThr.plus:IsEnabled(), "spell threshold usable with spells off")
+end)
+
+
 test("options: a long unlock label pushes 'Move texts freely' one row down instead of covering it", function()
   local ns = M.load({ language = "ruRU" })
   ns.ToggleOptions(true)

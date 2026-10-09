@@ -628,6 +628,8 @@ Build = function()
       fmt = function(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end })
   spellThr.label:SetPoint("TOPLEFT", margin.label, "TOPLEFT", 0, -32)
   c.y = c.y - 32
+  ActiveIf(function() return db.enabled.rune end, margin)
+  ActiveIf(function() return db.enabled.spell end, spellThr)
   local items = Button(col, L.optItems, 180, 24)
   items:SetPoint("TOPLEFT", spellThr.label, "TOPLEFT", -4, -36)
   items:SetScript("OnClick", function() ns.ToggleLibrary(true) end)
