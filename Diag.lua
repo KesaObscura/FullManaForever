@@ -310,7 +310,7 @@ local GROUP_WATCH = {
   [10157] = "Intellect", [23028] = "Brilliance",
   [14752] = "DivineSpirit", [14818] = "DivineSpirit", [14819] = "DivineSpirit", [27841] = "DivineSpirit",
   [27681] = "PrayerSpirit",
-  [10310] = "LayOnHands", -- rank 3 (level 50) restores 550 mana of the target
+  [2800] = "LayOnHands", [10310] = "LayOnHands", -- ranks 2 (30) and 3 (50): 250 / 550 mana to the target
   [5504] = "Water", [5505] = "Water", [5506] = "Water", [6127] = "Water", [10138] = "Water",
   [10139] = "Water", [10140] = "Water",
 }

@@ -88,8 +88,8 @@ and `/fmf log` (kept in releases for bug reports).
   (warlock 14, no cd, health to mana; not tested in game yet), Mana Spring Totem 5675/10497, Blessing of Wisdom 19742/19854
   and Greater 25894/25918, Seal of Wisdom 20166/20357, Lay on Hands (paladin 10, 1200;
   Forever rank 1, owner's Wowhead screenshot: heals for the paladin's max health and USES all
-  remaining mana, no cost entry, does not stop regen. Rank 3 10310 (level 50) also restores 550
-  mana of the TARGET: never a source for the paladin's own slot, but a group helper like
+  remaining mana, no cost entry, does not stop regen. Rank 2 2800 (level 30) restores 250, rank 3
+  10310 (level 50) 550 mana of the TARGET (Classic IDs, unconfirmed in Forever): never a source for the paladin's own slot, but a group helper like
   Innervate for 0.9.0; it is on the group log's watch list), Mage Armor 6117/22783 (50 % regen while casting), Totemic Recall 36936 (25 % of
   totem mana back), Drain Mana 11704, Viper Sting 14280. Talents/procs: Inner Focus 14751 (180,
   next spell free), Omen of Clarity 16864, Meditation 14521, Spirit Tap 15270.
