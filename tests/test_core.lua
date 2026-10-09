@@ -1453,4 +1453,6 @@ test("login: a short tip only the first time, the version line only when it chan
   ok(not out:find(ns.VERSION, 1, true) and not out:find("unlock", 1, true), "login message on every login: " .. out)
   ns, out = logins({ seenVersion = "0.0.1" })
   ok(out:find(ns.VERSION, 1, true), "no line after an update: " .. out)
+  ns, out = logins({ dbVersion = 8 })
+  ok(out:find(ns.VERSION, 1, true) and not out:find("unlock", 1, true), "update from 0.8.2 shows the first-run tip: " .. out)
 end)

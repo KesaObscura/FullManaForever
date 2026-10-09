@@ -6,7 +6,7 @@
 - `/fmf test` does the same as `/fmf unlock` (before, it switched a separate test view on and off)
 - Switched-off settings show a grey tick instead of a gold one
 - Each icon group in the settings has a tooltip that says what it shows
-- The tip at login appears only the first time; after an update one line names the new version, otherwise the addon stays silent
+- The tip at login appears only on a new install; after an update one line names the new version, otherwise the addon stays silent
 
 **Full Mana Forever 0.8.2**
 

@@ -1572,8 +1572,10 @@ end
 ------------------------------------------------------------------------
 local DB_VERSION = 8 -- the last migration below
 
+local freshInstall = false
 local function InitDB()
   -- a new install has nothing to migrate
+  freshInstall = FullManaForeverDB == nil
   FullManaForeverDB = FullManaForeverDB or { dbVersion = DB_VERSION }
   db = FullManaForeverDB
   CopyDefaults(DEFAULTS, db)
@@ -1636,7 +1638,8 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     C_Timer.NewTicker(0.1, SafeUpdate)
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     -- a short tip on the very first login, afterwards one line only when the version changes
-    if not db.seenVersion then
+    -- (settings from before 0.8.3 have no seenVersion: those players get the version line)
+    if freshInstall then
       Print(L.firstRun)
     elseif db.seenVersion ~= ns.VERSION then
       Print(L.loaded, ns.VERSION)
