@@ -151,3 +151,9 @@ and `/fmf log` (kept in releases for bug reports).
   passive talent of the new "Adventures" tree: after a kill that gives XP or honor, 1 % of max
   health and mana over 10 s at rank 1/5 (2 % at rank 2), not in dungeons, raids or battlegrounds.
   Not coloured (green would then show a normal number); maybe later a "+x" out of combat.
+- Forever patch notes (owner, 0.8.2 time): druids may drink mana potions in forms (the addon never
+  checks forms; untested whether mana stays readable in bear/cat form); Seal of Fury restores mana
+  only with Improved Seal of Fury (no paladin source in the addon, only the Diag watch list);
+  Mana Tide and Water Shield changed only visuals. Blizzard's Cooldown Manager now shows trinkets,
+  consumables "later": overlaps with "potion is ready", not with "fits your missing mana", runes'
+  health check, own spells, five-second rule and regen. Watch it.
