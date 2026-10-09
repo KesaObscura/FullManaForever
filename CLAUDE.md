@@ -160,3 +160,16 @@ and `/fmf log` (kept in releases for bug reports).
   Mana Tide and Water Shield changed only visuals. Blizzard's Cooldown Manager now shows trinkets,
   consumables "later": overlaps with "potion is ready", not with "fits your missing mana", runes'
   health check, own spells, five-second rule and regen. Watch it.
+- UX review for 0.8.3 (three reviewers, owner decisions): 0.8.3 = per-character profiles +
+  confirmed bugs + settings order/wording; 0.8.4 = HUD polish (colour system: white markers inside
+  the bar, gold only for the five-second rule; Blizzard-like ready glow; gradient bar gloss; digit
+  font, whole seconds; non-colour cue for regen states; bigger defaults). Profiles: saved
+  variables stay account-wide (copying needs it); "Shared" + own per character (created as a copy
+  of Shared, kept when switching back); new characters start on Shared; switch in the window title,
+  rare actions (copy / reset / delete stale) in a small "Profiles..." window; copy and reset
+  confirm, one undo per session; disabled items per profile, own items and language account-wide;
+  profiles keyed by name so named profiles can come later. Every module must re-read the active
+  profile on a switch (Core caches `db`). "Drinking" becomes "When to light up" (all languages).
+  `/fmf hold` (command / macro only, owner: no key binding): its own state, not the "Mana
+  potions" switch; ends at the end of the next fight; while held the potion shows grey with
+  "HOLD" when it would light up; a second /fmf hold ends it early.
