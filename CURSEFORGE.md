@@ -21,7 +21,7 @@ Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules
 - **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
 - **Item list.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
-- **Hold potions.** `/fmf hold` stops potion suggestions for fights where you want the potion cooldown for something else.
+- **Hold potions.** `/fmf hold` (best in a macro) holds mana potions until the end of the next fight, for when you want the potion cooldown for something else. The potion icon turns grey with "HOLD"; after the fight it releases by itself.
 - Only suggests what you can use: skips items above your level, mage-only items for other classes and battleground-only items outside battlegrounds.
 - 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português, 繁體中文, 简体中文.
 
@@ -43,7 +43,7 @@ In Forever your current mana is a *secret value*: addons cannot read it. Full Ma
 |---|---|
 | `/fmf` | open the settings |
 | `/fmf items` | open the item list |
-| `/fmf hold` | hold / release potion suggestions |
+| `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |
 | `/fmf unlock` / `/fmf lock` | move the icons |
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |
 | `/fmf reset` | move the icons back to the default position |

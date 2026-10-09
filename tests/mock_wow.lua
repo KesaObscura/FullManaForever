@@ -8,7 +8,7 @@ local methods = {}
 local Widget = { __index = methods }
 function M.noop() end
 for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDrag", "SetAutoFocus",
-  "SetBlendMode", "SetCheckedTexture", "SetClampedToScreen", "SetColorTexture", "SetDesaturated",
+  "SetBlendMode", "SetCheckedTexture", "SetDisabledCheckedTexture", "SetClampedToScreen", "SetColorTexture",
   "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
   "SetHighlightFontObject", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
   "SetMovable", "SetNormalFontObject", "SetNormalTexture", "SetNumeric", "SetOwner", "SetPushedTexture",
@@ -50,6 +50,7 @@ function methods:GetPoint() local p = self.points[1] or {} return p[1], p[2], p[
 function methods:GetLeft() return M.left end
 function methods:GetTop() return M.top end
 function methods:GetCenter() return M.cx, M.cy end
+function methods:SetDesaturated(v) self.desaturated = v and true or false end
 function methods:SetScript(k, f) self.scripts[k] = f end
 function methods:GetScript(k) return self.scripts[k] end
 function methods:CreateTexture() return new("Texture", self) end

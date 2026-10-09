@@ -532,13 +532,15 @@ test("five-second seconds never cover the mana numbers or the frame label", func
   eq(label.points[1][5], 8, "label offset without the rule")
 end)
 
-test("/fmf test is the same switch as unlocking; an old test mode is switched off", function()
+test("/fmf test is the same as /fmf unlock (no toggle); an old test mode is switched off", function()
   local ns = M.load({ test = true, dbVersion = 5 })
   eq(ns.db.test, nil, "old test mode left on")
   eq(ns.db.locked, true)
   SlashCmdList.FULLMANAFOREVER("test")
   eq(ns.db.locked, false, "/fmf test did not unlock")
   SlashCmdList.FULLMANAFOREVER("test")
+  eq(ns.db.locked, false, "a second /fmf test locked the frame again")
+  SlashCmdList.FULLMANAFOREVER("lock")
   eq(ns.db.locked, true)
 end)
 
@@ -1402,4 +1404,53 @@ test("row above the icons: the frame label leaves dragged mana numbers alone", f
   eq(label.points[1][2], bar(ns).text)
   ns.db.textPoints.mana = { 300, 300 }; ns.PositionBar()
   eq(label.points[1][2], bar(ns), "label follows the dragged mana numbers")
+end)
+
+
+-- 0.8.3 ------------------------------------------------------------------------------
+test("/fmf hold keeps the potion switch, shows the potion grey with HOLD, ends after the next fight", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2; M.tick()
+  local b = buttons(ns)[1]
+  ok(slotVisible(ns, 1), "potion not lit")
+  SlashCmdList.FULLMANAFOREVER("hold")
+  eq(ns.db.enabled.potion, true, "hold switched the potion group off")
+  M.tick()
+  ok(slotVisible(ns, 1), "held potion hidden instead of grey")
+  ok(b.layers[1].icon.desaturated, "held potion not grey")
+  ok(b.holdText.shown, "no HOLD text"); eq(b.holdText.text, ns.L.holdLabel)
+  ok(not b.layers[1].glow.shown, "held potion still glows")
+  -- out of combat nothing ends it; the end of a fight does
+  M.Fire("PLAYER_REGEN_ENABLED"); eq(ns.IsHeld(), true, "hold ended without a fight")
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  eq(ns.IsHeld(), false, "hold still on after the fight")
+  M.tick()
+  ok(not b.layers[1].icon.desaturated, "potion stays grey"); ok(not b.holdText.shown, "HOLD text stays")
+  ok(b.layers[1].glow.shown, "glow not back")
+  -- a second /fmf hold ends it early
+  SlashCmdList.FULLMANAFOREVER("hold"); eq(ns.IsHeld(), true)
+  SlashCmdList.FULLMANAFOREVER("hold"); eq(ns.IsHeld(), false)
+end)
+
+test("hold started during a fight ends when that fight ends", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.combat = true
+  SlashCmdList.FULLMANAFOREVER("hold")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  eq(ns.IsHeld(), false)
+end)
+
+test("login: a short tip only the first time, the version line only when it changes", function()
+  local function logins(db)
+    local ns = M.load(db)
+    return ns, table.concat(M.printed, "\n")
+  end
+  local ns, out = logins(nil)
+  ok(out:find("unlock", 1, true), "no first-run tip: " .. out)
+  eq(ns.db.seenVersion, ns.VERSION)
+  ns, out = logins({ seenVersion = ns.VERSION })
+  ok(not out:find(ns.VERSION, 1, true) and not out:find("unlock", 1, true), "login message on every login: " .. out)
+  ns, out = logins({ seenVersion = "0.0.1" })
+  ok(out:find(ns.VERSION, 1, true), "no line after an update: " .. out)
 end)

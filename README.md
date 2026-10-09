@@ -67,7 +67,7 @@ otherwise the game does not load it.
 |---|---|
 | `/fmf` | open the settings (also in Options → AddOns and the addon menu at the minimap) |
 | `/fmf items` | open the item list |
-| `/fmf hold` | hold / release potion suggestions |
+| `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |
 | `/fmf unlock` / `/fmf lock` | move the icons |
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |
 | `/fmf item <id> <amount> [potion\|rune\|gem\|herb\|gear]` | add your own item |

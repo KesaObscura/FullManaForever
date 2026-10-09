@@ -82,6 +82,8 @@ local function Check(parent, text, get, set, tip, enabledIf)
   cb:SetPushedTexture("Interface\\Buttons\\UI-CheckBox-Down")
   cb:SetHighlightTexture("Interface\\Buttons\\UI-CheckBox-Highlight", "ADD")
   cb:SetCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check")
+  -- a greyed-out box shows a grey tick, not the bright one
+  cb:SetDisabledCheckedTexture("Interface\\Buttons\\UI-CheckBox-Check-Disabled")
   cb.label = Label(parent, text)
   cb.label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
   -- the label is part of the button: it toggles the box and shows the tooltip
@@ -96,6 +98,7 @@ local function Check(parent, text, get, set, tip, enabledIf)
     if enabledIf then
       local on = enabledIf() and true or false
       cb:SetEnabled(on)
+      cb:SetAlpha(on and 1 or 0.6)
       if on then cb.label:SetTextColor(1, 1, 1) else cb.label:SetTextColor(0.5, 0.5, 0.5) end
     end
   end
@@ -602,7 +605,8 @@ Build = function()
   for i, group in ipairs(ns.GROUPS) do
     if ns.ForMyClass(group) then
       local cb = Check(col, L["grp_" .. group.key], function() return db.enabled[group.key] end,
-        function(v) db.enabled[group.key] = v; ns.Layout(true) end) -- auto bar length follows
+        function(v) db.enabled[group.key] = v; ns.Layout(true) end, -- auto bar length follows
+        L["tipGrp_" .. group.key])
       if first then cb:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y); first = false end
       local st = Label(col, "", "GameFontHighlightSmall")
       if st.SetWordWrap then st:SetWordWrap(false) end -- one line; long texts end in "..."
@@ -673,6 +677,9 @@ local function StatusText(i, group)
   local db = ns.db
   if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r", true end
   if group.spells then return SpellStatus() end
+  if group.key == "potion" and ns.IsHeld and ns.IsHeld() then
+    return "|cffffaa33" .. L.stHold .. "|r", true
+  end
   local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
   if not item then return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r", true end
   if not ready then

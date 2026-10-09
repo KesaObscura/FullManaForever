@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.2"
+ns.VERSION = "0.8.3"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -630,9 +630,41 @@ local function CreateButton()
   b.hp:SetAllPoints()
   b.layers = {}
   for k = 1, MAX_LAYERS do b.layers[k] = CreateLayer(b.hp) end  -- gate 3: mana band per item
+  -- "/fmf hold": the potion stays visible, grey, with this word on it (own frame above
+  -- the layers, which are child frames and would cover a text of b.hp)
+  local holdTop = CreateFrame("Frame", nil, b.hp)
+  holdTop:SetAllPoints()
+  holdTop:SetFrameLevel((b.hp:GetFrameLevel() or 1) + MAX_LAYERS + 5)
+  b.holdText = holdTop:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  OutlineFont(b.holdText, "GameFontNormal", true)
+  b.holdText:SetPoint("CENTER")
+  b.holdText:Hide()
   b.outer:Hide()
   return b
 end
+
+-- "/fmf hold": mana potions are not suggested until the end of the next fight (a fight that
+-- is already running counts). Not saved: a reload ends it too. The "Mana potions" switch
+-- is left alone.
+local held, heldFightSeen = false, false
+function ns.IsHeld() return held end
+function ns.SetHold(on)
+  held = on and true or false
+  heldFightSeen = held and InCombatLockdown() and true or false
+end
+local holdFrame = CreateFrame("Frame")
+holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+holdFrame:SetScript("OnEvent", function(_, event)
+  if not held then return end
+  if event == "PLAYER_REGEN_DISABLED" then
+    heldFightSeen = true
+  elseif heldFightSeen then
+    ns.SetHold(false)
+    Print(L.holdOff)
+    if ns.RefreshOptions then ns.RefreshOptions() end
+  end
+end)
 
 -- mana bar next to the icons, drawn by the engine from the secret value, with ticks.
 -- Vertical: the fill stands on the bottom, so spending mana lowers it from the top.
@@ -1162,9 +1194,18 @@ local function UpdateButton(i, b, maxMana, maxHP)
   if #cands == 0 then b.outer:Hide() return end
 
   local hpCost
+  -- on hold: the potion is shown grey with "HOLD" exactly where it would light up
+  local hold = held and group.key == "potion"
+  if b.holdShown ~= hold then
+    b.holdShown = hold
+    b.holdText:SetText(L.holdLabel)
+    b.holdText:SetShown(hold)
+  end
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
+    if hold then l.icon:SetDesaturated(true) end
+    if l.held ~= hold then l.held = hold; l.glow:SetShown(not hold) end
     ApplySweep(l, c.it.id)
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
@@ -1423,15 +1464,16 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
   elseif cmd == "items" or cmd == "list" then
     if ns.ToggleLibrary then ns.ToggleLibrary() end
   elseif cmd == "hold" then
-    db.enabled.potion = not db.enabled.potion
-    Print(db.enabled.potion and L.holdOff or L.holdOn)
+    ns.SetHold(not held)
+    Print(held and L.holdOn or L.holdOff)
+    if ns.RefreshOptions then ns.RefreshOptions() end
   elseif cmd == "unlock" then
     db.locked = false; ns.ApplyLock(); Print(L.unlocked)
   elseif cmd == "lock" then
     db.locked = true; ns.ApplyLock(); Print(L.locked)
   elseif cmd == "test" then
-    -- test mode and the unlocked frame are one thing now
-    db.locked = not db.locked; ns.ApplyLock(); Print(db.locked and L.locked or L.unlocked)
+    -- test mode and the unlocked frame are one thing now: the same as /fmf unlock
+    db.locked = false; ns.ApplyLock(); Print(L.unlocked)
   elseif cmd == "item" and args[2] == "clear" then
     wipe(db.custom); ns.RebuildLists(); RefreshLibrary(); Print(L.itemClear)
   elseif cmd == "item" then
@@ -1593,6 +1635,12 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     end
     C_Timer.NewTicker(0.1, SafeUpdate)
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    Print(L.loaded, ns.VERSION)
+    -- a short tip on the very first login, afterwards one line only when the version changes
+    if not db.seenVersion then
+      Print(L.firstRun)
+    elseif db.seenVersion ~= ns.VERSION then
+      Print(L.loaded, ns.VERSION)
+    end
+    db.seenVersion = ns.VERSION
   end
 end)

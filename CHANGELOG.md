@@ -1,5 +1,13 @@
 # Changelog
 
+**Full Mana Forever 0.8.3**
+
+- `/fmf hold` now holds mana potions only until the end of the next fight (or the one you are in) and then releases them by itself, with a chat line. While held, the potion icon is grey and says "HOLD" instead of disappearing; the settings show "on hold" for the potion group. Tip: put `/fmf hold` in a macro. The old `/fmf hold` switched the "Mana potions" group off; if it is still off, switch it on in the settings
+- `/fmf test` does the same as `/fmf unlock` (before, it switched a separate test view on and off)
+- Switched-off settings show a grey tick instead of a gold one
+- Each icon group in the settings has a tooltip that says what it shows
+- The tip at login appears only the first time; after an update one line names the new version, otherwise the addon stays silent
+
 **Full Mana Forever 0.8.2**
 
 - Mana regen turns green when it is above your normal rate: out of combat it is compared with your lowest normal regen since the last level-up or gear change (drinking, Spirit Tap, buffs, ...); in combat Forever hides the value from addons, so only your own Evocation (8 s) and Ley Line reading (15 s) count
