@@ -104,5 +104,6 @@ and `/fmf log` (kept in releases for bug reports).
    fix bugs; one reply in the Blizzard forum thread "WoW Forever Addons" (UI and Macro), one
    Reddit post (check the sub's rules), short notes to Icy Veins / Warcraft Tavern / mein-mmo
    (texts by Claude, sent by the owner). Reply to CurseForge comments within 1-2 days.
-6. Untested in game, check when it comes up: druid in forms, Life Tap, group log.
+6. Untested in game: owner's printed list `docs/test-checklist.md` (druid forms, Life Tap, group
+   log, Mana Agate, Evocation, Inner Focus buff, launch-day Interface check). Update it as answers come.
 7. After launch: 0.8.4 HUD polish; maybe Wago / WoWInterface mirrors.
