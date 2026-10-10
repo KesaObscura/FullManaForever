@@ -96,7 +96,7 @@ and `/fmf log` (kept in releases for bug reports).
    "When to light up" in all languages); new settings screenshot for the gallery.
 3. Released on GitHub: 0.8.3 and 0.8.4 (10 Oct). CurseForge uploads by the owner: 0.8.3 on 11 Oct
    (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold new), 0.8.4 on
-   13 Oct. 0.8.5 starts 11 Oct (owner).
+   Monday 12 Oct. 0.8.5 starts 11 Oct (owner).
 4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions); 16-20 Oct
    only fixes. 21 Oct (beta end): the most stable and complete version is out.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
