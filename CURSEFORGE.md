@@ -10,7 +10,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 - **Icons that light up at the right time.** One icon per cooldown group: mana potions, Demonic/Dark Runes, mage mana gems, other mana consumables, and use effects of equipped gear.
 - **Right potion for the deficit.** With several potions in your bags, the icon shows the **strongest potion that will not overflow**: a weak one when you are slightly down, a strong one when you are low.
-- **One simple setting: Drinking.** *No waste* waits until the whole potion fits. *More per fight* uses the average restore, so you drink earlier and fit more potions into a long fight. *Strongest only* keeps it simple.
+- **One simple setting: When to light up.** *No waste* waits until the whole potion fits. *More per fight* uses the average restore, so you drink earlier and fit more potions into a long fight. *Strongest only* keeps it simple.
 - **Runes are safe.** A rune is only shown when you will keep a configurable share of your health after its damage (30 % by default).
 - **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Ley Line reading (Skyborne) get their own icon: it lights up when the spell is ready and your mana is at or below a share you choose (50 % by default). Life Tap lights up like a potion when its mana fits, with the same health check as runes. Forever hides spell cooldowns from addons in combat, so the addon counts them from your cast — never too early.
 - **Made for wanding.** Each wand shot blocks potions and spells for a moment. The icon stays lit and shows that short wait as a sweep, like the action bar: the potion fits, stop shooting and drink.
@@ -65,7 +65,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 - **Does it work in combat?** Yes, it was built and tested for combat in Forever.
 - **Does it drink for me?** No. The icon tells you when; you press your potion button.
 - **Does it work in WoW Classic Era, Hardcore or retail?** No. It is made for World of Warcraft: Forever (client 1.60.1) and its addon rules.
-- **Why does the icon not light up at 90 % mana?** *No waste*: it waits until the whole potion fits into your missing mana. Want to drink earlier? Switch *Drinking* to *More per fight*.
+- **Why does the icon not light up at 90 % mana?** *No waste*: it waits until the whole potion fits into your missing mana. Want to drink earlier? Switch *When to light up* to *More per fight*.
 - **Different settings for my healer and my mage?** Yes: each character can have its own profile, or copy another character's settings.
 - **How do I save my expensive potions?** Switch single items off in `/fmf items`, or hold potions for one fight with `/fmf hold`.
 

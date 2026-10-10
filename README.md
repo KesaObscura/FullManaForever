@@ -35,7 +35,7 @@ when the icon lights up.
   mana consumables, and use effects of equipped gear.
 - **Right potion for the deficit**: with several potions in your bags the icon shows the
   strongest one that will not overflow.
-- **Drinking** setting: *No waste* (default) waits until the whole potion fits;
+- **When to light up** setting: *No waste* (default) waits until the whole potion fits;
   *More per fight* uses the average restore (earlier, sometimes a small overflow);
   *Strongest only*.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
@@ -77,7 +77,7 @@ and the regen running right now, per second, in and out of combat.
 - **Does it work in WoW Classic Era, Hardcore or retail?** No. It is made for World of
   Warcraft: Forever (client 1.60.1) and its addon rules.
 - **Why does the icon not light up at 90 % mana?** *No waste*: it waits until the whole potion
-  fits into your missing mana. Switch *Drinking* to *More per fight* to drink earlier.
+  fits into your missing mana. Switch *When to light up* to *More per fight* to drink earlier.
 - **Different settings per character?** Yes: Shared or an own profile per character, and copy
   another character's settings.
 - **Missing a feature?** Ask in the CurseForge comments or open an issue here: requests are

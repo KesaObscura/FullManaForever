@@ -292,6 +292,7 @@ local Build
 -- nothing in the bags (or switched off) keeps the short status next to its name.
 -- Each row hangs on the one above, so only the anchors change, never the frames.
 local GROUP_FULL, GROUP_COMPACT = 42, 26
+local EXTRA_H = 30 -- a group's own setting (rune health, spell mana) on the row under it
 local function PlaceGroups(force)
   local changed = force
   for _, r in ipairs(groupRows) do
@@ -308,12 +309,18 @@ local function PlaceGroups(force)
       r.st:SetPoint("TOPLEFT", r.cb, "TOPLEFT", 30, -20)
       r.st:SetWidth(W - 2 * PAD - 30)
     end
+    local below, bx, gap = r.cb, 0, (r.compact and GROUP_COMPACT or GROUP_FULL)
+    if r.extra then -- the group's own setting sits right under it, indented like a status line
+      r.extra:ClearAllPoints()
+      r.extra:SetPoint("TOPLEFT", r.cb, "TOPLEFT", 30, -gap + 4)
+      below, bx, gap = r.extra, -30, EXTRA_H
+    end
     local nextRow = groupRows[k + 1]
     local f, dx = nextRow and nextRow.cb, 0
     if not nextRow and groupTail then f, dx = groupTail.frame, groupTail.dx end
     if f then
       f:ClearAllPoints()
-      f:SetPoint("TOPLEFT", r.cb, "TOPLEFT", dx, -(r.compact and GROUP_COMPACT or GROUP_FULL))
+      f:SetPoint("TOPLEFT", below, "TOPLEFT", dx + bx, -gap)
     end
   end
 end
@@ -663,7 +670,21 @@ Build = function()
   registry[#registry + 1] = { Refresh = function() desc:SetText(stratDesc[Strategy()]) end }
 
   -- groups are chained: a group with nothing to report keeps its status on the same
-  -- line and takes less room (see PlaceGroups); the first one sits at a fixed spot
+  -- line and takes less room (see PlaceGroups); the first one sits at a fixed spot.
+  -- Runes and own spells have one setting each: it sits right under the group.
+  local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
+  local extras = {
+    rune = function()
+      return Stepper(col, PAD + 30, L.optMargin, function() return db.runeMargin end,
+        function(v) db.runeMargin = v; ns.InvalidateCurves() end,
+        { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pct })
+    end,
+    spell = function()
+      return Stepper(col, PAD + 30, L.optSpellThr, function() return db.spellThreshold end,
+        function(v) db.spellThreshold = v; ns.InvalidateCurves() end,
+        { step = 0.05, lo = 0.10, hi = 0.90, tip = L.tipSpellThr, fmt = pct })
+    end,
+  }
   local first = true
   for i, group in ipairs(ns.GROUPS) do
     if ns.ForMyClass(group) then
@@ -673,30 +694,23 @@ Build = function()
       if first then cb:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y); first = false end
       local st = Label(col, "", "GameFontHighlightSmall")
       if st.SetWordWrap then st:SetWordWrap(false) end -- one line; long texts end in "..."
-      groupRows[#groupRows + 1] = { cb = cb, st = st, i = i }
+      local row = { cb = cb, st = st, i = i }
       c.y = c.y - GROUP_FULL -- room for the worst case: every group with a status line
+      if extras[group.key] then
+        local stp = extras[group.key]()
+        row.extra = stp.label
+        local key = group.key
+        ActiveIf(function() return db.enabled[key] end, stp)
+        c.y = c.y - EXTRA_H
+      end
+      groupRows[#groupRows + 1] = row
     end
   end
-  local margin = Stepper(col, PAD + 4, L.optMargin, function() return db.runeMargin end,
-    function(v) db.runeMargin = v; ns.InvalidateCurves() end,
-    { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin,
-      fmt = function(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end })
-  groupTail = { frame = margin.label, dx = 4 }
-  if #groupRows == 0 then margin.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 4, c.y) end
-  c.y = c.y - 36
-  -- own spells (Evocation, Innervate, ...): one mana% for all of them
-  local spellThr = Stepper(col, PAD + 4, L.optSpellThr, function() return db.spellThreshold end,
-    function(v) db.spellThreshold = v; ns.InvalidateCurves() end,
-    { step = 0.05, lo = 0.10, hi = 0.90, tip = L.tipSpellThr,
-      fmt = function(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end })
-  spellThr.label:SetPoint("TOPLEFT", margin.label, "TOPLEFT", 0, -32)
-  c.y = c.y - 32
-  ActiveIf(function() return db.enabled.rune end, margin)
-  ActiveIf(function() return db.enabled.spell end, spellThr)
   local items = Button(col, L.optItems, 180, 24)
-  items:SetPoint("TOPLEFT", spellThr.label, "TOPLEFT", -4, -36)
   items:SetScript("OnClick", function() ns.ToggleLibrary(true) end)
   Tip(items, L.optItems, L.tipItems)
+  groupTail = { frame = items, dx = 0 }
+  if #groupRows == 0 then items:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y) end
   c.y = c.y - 34
   PlaceGroups(true)
 

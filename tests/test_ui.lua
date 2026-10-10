@@ -141,7 +141,10 @@ test("options: empty groups keep their status on the same line", function()
   local potion, rune = rows[1], rows[2]
   eq(potion.st.points[1][2], potion.cb, "potion status not below its checkbox")
   eq(rune.st.points[1][2], rune.cb.label, "empty rune status not next to the name")
-  eq(rows[3].cb.points[1][5], -26, "row after an empty group is not compact")
+  -- the rune's own setting sits right under the (compact) rune row, the next group under it
+  eq(rune.extra.points[1][2], rune.cb, "rune health not under the rune group")
+  eq(rune.extra.points[1][5], -22, "rune health after an empty group is not compact")
+  eq(rows[3].cb.points[1][2], rune.extra, "next group not under the rune health")
   eq(rune.cb.points[1][5], -42, "row after a full group")
 end)
 
