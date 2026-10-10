@@ -121,8 +121,10 @@ and `/fmf log` (kept in releases for bug reports).
 - Gallery workflow (owner): images are updated as the addon changes. When a change alters what
   a gallery image shows, ask the owner for screenshots during development or at the latest with
   the GitHub release, and prepare the images (`tools/gallery.py`, descriptions <= 256) then.
-  On CurseForge since 0.8.0: 9 images (hero, right potion, rule column, rule row, mana text, item
-  list, unlocked, own spells, settings).
+  On CurseForge since 0.8.2: 12 images in this order: hero ("Drink at the right moment"), regen at a
+  glance, right potion, rule row, rule column, just the regen, move texts, mana text, item list,
+  easy to place, own spells, settings. Featured (star, under the description): hero, regen at a
+  glance, right potion, rule row, own spells.
 - Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
   progress is already taken off); the addon uses the real value, so an icon lights up only when
   the cast lands. `UnitPowerPercent(..., predicted=true)` could light it up during the cast;
