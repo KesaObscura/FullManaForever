@@ -190,3 +190,20 @@ and `/fmf log` (kept in releases for bug reports).
   user names (e.g. commenters) in texts; "features asked for in the comments get built" is fine.
   CurseForge avatar: own flask with an infinity sign (no new logo needed). 9 languages (esMX uses
   the esES texts), not 10.
+
+## Roadmap and reminders (owner asked to be reminded; keep this list current)
+
+1. Owner tests 0.8.3 profiles in game (blocks everything else).
+2. 0.8.3 step 3: settings order and wording (thresholds under their groups, "Drinking" ->
+   "When to light up" in all languages); new settings screenshot for the gallery.
+3. Release 0.8.3 (~14-15 Oct): merge PR (new README with docs/images goes live), owner tags
+   v0.8.3, GitHub release in the new format, new CurseForge description (CURSEFORGE.md), new
+   gallery image for profiles and /fmf hold.
+4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions); 16-20 Oct
+   only fixes. 21 Oct (beta end): the most stable and complete version is out.
+5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
+   fix bugs; one reply in the Blizzard forum thread "WoW Forever Addons" (UI and Macro), one
+   Reddit post (check the sub's rules), short notes to Icy Veins / Warcraft Tavern / mein-mmo
+   (texts by Claude, sent by the owner). Reply to CurseForge comments within 1-2 days.
+6. Untested in game, check when it comes up: druid in forms, Life Tap, group log.
+7. After launch: 0.8.4 HUD polish; maybe Wago / WoWInterface mirrors.
