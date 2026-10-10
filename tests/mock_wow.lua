@@ -30,10 +30,19 @@ local function new(kind, parent)
 end
 M.new = new
 
-function methods:Show() self.shown = true end
+function methods:Show()
+  local was = self.shown
+  self.shown = true
+  if not was and self.scripts.OnShow then self.scripts.OnShow(self) end
+end
 function methods:Hide()
+  local was = self.shown
   self.shown = false
-  if self.scripts.OnHide then self.scripts.OnHide(self) end
+  if was and self.scripts.OnHide then self.scripts.OnHide(self) end
+end
+function methods:HookScript(k, f)
+  local old = self.scripts[k]
+  self.scripts[k] = old and function(...) old(...); f(...) end or f
 end
 function methods:SetShown(v) if v then self:Show() else self:Hide() end end
 function methods:IsShown() return self.shown end
@@ -233,7 +242,7 @@ function M.reset(opts)
     if cd then return cd[1], cd[2], cd[3] == nil and 1 or cd[3] end
     return 0, 0, 1
   end }
-  _G.GetTime = function() return 100 end
+  _G.GetTime = function() return S.time or 100 end
   _G.InCombatLockdown = function() return S.combat end
   _G.IsInInstance = function() count("IsInInstance"); return S.instance ~= "none", S.instance end
   _G.IsInRaid = function() count("IsInRaid"); return S.raid end

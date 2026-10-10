@@ -190,6 +190,7 @@ local function Build(point)
     for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverItems" then listed = true end end
     if not listed then table.insert(UISpecialFrames, "FullManaForeverItems") end
   end
+  ns.RegisterPopup(lib, "items") -- over the settings when they are open
 
   local bg = lib:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()

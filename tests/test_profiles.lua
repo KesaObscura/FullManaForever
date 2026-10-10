@@ -219,3 +219,33 @@ test("Esc closes the settings and the profiles window", function()
   ok(not _G.FullManaForeverOptions:IsShown(), "settings window stays open on Esc")
   ok(not _G.FullManaForeverProfiles:IsShown(), "profiles window stays open on Esc")
 end)
+
+test("popups: over the settings, settings dimmed; Esc closes one window per press", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local win = FullManaForeverOptions
+  ok(not win.shade.shown, "dimmed without a popup")
+  ns.ToggleProfiles(true)
+  local pwin = FullManaForeverProfiles
+  ok(win.shade.shown, "settings not dimmed under the profiles window")
+  eq(pwin.points[1][2], win, "profiles window not centred on the settings")
+  -- Esc as the game does it: every listed window is hidden, then the hook runs
+  local function Esc()
+    for _, name in ipairs(UISpecialFrames) do
+      local f = _G[name]
+      if f and f:IsShown() then f:Hide() end
+    end
+    M.hooks.CloseSpecialWindows()
+  end
+  Esc()
+  ok(not pwin:IsShown(), "profiles window still open")
+  ok(win:IsShown(), "first Esc closed the settings too")
+  ok(not win.shade.shown, "settings still dimmed")
+  M.state.time = 101 -- the next key press comes later
+  Esc()
+  ok(not win:IsShown(), "second Esc did not close the settings")
+  -- the item list on its own: a normal window, nothing dimmed
+  ns.ToggleLibrary(true)
+  ok(FullManaForeverItems:IsShown())
+  ok(not win.shade.shown)
+end)

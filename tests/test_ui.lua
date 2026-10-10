@@ -160,20 +160,24 @@ test("options: settings explain themselves on hover", function()
   ok(tips >= 6, "checkboxes with tooltips: " .. tips)
 end)
 
-test("item list keeps its place when the language changes", function()
+test("item list: on its own it keeps its place; with the settings open it moves over them", function()
   local ns = M.load(nil)
   ns.ToggleLibrary(true)
   local lib = FullManaForeverItems
   lib:ClearAllPoints()
   lib:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", 123, 456)
+  ns.ToggleLibrary(); ns.ToggleLibrary(true)
+  eq(lib.points[1][1], "TOPLEFT", "item list moved without the settings")
   ns.ToggleOptions(true)
+  eq(lib.points[1][1], "CENTER"); eq(lib.points[1][2], FullManaForeverOptions, "not over the settings")
+  ok(FullManaForeverOptions.shade.shown, "settings not dimmed")
+  -- a language change (the settings rebuild themselves): the list stays open over the new window
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
   end
   ok(FullManaForeverItems ~= lib, "window not rebuilt")
-  local p = FullManaForeverItems.points[1]
-  eq(p[1], "TOPLEFT"); eq(p[4], 123, "x"); eq(p[5], 456, "y")
   ok(FullManaForeverItems.shown, "window closed by the language change")
+  eq(FullManaForeverItems.points[1][2], FullManaForeverOptions, "list not over the new settings")
 end)
 
 test("item list: the owned column cannot run into the amount column", function()

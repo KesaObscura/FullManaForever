@@ -7,7 +7,7 @@
 - `/fmf test` does the same as `/fmf unlock` (before, it switched a separate test view on and off)
 - Switched-off settings show a grey tick instead of a gold one; "Min HP left after rune" and "Spells at mana <=" are greyed out while their group is off
 - Every control in the settings and the item list has a tooltip (each icon group, dropdowns, -/+ buttons, close buttons), also while it is greyed out
-- Opening the settings or the item list again brings the window to the front (it could hide behind another one); Esc closes the settings window too
+- The item list and the profiles window open over the settings, framed in gold; the settings are dimmed until you close them, so no window can hide behind another. Esc closes one window per press, the settings last. On its own (`/fmf items`) the item list is a normal window
 - The description in the game's addon list says what the addon does, in your game language
 - The tip at login appears only on a new install; after an update one line names the new version, otherwise the addon stays silent
 

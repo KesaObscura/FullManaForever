@@ -11,6 +11,10 @@ local groupRows = {}      -- consumable groups in the window: { cb, st, i, compa
 local groupTail           -- { frame, dx }: what follows the last group (rune margin)
 local registry = widgets  -- where the widget helpers register (see WithRegistry)
 local openList            -- the dropdown list that is open right now (only one at a time)
+-- windows that open over the settings (item list, profiles): one at a time, the settings dimmed
+local popups = {}         -- [key] = frame
+local popupClosedAt, winHiddenAt -- GetTime() of the last close: Esc closes one window per press
+local UpdateShade, OnSettingsShown
 
 local W, PAD = 440, 16
 -- fixed columns inside a settings column: every dropdown has the same width and left
@@ -360,6 +364,20 @@ Build = function()
   top:SetPoint("TOPRIGHT")
   top:SetHeight(2)
   top:SetColorTexture(0.3, 0.55, 1, 0.9)
+
+  -- while the item list or the profiles window is open over the settings, the settings are
+  -- dimmed and take no clicks: only one window can be used at a time
+  local shade = CreateFrame("Frame", nil, win)
+  shade:SetAllPoints()
+  shade:SetFrameLevel((win:GetFrameLevel() or 1) + 50)
+  shade:EnableMouse(true)
+  local shadeTex = shade:CreateTexture(nil, "OVERLAY")
+  shadeTex:SetAllPoints()
+  shadeTex:SetColorTexture(0, 0, 0, 0.6)
+  shade:Hide()
+  win.shade = shade
+  win:SetScript("OnShow", function() OnSettingsShown() end)
+  win:SetScript("OnHide", function() winHiddenAt = GetTime(); UpdateShade() end)
 
   local title = Label(win, "Full Mana Forever  |cff888888v" .. ns.VERSION .. "|r", "GameFontNormalLarge")
   title:SetPoint("TOPLEFT", PAD, -12)
@@ -766,6 +784,55 @@ function ns.ToggleOptions(forceShow)
 end
 
 ------------------------------------------------------------------------
+-- windows over the settings
+------------------------------------------------------------------------
+UpdateShade = function()
+  if not win or not win.shade then return end
+  local open = false
+  for _, p in pairs(popups) do
+    if p:IsShown() then open = true end
+  end
+  win.shade:SetShown(open and win:IsShown())
+end
+
+local function CenterOnSettings(f)
+  if win and win:IsShown() then
+    f:ClearAllPoints()
+    f:SetPoint("CENTER", win, "CENTER", 0, 0)
+  end
+end
+
+-- the settings were opened (or rebuilt) while a window was already open: it moves over them
+OnSettingsShown = function()
+  for _, p in pairs(popups) do
+    if p:IsShown() then CenterOnSettings(p); p:Raise() end
+  end
+  UpdateShade()
+end
+
+-- a window that opens over the settings: above them (own strata), centred on them, with a
+-- gold frame and a shadow so it stands out. Without the settings it is a normal window.
+function ns.RegisterPopup(f, key)
+  popups[key] = f
+  f:SetFrameStrata("FULLSCREEN")
+  local shadow = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+  shadow:SetPoint("TOPLEFT", -10, 10)
+  shadow:SetPoint("BOTTOMRIGHT", 10, -10)
+  shadow:SetColorTexture(0, 0, 0, 0.55)
+  local gold = { 0.95, 0.78, 0.3, 0.9 }
+  for _, side in ipairs({ { "TOPLEFT", "TOPRIGHT", true }, { "BOTTOMLEFT", "BOTTOMRIGHT", true },
+                          { "TOPLEFT", "BOTTOMLEFT", false }, { "TOPRIGHT", "BOTTOMRIGHT", false } }) do
+    local t = f:CreateTexture(nil, "OVERLAY")
+    t:SetPoint(side[1])
+    t:SetPoint(side[2])
+    if side[3] then t:SetHeight(2) else t:SetWidth(2) end
+    t:SetColorTexture(gold[1], gold[2], gold[3], gold[4])
+  end
+  f:HookScript("OnShow", function() CenterOnSettings(f); UpdateShade() end)
+  f:HookScript("OnHide", function() popupClosedAt = GetTime(); UpdateShade() end)
+end
+
+------------------------------------------------------------------------
 -- profiles window: copy from another character, reset, delete, undo
 ------------------------------------------------------------------------
 local pwin, RefreshProfiles
@@ -935,6 +1002,7 @@ local function BuildProfiles()
   end
   pwin:SetScript("OnShow", function() RefreshProfiles() end)
   pwin:SetScript("OnHide", function() confirm:Hide() end) -- a question never waits for later
+  ns.RegisterPopup(pwin, "profiles")
 end
 
 function ns.ToggleProfiles(forceShow)
@@ -950,9 +1018,16 @@ end
 
 -- Esc: the game hides the frames listed in UISpecialFrames. In game the settings window stayed
 -- open while the item list and the profiles window closed, so the same close is hooked here
--- too (a post-hook on our own frames only; nothing of the game is changed)
+-- too (a post-hook on our own frames only; nothing of the game is changed). One window per
+-- press: when a window over the settings closed, the settings come back at once (same frame).
 if hooksecurefunc and CloseSpecialWindows then
   hooksecurefunc("CloseSpecialWindows", function()
+    local now = GetTime()
+    if popupClosedAt == now then
+      -- this Esc closed a window over the settings: the settings stay (the next Esc closes them)
+      if win and winHiddenAt == now and not win:IsShown() then win:Show() end
+      return
+    end
     for _, f in ipairs({ win, pwin }) do
       if f and f:IsShown() then f:Hide() end
     end
