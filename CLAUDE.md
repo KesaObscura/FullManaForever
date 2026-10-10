@@ -35,10 +35,17 @@ and `/fmf log` (kept in releases for bug reports).
 ## Releases
 
 - The owner uploads to CurseForge by hand, release type **Release**.
-- CurseForge summary (short description): at most 256 characters. Since 0.8.0 (226): "Shows a
-  mana potion, rune, mana item or your own mana spell (Evocation, Innervate, Eureka! ...) the
-  moment it is ready and nothing is wasted. Plus a mana bar with the five-second rule and your
-  live mana regen. For WoW Forever." Gallery image descriptions: also at most 256.
+- CurseForge summary (short description): at most 256 characters. Since 10 Oct 2026 (248): "Never
+  waste a mana potion again: the right potion, rune, mana gem or mana spell (Evocation, Innervate,
+  Mana Tide) lights up when it is ready and fits your missing mana. Mana bar with five-second rule
+  and live regen. For every WoW Forever mana user." (owner: not only healers). CurseForge
+  categories: main HUDs; additional Healer, Caster, Bags & Inventory, Combat. Avatar: own flask
+  with an infinity sign. GitHub About (set by hand): "World of Warcraft: Forever addon for healers
+  and every mana user: lights up your mana potion, rune, mana gem or own mana spell (Evocation,
+  Innervate, Mana Tide...) the moment it is ready and fits your missing mana. Mana bar with the
+  five-second rule (5SR) and live mana regen, also in combat. 9 languages."; 16 topics incl.
+  wow-forever, classic-plus, five-second-rule; social preview = docs/images/social-preview.png.
+  Gallery image descriptions: also at most 256.
 - GitHub release: tag `vX.Y.Z` on the release commit, not a pre-release, same changelog text
   and zip. Title "Full Mana Forever X.Y.Z – WoW Forever mana addon"; body = two-line pitch,
   install line (CurseForge app or unzip into Interface/AddOns), the changelog, bug-report link.
@@ -118,6 +125,9 @@ and `/fmf log` (kept in releases for bug reports).
   when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
   replace the 0.7.0 ones on CurseForge. All row images were re-shot with the 0.8.x bar (0.8.1/0.8.2
   uploads); every image on CurseForge is current as of 0.8.2.
+- The finished gallery images (as on CurseForge) are kept in `docs/gallery/`. The in-game source
+  screenshots are NOT in the repo (they show character names and chat): the owner keeps them;
+  `tools/gallery.py` expects them as `<workdir>/images/<n>.webp`, numbers from the old session.
 - Gallery workflow (owner): images are updated as the addon changes. When a change alters what
   a gallery image shows, ask the owner for screenshots during development or at the latest with
   the GitHub release, and prepare the images (`tools/gallery.py`, descriptions <= 256) then.
