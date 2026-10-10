@@ -257,6 +257,7 @@ function M.reset(opts)
   _G.CloseSpecialWindows = M.noop
   M.sounds = {}
   _G.PlaySound = function(id) M.sounds[#M.sounds + 1] = id end
+  _G.PlaySoundFile = function(path) M.sounds[#M.sounds + 1] = path; return not M.state.noSoundFile end
   _G.HideUIPanel = function() count("HideUIPanel") end
   _G.SettingsPanel = nil
   _G.Settings = nil

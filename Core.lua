@@ -1437,7 +1437,7 @@ end
 
 -- optional sound when the mana potion cooldown is over (item cooldowns are readable in combat,
 -- the mana is not: the sound means "a potion is ready again", not "it fits")
-local POTION_SOUND = 8960 -- the ready check sound: in the game since the beginning, easy to hear
+local POTION_SOUND = 8960 -- fallback: the ready check sound, in the game since the beginning
 local potionIndex, potionWaiting
 local function PotionSound()
   if not potionIndex then
@@ -1454,8 +1454,12 @@ local function PotionSound()
   end
 end
 
--- on the Master channel, so it is heard even with sound effects turned down
+-- the addon's own sound (a drop and a bell, tools/sound.py "b"), on the Master channel so it is
+-- heard even with sound effects turned down; the ready check if the file cannot be played
+local POTION_SOUND_FILE = "Interface\\AddOns\\FullManaForever\\Sounds\\potion-ready.ogg"
 function ns.PlayPotionSound()
+  local ok, willPlay = pcall(PlaySoundFile, POTION_SOUND_FILE, "Master")
+  if ok and willPlay then return end
   pcall(PlaySound, (SOUNDKIT and SOUNDKIT.READY_CHECK) or POTION_SOUND, "Master")
 end
 
