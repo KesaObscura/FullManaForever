@@ -1,5 +1,11 @@
 # Changelog
 
+**Full Mana Forever 0.8.4**
+
+- New option under Mana potions: "Sound when ready again" plays a short sound when your mana potion cooldown is over, also in combat (off by default; you hear it once when you switch it on). Three sounds of the addon's own to choose from: Drop and bell, Crystal rise, Glass notes
+- The five-second rule counts down in whole seconds (5, 4, 3, 2, 1); new option "Whole seconds" under Five-second rule, switch it off for tenths
+- On the unlocked frame only icons you carry glow; grey placeholders do not
+
 **Full Mana Forever 0.8.3**
 
 - Profiles: all characters share one set of settings ("Shared"), or a character uses its own ("This character", switch at the top of the settings). Its own settings start as a copy of the shared ones and are kept when it switches back. "Profiles..." copies another character's settings (with class colour, level and last login), resets the profile in use or deletes the settings of characters you no longer play; each asks first, and the last change can be undone until you log out. Also `/fmf profile`. Your settings so far become "Shared", so nothing changes until you choose. Language and own items stay the same for every character; switched-off items belong to the profile

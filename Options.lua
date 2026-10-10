@@ -310,10 +310,15 @@ local function PlaceGroups(force)
       r.st:SetWidth(W - 2 * PAD - 30)
     end
     local below, bx, gap = r.cb, 0, (r.compact and GROUP_COMPACT or GROUP_FULL)
-    if r.extra then -- the group's own setting sits right under it, indented like a status line
-      r.extra:ClearAllPoints()
-      r.extra:SetPoint("TOPLEFT", r.cb, "TOPLEFT", 30, -gap + 4)
-      below, bx, gap = r.extra, -30, EXTRA_H
+    -- the group's own settings sit right under it, indented like a status line, one per row
+    for n, e in ipairs(r.extras or {}) do
+      e:ClearAllPoints()
+      if n == 1 then
+        e:SetPoint("TOPLEFT", r.cb, "TOPLEFT", 30, -gap + 4)
+      else
+        e:SetPoint("TOPLEFT", below, "TOPLEFT", 0, -EXTRA_H)
+      end
+      below, bx, gap = e, -30, EXTRA_H
     end
     local nextRow = groupRows[k + 1]
     local f, dx = nextRow and nextRow.cb, 0
@@ -613,6 +618,8 @@ Build = function()
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
   ActiveIf(function() return db.fsr end, SizeStepper("fsrScale"))
+  c.Row(Check(col, L.optFsrWhole, function() return db.fsrWhole end,
+    function(v) db.fsrWhole = v end, L.tipFsrWhole, function() return db.fsr end), PAD + 26, 26)
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))
@@ -673,16 +680,43 @@ Build = function()
   -- line and takes less room (see PlaceGroups); the first one sits at a fixed spot.
   -- Runes and own spells have one setting each: it sits right under the group.
   local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
+  -- each returns the frames to place, one per row
+  local soundText = { drop = L.sndDrop, crystal = L.sndCrystal, glass = L.sndGlass }
   local extras = {
+    potion = function()
+      local snd = Check(col, L.optPotionSound, function() return db.potionSound end,
+        function(v) db.potionSound = v; if v and ns.PlayPotionSound then ns.PlayPotionSound() end end,
+        L.tipPotionSound,
+        function() return db.enabled.potion end)
+      -- three sounds of the addon's own: picking one plays it
+      local kindLabel = Label(col, L.optSoundKind .. ":")
+      local kind = Dropdown(col, 170, {
+        { value = "drop", text = L.sndDrop }, { value = "crystal", text = L.sndCrystal },
+        { value = "glass", text = L.sndGlass },
+      }, function() return soundText[db.potionSoundKind or "drop"] or L.sndDrop end,
+      function(v)
+        db.potionSoundKind = v
+        if ns.PlayPotionSound then ns.PlayPotionSound() end
+        ns.RefreshOptions()
+      end)
+      kind:SetPoint("LEFT", kindLabel, "LEFT", VALUE_X - PAD - 30, 0)
+      TipBoth(col, kindLabel, kind, L.optSoundKind, L.tipSoundKind)
+      ActiveIf(function() return db.enabled.potion and db.potionSound end, kindLabel, kind)
+      return { snd, kindLabel }
+    end,
     rune = function()
-      return Stepper(col, PAD + 30, L.optMargin, function() return db.runeMargin end,
+      local s = Stepper(col, PAD + 30, L.optMargin, function() return db.runeMargin end,
         function(v) db.runeMargin = v; ns.InvalidateCurves() end,
         { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pct })
+      ActiveIf(function() return db.enabled.rune end, s)
+      return { s.label }
     end,
     spell = function()
-      return Stepper(col, PAD + 30, L.optSpellThr, function() return db.spellThreshold end,
+      local s = Stepper(col, PAD + 30, L.optSpellThr, function() return db.spellThreshold end,
         function(v) db.spellThreshold = v; ns.InvalidateCurves() end,
         { step = 0.05, lo = 0.10, hi = 0.90, tip = L.tipSpellThr, fmt = pct })
+      ActiveIf(function() return db.enabled.spell end, s)
+      return { s.label }
     end,
   }
   local first = true
@@ -697,11 +731,8 @@ Build = function()
       local row = { cb = cb, st = st, i = i }
       c.y = c.y - GROUP_FULL -- room for the worst case: every group with a status line
       if extras[group.key] then
-        local stp = extras[group.key]()
-        row.extra = stp.label
-        local key = group.key
-        ActiveIf(function() return db.enabled[key] end, stp)
-        c.y = c.y - EXTRA_H
+        row.extras = extras[group.key]()
+        c.y = c.y - EXTRA_H * #row.extras
       end
       groupRows[#groupRows + 1] = row
     end

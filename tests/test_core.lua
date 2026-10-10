@@ -378,7 +378,7 @@ test("a spell that costs mana starts the five-second rule, a wand does not", fun
   ok(bar(ns).fsr.shown, "strip hidden during the rule")
   eq(bar(ns).fsr.value, 5)
   eq(bar(ns).regen.text, "0.0/s", "regen during the rule")
-  eq(bar(ns).fsrText.text, "5.0", "seconds at the end of the bar")
+  eq(bar(ns).fsrText.text, "5", "whole seconds at the end of the bar")
   ok(bar(ns).fsrText.shown, "seconds hidden")
   local real = GetTime
   _G.GetTime = function() return 106 end
@@ -1467,4 +1467,48 @@ test("login: a short tip only the first time, the version line only when it chan
   ok(out:find(ns.VERSION, 1, true), "no line after an update: " .. out)
   ns, out = logins({ dbVersion = 8 })
   ok(out:find(ns.VERSION, 1, true) and not out:find("unlock", 1, true), "update from 0.8.2 shows the first-run tip: " .. out)
+end)
+
+
+test("0.8.4: whole seconds; a placeholder does not glow; optional sound when the potion is ready again", function()
+  local ns = M.load(nil, { bags = { [3385] = 2 } })
+  -- seconds: 4.2 left shows 5, 0.4 left shows 1
+  regenApis(14.75, 0)
+  local real = GetTime
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  _G.GetTime = function() return real() + 0.8 end; M.tick()
+  eq(bar(ns).fsrText.text, "5")
+  _G.GetTime = function() return real() + 4.6 end; M.tick()
+  eq(bar(ns).fsrText.text, "1")
+  ns.db.fsrWhole = false; M.tick()
+  eq(bar(ns).fsrText.text, "0.4", "tenths when whole seconds are off")
+  ns.db.fsrWhole = true
+  _G.GetTime = real
+  -- unlocked frame: a group with nothing in the bags shows a grey placeholder without glow
+  ns.db.locked = false; M.tick()
+  local b = buttons(ns)
+  ok(b[1].layers[1].glow.shown, "potion in the bags does not glow in the preview")
+  ok(not b[2].layers[1].glow.shown, "placeholder rune glows")
+  ns.db.locked = true; M.tick()
+  -- sound: off by default; on, it plays once when the potion cooldown is over
+  local t0 = real()
+  local function at(sec) _G.GetTime = function() return t0 + sec end; M.tick() end
+  M.state.cooldowns[3385] = { t0, 120 }
+  at(1); at(121)
+  eq(#M.sounds, 0, "sound although switched off")
+  ns.db.potionSound = true
+  M.state.cooldowns[3385] = { t0 + 200, 120 }
+  at(201); eq(#M.sounds, 0, "sound while on cooldown")
+  at(321); eq(#M.sounds, 1, "no sound when the potion is ready again")
+  ok(tostring(M.sounds[1]):find("Sounds\\drop%-and%-bell%.ogg"), "not the addon's own sound: " .. tostring(M.sounds[1]))
+  at(322); eq(#M.sounds, 1, "sound repeats")
+  -- a wand shot's short lock is no potion cooldown
+  M.state.cooldowns[3385] = { t0 + 400, 1.8 }
+  at(400.5); at(403)
+  eq(#M.sounds, 1, "sound after a wand shot")
+  -- another of the three sounds
+  ns.db.potionSoundKind = "crystal"
+  ns.PlayPotionSound()
+  ok(tostring(M.sounds[#M.sounds]):find("crystal%-rise%.ogg"), "picked sound not played")
+  _G.GetTime = real
 end)

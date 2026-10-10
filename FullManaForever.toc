@@ -10,7 +10,7 @@
 ## Notes-koKR: 준비되었고 부족한 마나에 딱 맞을 때 알맞은 마나 물약, 룬, 마나석 또는 자신의 마나 주문을 표시합니다. 5초 규칙과 실시간 마나 회복이 있는 마나 바.
 ## Notes-zhCN: 当合适的法力药水、符文、法力宝石或自身法力技能就绪且恰好补满缺失的法力时将其点亮。带五秒规则和实时法力回复的法力条。
 ## Notes-zhTW: 當合適的法力藥水、符文、法力寶石或自身法力技能就緒且剛好補滿缺少的法力時將其點亮。帶五秒規則和即時法力回復的法力條。
-## Version: 0.8.3
+## Version: 0.8.4
 ## IconTexture: Interface\Icons\INV_Potion_76
 ## AddonCompartmentFunc: FullManaForever_OnCompartmentClick
 ## SavedVariables: FullManaForeverDB, FullManaForeverLog
