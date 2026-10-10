@@ -613,6 +613,8 @@ Build = function()
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
   ActiveIf(function() return db.fsr end, SizeStepper("fsrScale"))
+  c.Row(Check(col, L.optFsrWhole, function() return db.fsrWhole end,
+    function(v) db.fsrWhole = v end, L.tipFsrWhole, function() return db.fsr end), PAD + 26, 26)
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))
@@ -676,7 +678,8 @@ Build = function()
   local extras = {
     potion = function()
       return Check(col, L.optPotionSound, function() return db.potionSound end,
-        function(v) db.potionSound = v end, L.tipPotionSound,
+        function(v) db.potionSound = v; if v and ns.PlayPotionSound then ns.PlayPotionSound() end end,
+        L.tipPotionSound,
         function() return db.enabled.potion end)
     end,
     rune = function()

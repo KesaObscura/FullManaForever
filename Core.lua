@@ -27,7 +27,8 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,
-  potionSound = false,  -- a short sound when the mana potion cooldown is over    -- current mana regen next to the mana bar (also without the bar)
+  potionSound = false,  -- a short sound when the mana potion cooldown is over
+  fsrWhole   = true,    -- the rule's seconds as 5, 4, 3 ... (false: tenths, 4.3)    -- current mana regen next to the mana bar (also without the bar)
   textFree   = false,   -- mana numbers, rule seconds and regen can be dragged (frame unlocked)
   textPoints = {},      -- [mana|fsr|regen] = { x, y }: dragged text centers, UIParent units
   manaTextOn = true,    -- mana numbers at the bar (also without the bar)
@@ -1378,9 +1379,9 @@ local function UpdateTexts(maxMana)
   ShowBox(bar.manaBox, manaOn)
   local left = visible and FsrShown() or 0
   if left > 0 then
-    -- whole seconds, counting down 5, 4, 3, 2, 1 like the action bar (no flicker of tenths)
-    local sec = math.ceil(left - 0.001)
-    if bar.fsrSec ~= sec then bar.fsrSec = sec; bar.fsrText:SetText(tostring(sec)) end
+    -- whole seconds count down 5, 4, 3, 2, 1 like the action bar; tenths if the player wants them
+    local sec = db.fsrWhole and tostring(math.ceil(left - 0.001)) or ("%.1f"):format(left)
+    if bar.fsrSec ~= sec then bar.fsrSec = sec; bar.fsrText:SetText(sec) end
     if not bar.fsrText:IsShown() then bar.fsrText:Show() end
   elseif bar.fsrText:IsShown() then
     bar.fsrText:Hide()
@@ -1436,7 +1437,7 @@ end
 
 -- optional sound when the mana potion cooldown is over (item cooldowns are readable in combat,
 -- the mana is not: the sound means "a potion is ready again", not "it fits")
-local POTION_SOUND = 18019 -- SOUNDKIT.UI_BNET_TOAST, a short soft chime
+local POTION_SOUND = 8960 -- the ready check sound: in the game since the beginning, easy to hear
 local potionIndex, potionWaiting
 local function PotionSound()
   if not potionIndex then
@@ -1449,8 +1450,13 @@ local function PotionSound()
     potionWaiting = true
   elseif potionWaiting then
     potionWaiting = false
-    pcall(PlaySound, (SOUNDKIT and SOUNDKIT.UI_BNET_TOAST) or POTION_SOUND)
+    ns.PlayPotionSound()
   end
+end
+
+-- on the Master channel, so it is heard even with sound effects turned down
+function ns.PlayPotionSound()
+  pcall(PlaySound, (SOUNDKIT and SOUNDKIT.READY_CHECK) or POTION_SOUND, "Master")
 end
 
 local function Update()

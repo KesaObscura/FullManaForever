@@ -1480,6 +1480,9 @@ test("0.8.4: whole seconds; a placeholder does not glow; optional sound when the
   eq(bar(ns).fsrText.text, "5")
   _G.GetTime = function() return real() + 4.6 end; M.tick()
   eq(bar(ns).fsrText.text, "1")
+  ns.db.fsrWhole = false; M.tick()
+  eq(bar(ns).fsrText.text, "0.4", "tenths when whole seconds are off")
+  ns.db.fsrWhole = true
   _G.GetTime = real
   -- unlocked frame: a group with nothing in the bags shows a grey placeholder without glow
   ns.db.locked = false; M.tick()

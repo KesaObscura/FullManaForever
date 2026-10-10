@@ -446,3 +446,19 @@ test("options: a long unlock label pushes 'Move texts freely' one row down inste
   eq(freeCb.points[1][4], unlockCb.points[1][4], "free text switch not under unlock")
   ok(freeCb.points[1][5] < unlockCb.points[1][5], "free text switch not one row down")
 end)
+
+test("options: switching the potion sound on plays it once; whole seconds greyed out with the rule off", function()
+  local ns = M.load({ fsr = false })
+  ns.ToggleOptions(true)
+  local snd, whole
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optPotionSound then snd = w end
+    if w.label and w.label.text == ns.L.optFsrWhole then whole = w end
+  end
+  ok(snd and whole, "switches not found")
+  snd:SetChecked(true); snd.scripts.OnClick(snd)
+  eq(ns.db.potionSound, true); eq(#M.sounds, 1, "no sound to try it")
+  snd:SetChecked(false); snd.scripts.OnClick(snd)
+  eq(#M.sounds, 1, "sound when switched off")
+  ok(not whole:IsEnabled(), "whole seconds usable with the rule off")
+end)
