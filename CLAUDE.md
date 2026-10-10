@@ -114,10 +114,8 @@ and `/fmf log` (kept in releases for bug reports).
   screenshots (English addon texts, PNG). Done: hero, right potion, five-second rule (row and
   column), mana text, item list, unlocked frame. For 0.8.0 (made, hand over with the release
   when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
-  replace the 0.7.0 ones on CurseForge. The row images 01_hero, 03_five_second_rule_row and
-  05_mana_text still show the 0.7.0 bar (numbers inside the bar, seconds at its right end; since
-  0.7.1 numbers sit outside, seconds left of the bar): kept for the 0.7.1 upload (owner), to be
-  re-shot for 0.8.x. The column images (02, 03 column) are current.
+  replace the 0.7.0 ones on CurseForge. All row images were re-shot with the 0.8.x bar (0.8.1/0.8.2
+  uploads); every image on CurseForge is current as of 0.8.2.
 - Gallery workflow (owner): images are updated as the addon changes. When a change alters what
   a gallery image shows, ask the owner for screenshots during development or at the latest with
   the GitHub release, and prepare the images (`tools/gallery.py`, descriptions <= 256) then.
@@ -181,3 +179,12 @@ and `/fmf log` (kept in releases for bug reports).
   `/fmf hold` (command / macro only, owner: no key binding): its own state, not the "Mana
   potions" switch; ends at the end of the next fight; while held the potion shows grey with
   "HOLD" when it would light up; a second /fmf hold ends it early.
+- Launch plan (owner, 0.8.3 time): Forever beta ends 21 Oct 2026, launch 4 Nov (EU 5 Nov). By 21 Oct
+  the most stable and complete version must be out; at launch only the Interface number (check
+  the live client, 16001 may change) and bug fixes. SEO (three reviews, owner decisions): keywords
+  WoW, WoW Forever, World of Warcraft: Forever, Classic Plus / Classic+; "mana tick" and "mp5" ARE
+  used, but only in their true context (Forever has no ticks, mp5 is impossible in combat; the
+  addon shows the live regen per second instead); never claim Classic Era / retail support. No
+  user names (e.g. commenters) in texts; "features asked for in the comments get built" is fine.
+  CurseForge avatar: own flask with an infinity sign (no new logo needed). 9 languages (esMX uses
+  the esES texts), not 10.
