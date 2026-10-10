@@ -37,7 +37,7 @@ test("every key used in the code exists, and every key is used", function()
   end
   for k in code:gmatch("L%.([%a_][%w_]*)") do ok(en[k], "missing key " .. k) end
   -- keys built at runtime
-  local dynamic = { grp_ = true, col_ = true, strat = true, show = true }
+  local dynamic = { grp_ = true, col_ = true, strat = true, show = true, tipGrp_ = true }
   for k in pairs(en) do
     local used = code:find("L%." .. k .. "[^%w_]") or code:find('"' .. k .. '"')
     if not used then

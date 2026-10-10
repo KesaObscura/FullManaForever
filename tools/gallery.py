@@ -81,6 +81,21 @@ def hide_name(im):
     im.paste(im.crop(box).filter(ImageFilter.GaussianBlur(8)), box[:2])
     return im
 
+def social(avatar, shot, box):
+    # GitHub social preview (1280x640): avatar, name, what it does, the hero shot
+    bg = background().crop((0, 40, W, 680))
+    d = ImageDraw.Draw(bg)
+    av = Image.open(BASE + avatar).convert("RGBA").resize((230, 230), Image.LANCZOS)
+    bg.paste(av, (70, 60), av)
+    d.text((340, 92), "Full Mana Forever", font=ImageFont.truetype(BOLD, 64), fill=WHITE)
+    d.text((344, 178), "Mana potion timing, five-second rule", font=ImageFont.truetype(REG, 30), fill=SUB)
+    d.text((344, 218), "and live mana regen for WoW Forever", font=ImageFont.truetype(REG, 30), fill=SUB)
+    im = crop(shot, box, 1.25)
+    x, y = (W - im.width) // 2, 330
+    bg.paste(im, (x, y), rounded(im))
+    d.rounded_rectangle((x - 2, y - 2, x + im.width + 1, y + im.height + 1), 15, outline=BLUE, width=2)
+    bg.save(BASE + "gallery/out/social_preview.png", optimize=True)
+
 def only(name):
     args = [a for a in sys.argv[1:] if not a.endswith("/")]
     return not args or name in args
@@ -92,6 +107,8 @@ if __name__ == "__main__":
         make("01_hero.png", "Drink at the right moment",
              "Potions light up when they fit into your missing mana, your own mana spells when they are ready.",
              [(crop("images/192.webp", BIG, 1.6), "")], top=180)
+    if only("social"):
+        social("images/234.png", "images/192.webp", BIG)
     if only("02"):
         make("02_right_potion.png", "The right potion for your missing mana",
              "Several potions in your bags: the strongest one that will not overflow lights up.",
@@ -163,6 +180,17 @@ if __name__ == "__main__":
         make("08_unlocked.png", "Easy to place",
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
              [(crop("images/141.webp", (1150, 132, 1480, 240), 2.9), "")], top=190)
+    if only("06v3"):
+        # 0.8.3 window: profile switch in the title, thresholds under their groups
+        make("06_settings.png", "Settings that explain themselves",
+             "Every part has its own switch and text size. Hover any option for a short explanation.",
+             [(crop("images/249.png", (0, 0, 924, 618), 0.86), "")], top=140)
+    if only("13"):
+        make("13_profiles_hold.png", "Profiles and potions on hold",
+             "Shared settings or your own per character. /fmf hold keeps potions for the next fight.",
+             [(crop("images/246.png", (219, 262, 760, 436), 1.15), "Copy another character's settings"),
+              (crop("images/222.webp", (1060, 140, 1375, 235), 1.5), "/fmf hold: grey until the fight ends")],
+             top=250)
     if only("06n"):
         # 0.8.2 window: every part has its own switch, switched-off settings stay greyed out
         make("06_settings.png", "Settings that explain themselves",

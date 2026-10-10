@@ -3,6 +3,7 @@ package-as: FullManaForever
 ignore:
   - tests
   - tools
+  - docs
   - .gitignore
   - CURSEFORGE.md
   - CLAUDE.md

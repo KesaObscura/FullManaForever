@@ -40,7 +40,7 @@ test("options: choosing the current layout or language does not rebuild the wind
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.Select and w.entries then
       if w.entries[1].value == false then w.Select(ns.db.vertical); picked = picked + 1 end
-      if w.entries[1].value == "auto" then w.Select(ns.db.language); picked = picked + 1 end
+      if w.entries[1].value == "auto" then w.Select(ns.acct.language); picked = picked + 1 end
     end
   end
   eq(picked, 2, "dropdowns found")
@@ -100,7 +100,8 @@ test("options: stepper buttons and dropdowns line up in fixed columns", function
   eq(cols, 1, "different -/+ columns")
   local widths = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
-    if w.entries then widths[w.w] = true end
+    -- the profile switch sits in the title row, not in a column
+    if w.entries and w.entries[1].value ~= "shared" then widths[w.w] = true end
   end
   local nw = 0
   for _ in pairs(widths) do nw = nw + 1 end
@@ -140,7 +141,10 @@ test("options: empty groups keep their status on the same line", function()
   local potion, rune = rows[1], rows[2]
   eq(potion.st.points[1][2], potion.cb, "potion status not below its checkbox")
   eq(rune.st.points[1][2], rune.cb.label, "empty rune status not next to the name")
-  eq(rows[3].cb.points[1][5], -26, "row after an empty group is not compact")
+  -- the rune's own setting sits right under the (compact) rune row, the next group under it
+  eq(rune.extra.points[1][2], rune.cb, "rune health not under the rune group")
+  eq(rune.extra.points[1][5], -22, "rune health after an empty group is not compact")
+  eq(rows[3].cb.points[1][2], rune.extra, "next group not under the rune health")
   eq(rune.cb.points[1][5], -42, "row after a full group")
 end)
 
@@ -159,20 +163,24 @@ test("options: settings explain themselves on hover", function()
   ok(tips >= 6, "checkboxes with tooltips: " .. tips)
 end)
 
-test("item list keeps its place when the language changes", function()
+test("item list: on its own it keeps its place; with the settings open it moves over them", function()
   local ns = M.load(nil)
   ns.ToggleLibrary(true)
   local lib = FullManaForeverItems
   lib:ClearAllPoints()
   lib:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", 123, 456)
+  ns.ToggleLibrary(); ns.ToggleLibrary(true)
+  eq(lib.points[1][1], "TOPLEFT", "item list moved without the settings")
   ns.ToggleOptions(true)
+  eq(lib.points[1][1], "CENTER"); eq(lib.points[1][2], FullManaForeverOptions, "not over the settings")
+  ok(FullManaForeverOptions.shade.shown, "settings not dimmed")
+  -- a language change (the settings rebuild themselves): the list stays open over the new window
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
   end
   ok(FullManaForeverItems ~= lib, "window not rebuilt")
-  local p = FullManaForeverItems.points[1]
-  eq(p[1], "TOPLEFT"); eq(p[4], 123, "x"); eq(p[5], 456, "y")
   ok(FullManaForeverItems.shown, "window closed by the language change")
+  eq(FullManaForeverItems.points[1][2], FullManaForeverOptions, "list not over the new settings")
 end)
 
 test("item list: the owned column cannot run into the amount column", function()
@@ -377,6 +385,51 @@ test("options: settings of a switched-off part stay in place, greyed out", funct
   ok(barDD:IsEnabled() and manaDD:IsEnabled(), "settings stay grey after switching on")
   ok(sizes[1].plus:IsEnabled(), "mana size stays grey after switching on")
   eq(sizes[1].label.color[1], 1, "label stays grey after switching on")
+end)
+
+
+test("every control in the settings and the item list has a tooltip, also while greyed out", function()
+  local ns = M.load({ custom = { { id = 12345, max = 500, group = "potion" } } })
+  ns.ToggleOptions(true)
+  ns.ToggleLibrary(true)
+  local roots = { [_G.FullManaForeverOptions] = true, [_G.FullManaForeverItems] = true }
+  local clickable = { Button = true, CheckButton = true, EditBox = true }
+  local seen = 0
+  for _, f in ipairs(M.all) do
+    if clickable[f.kind] then
+      local p, inList, inWin = f.parent, false, false
+      while p do
+        if p.ddList then inList = true end
+        if roots[p] then inWin = true end
+        p = p.parent
+      end
+      if inWin and not inList then
+        seen = seen + 1
+        local name = f.text or (f.label and f.label.text) or f.kind
+        ok(f.scripts.OnEnter, "no tooltip on " .. tostring(name))
+        if f.kind ~= "EditBox" then ok(f.motionWhileDisabled, "no tooltip while greyed out: " .. tostring(name)) end
+      end
+    end
+  end
+  ok(seen > 30, "too few controls found: " .. seen)
+end)
+
+
+test("options: the rune and spell thresholds are greyed out while their group is off", function()
+  local ns = M.load({ enabled = { rune = false } })
+  ns.ToggleOptions(true)
+  local margin, spellThr
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == ns.L.optMargin .. ":" then margin = w end
+    if w.minus and w.label and w.label.text == ns.L.optSpellThr then spellThr = w end
+  end
+  ok(margin and spellThr, "thresholds not found")
+  ok(not margin.plus:IsEnabled(), "rune threshold usable with runes off")
+  ok(spellThr.plus:IsEnabled(), "spell threshold greyed out although spells are on")
+  ns.db.enabled.rune, ns.db.enabled.spell = true, false
+  ns.RefreshOptions()
+  ok(margin.plus:IsEnabled(), "rune threshold stays grey after switching on")
+  ok(not spellThr.plus:IsEnabled(), "spell threshold usable with spells off")
 end)
 
 

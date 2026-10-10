@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.2"
+ns.VERSION = "0.8.3"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -18,13 +18,10 @@ local MAX_RESTORE = 99999 -- sanity limit for own items
 local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
   locked     = true,
-  debug      = false,
-  scale100   = false,
   onlyCombat = false,
   showSolo   = true,    -- where to show: alone / in a party / in a raid (any combination)
   showParty  = true,
   showRaid   = true,
-  language   = "auto",
   pickMode   = "fit",   -- "fit": strongest item that does not overflow / "strongest": always the best
   thresholdMode = "max", -- "max": no waste / "avg": more drinks per fight
   showBar    = true,
@@ -48,11 +45,18 @@ local DEFAULTS = {
   runeMargin = 0.30, -- health% that must remain AFTER the rune hit (also Life Tap)
   spellThreshold = 0.50, -- own mana spells (Evocation, Innervate, ...) light up at or below this mana%
   enabled    = { potion = true, rune = true, gem = true, herb = true, gear = true, spell = true },
-  custom     = {},    -- { {id=, max=, group=}, ... } own items, highest priority in their group
   disabled   = {},    -- [itemID] = true: never suggest this item
 }
 
-local db, anchor
+-- account-wide, the same for every character and profile
+local ACCOUNT_DEFAULTS = {
+  language   = "auto",
+  debug      = false,
+  scale100   = false,
+  custom     = {},    -- { {id=, max=, group=}, ... } own items, highest priority in their group
+}
+
+local db, acct, anchor -- db: the profile in use (see Profiles.lua); acct: FullManaForeverDB
 local buttons = {}
 local lists = {}
 local warned = {}
@@ -67,7 +71,7 @@ end
 ns.Print = Print
 
 local function Debug(key, msg)
-  if db and db.debug and not warned["d:" .. key] then
+  if acct and acct.debug and not warned["d:" .. key] then
     warned["d:" .. key] = true
     Print("|cffff9900debug|r " .. msg)
   end
@@ -129,7 +133,7 @@ function ns.RebuildLists()
     own[g.key] = {}
     for _, it in ipairs(g.items) do known[it.id] = it end
   end
-  for _, c in ipairs(db.custom) do
+  for _, c in ipairs(acct.custom) do
     local mine = own[c.group or "potion"]
     if mine then mine[c.id] = true end
     local base = known[c.id]
@@ -139,7 +143,7 @@ function ns.RebuildLists()
   end
   for i, group in ipairs(ns.GROUPS) do
     local full, active = {}, {}
-    for _, c in ipairs(db.custom) do
+    for _, c in ipairs(acct.custom) do
       if (c.group or "potion") == group.key then
         c.custom = true
         full[#full + 1] = c
@@ -416,7 +420,7 @@ end
 ------------------------------------------------------------------------
 -- curves (the engine compares, we never see the value)
 ------------------------------------------------------------------------
-local function Scale() return db.scale100 and 100 or 1 end
+local function Scale() return acct.scale100 and 100 or 1 end
 local EPS = 0.0001
 
 -- alpha 1 while lo < mana% <= hi (lo = nil: from 0), 0 elsewhere
@@ -592,6 +596,15 @@ local function CreateLayer(parent)
     if sweep.SetDrawBling then sweep:SetDrawBling(false) end -- no flash after every shot
     l.sweep = sweep
   end
+  -- "/fmf hold": the word on a held potion. Inside the layer, so the mana band hides it
+  -- together with the icon; its own frame, so the sweep cannot cover it
+  local holdTop = CreateFrame("Frame", nil, l)
+  holdTop:SetAllPoints()
+  holdTop:SetFrameLevel((l:GetFrameLevel() or 1) + 3)
+  l.holdText = holdTop:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+  OutlineFont(l.holdText, "GameFontNormal", true)
+  l.holdText:SetPoint("CENTER")
+  l.holdText:Hide()
   -- soft light from the top that fades out downwards: a slightly "glassy" icon. A flat
   -- strip left a hard line in the middle that looked like a half-full icon
   l.shine = l:CreateTexture(nil, "ARTWORK", nil, 2)
@@ -633,6 +646,29 @@ local function CreateButton()
   b.outer:Hide()
   return b
 end
+
+-- "/fmf hold": mana potions are not suggested until the end of the next fight (a fight that
+-- is already running counts). Not saved: a reload ends it too. The "Mana potions" switch
+-- is left alone.
+local held, heldFightSeen = false, false
+function ns.IsHeld() return held end
+function ns.SetHold(on)
+  held = on and true or false
+  heldFightSeen = held and InCombatLockdown() and true or false
+end
+local holdFrame = CreateFrame("Frame")
+holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+holdFrame:SetScript("OnEvent", function(_, event)
+  if not held then return end
+  if event == "PLAYER_REGEN_DISABLED" then
+    heldFightSeen = true
+  elseif heldFightSeen then
+    ns.SetHold(false)
+    Print(L.holdOff)
+    if ns.RefreshOptions then ns.RefreshOptions() end
+  end
+end)
 
 -- mana bar next to the icons, drawn by the engine from the secret value, with ticks.
 -- Vertical: the fill stands on the bottom, so spending mana lowers it from the top.
@@ -1018,6 +1054,27 @@ local function CreateAnchor()
   if not IsPinned(db.point) then PinTopLeft() end
 end
 
+-- another profile is in use (switch, copy, reset, undo): every part reads it again
+local RefreshLibrary -- set with the slash commands below
+function ns.ApplyProfile()
+  db = ns.Profiles.ActiveTable()
+  CopyDefaults(DEFAULTS, db)
+  ns.db = db
+  ns.RebuildLists()
+  ns.InvalidateCurves()
+  if anchor then
+    local p = db.point
+    anchor:ClearAllPoints()
+    anchor:SetPoint(p[1], UIParent, p[3], p[4], p[5])
+    if not IsPinned(db.point) then PinTopLeft() end
+    ns.PositionBar()
+    ns.Layout(true)
+    ns.ApplyLock()
+  end
+  if ns.OnProfileChanged then ns.OnProfileChanged() end
+  if RefreshLibrary then RefreshLibrary() end
+end
+
 ------------------------------------------------------------------------
 -- update loop
 ------------------------------------------------------------------------
@@ -1063,6 +1120,27 @@ local function HideLayers(b, from)
   end
 end
 
+-- "/fmf hold" on one layer: no glow, the word on it (the grey comes from the caller)
+local function ShowHeld(b, l, hold)
+  if l.held ~= hold then
+    l.held = hold
+    l.glow:SetShown(not hold)
+    l.holdText:SetText(L.holdLabel)
+    l.holdText:SetShown(hold)
+    l.holdFitW = nil
+  end
+  if hold then
+    -- the word shrinks to fit the icon (RESERVA, small icons); measured at scale 1
+    local w = b.outer:GetWidth() or 0
+    if w > 0 and l.holdFitW ~= w and l.holdText.SetTextScale then
+      l.holdFitW = w
+      l.holdText:SetTextScale(1)
+      local tw = l.holdText:GetStringWidth() or 0
+      l.holdText:SetTextScale(tw > w * 0.9 and w * 0.9 / tw or 1)
+    end
+  end
+end
+
 local function ShowPreview(i, b, item, n)
   local l = b.layers[1]
   local ph
@@ -1074,6 +1152,7 @@ local function ShowPreview(i, b, item, n)
     ph = first and C_Item.GetItemIconByID(first.id) or PLACEHOLDER[ns.GROUPS[i].key]
   end
   SetLayer(l, item and item.id, n, ph)
+  ShowHeld(b, l, false) -- the preview shows the icon as it looks when lit
   l:SetAlpha(1)
   l.hi = nil
   l:Show()
@@ -1162,9 +1241,14 @@ local function UpdateButton(i, b, maxMana, maxHP)
   if #cands == 0 then b.outer:Hide() return end
 
   local hpCost
+  -- on hold: the potion is shown grey with "HOLD" exactly where it would light up
+  -- (not on the unlocked frame: that one shows every icon as it looks when lit)
+  local hold = held and group.key == "potion" and db.locked
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
+    if hold then l.icon:SetDesaturated(true) end
+    ShowHeld(b, l, hold)
     ApplySweep(l, c.it.id)
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
@@ -1404,14 +1488,13 @@ local function Probe()
     Print("UnitPowerPercent+curve: %s (variant %s)", r and "ok" or "FAILED", tostring(powerVariant))
   end)
   if not ok then Print("curve probe error: %s", tostring(err)) end
-  Print("scale100=%s locked=%s onlyCombat=%s custom=%d", tostring(db.scale100), tostring(db.locked),
-    tostring(db.onlyCombat), #db.custom)
+  Print("scale100=%s locked=%s onlyCombat=%s custom=%d", tostring(acct.scale100), tostring(db.locked),
+    tostring(db.onlyCombat), #acct.custom)
 end
 
 ------------------------------------------------------------------------
 -- slash commands
 ------------------------------------------------------------------------
-local RefreshLibrary
 SLASH_FULLMANAFOREVER1 = "/fmf"
 SlashCmdList.FULLMANAFOREVER = function(msg)
   local args = {}
@@ -1422,18 +1505,49 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     if ns.ToggleOptions then ns.ToggleOptions() else Print(L.help) end
   elseif cmd == "items" or cmd == "list" then
     if ns.ToggleLibrary then ns.ToggleLibrary() end
+  elseif cmd == "profile" or cmd == "profiles" then
+    -- shared | own | copy <name> | undo; nothing: the profile in use and who can be copied
+    local P, sub = ns.Profiles, args[2]
+    if sub == "shared" or sub == "own" then
+      if not P.Use(sub) then Print(L.profNoChar) return end
+    elseif sub == "copy" then
+      local key, name = nil, args[3]
+      if name == "shared" then
+        key, name = P.SHARED, L.profShared
+      else
+        local o = P.Find(name)
+        if o then key, name = o.key, o.name end
+      end
+      if not key or not P.CopyFrom(key) then Print(L.profUnknown, args[3] or "") return end
+      Print(L.profCopied, name)
+      return
+    elseif sub == "undo" then
+      Print(P.Undo() and L.profUndone or L.profNoUndo)
+      return
+    elseif sub then
+      Print(L.profHelp)
+      return
+    end
+    Print(L.profNow, P.IsOwn() and L.profOwn or L.profShared)
+    if not sub then
+      local names = {}
+      for _, o in ipairs(P.Others()) do names[#names + 1] = o.name end
+      Print(#names > 0 and L.profList:format(table.concat(names, ", ")) or L.profNone)
+      Print(L.profHelp)
+    end
   elseif cmd == "hold" then
-    db.enabled.potion = not db.enabled.potion
-    Print(db.enabled.potion and L.holdOff or L.holdOn)
+    ns.SetHold(not held)
+    Print(held and L.holdOn or L.holdOff)
+    if ns.RefreshOptions then ns.RefreshOptions() end
   elseif cmd == "unlock" then
     db.locked = false; ns.ApplyLock(); Print(L.unlocked)
   elseif cmd == "lock" then
     db.locked = true; ns.ApplyLock(); Print(L.locked)
   elseif cmd == "test" then
-    -- test mode and the unlocked frame are one thing now
-    db.locked = not db.locked; ns.ApplyLock(); Print(db.locked and L.locked or L.unlocked)
+    -- test mode and the unlocked frame are one thing now: the same as /fmf unlock
+    db.locked = false; ns.ApplyLock(); Print(L.unlocked)
   elseif cmd == "item" and args[2] == "clear" then
-    wipe(db.custom); ns.RebuildLists(); RefreshLibrary(); Print(L.itemClear)
+    wipe(acct.custom); ns.RebuildLists(); RefreshLibrary(); Print(L.itemClear)
   elseif cmd == "item" then
     if not args[2] or not args[3] then Print(L.itemUsage) return end
     ns.AddCustom(args[2], args[3], args[4])
@@ -1446,11 +1560,11 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
   elseif cmd == "probe" then
     Probe()
   elseif cmd == "debug" then
-    db.debug = not db.debug; wipe(warned); Print(db.debug and L.debugOn or L.debugOff)
+    acct.debug = not acct.debug; wipe(warned); Print(acct.debug and L.debugOn or L.debugOff)
   elseif cmd == "scale" then
-    db.scale100 = not db.scale100
+    acct.scale100 = not acct.scale100
     ns.InvalidateCurves()
-    Print("scale100 = %s", tostring(db.scale100))
+    Print("scale100 = %s", tostring(acct.scale100))
   elseif cmd == "reset" and args[2] == "size" then
     ns.ResetSize(); Print(L.resetSize)
   elseif cmd == "reset" then
@@ -1502,10 +1616,10 @@ function ns.AddCustom(id, amount, group)
   end
   -- no (valid) category given: a known item stays in its own group, others are potions
   if not valid then group = home or "potion" end
-  for i = #db.custom, 1, -1 do
-    if db.custom[i].id == id then table.remove(db.custom, i) end
+  for i = #acct.custom, 1, -1 do
+    if acct.custom[i].id == id then table.remove(acct.custom, i) end
   end
-  table.insert(db.custom, 1, { id = id, max = amount, group = group })
+  table.insert(acct.custom, 1, { id = id, max = amount, group = group })
   ns.RebuildLists()
   RefreshLibrary()
   Print(L.itemAdded, id, amount)
@@ -1513,8 +1627,8 @@ function ns.AddCustom(id, amount, group)
 end
 
 function ns.RemoveCustom(id)
-  for i = #db.custom, 1, -1 do
-    if db.custom[i].id == id then table.remove(db.custom, i) end
+  for i = #acct.custom, 1, -1 do
+    if acct.custom[i].id == id then table.remove(acct.custom, i) end
   end
   ns.RebuildLists()
   RefreshLibrary()
@@ -1528,19 +1642,24 @@ end
 ------------------------------------------------------------------------
 -- boot
 ------------------------------------------------------------------------
-local DB_VERSION = 8 -- the last migration below
+local DB_VERSION = 9 -- the last migration below
 
+local freshInstall = false
 local function InitDB()
   -- a new install has nothing to migrate
+  freshInstall = FullManaForeverDB == nil
   FullManaForeverDB = FullManaForeverDB or { dbVersion = DB_VERSION }
-  db = FullManaForeverDB
-  CopyDefaults(DEFAULTS, db)
+  acct = FullManaForeverDB
+  ns.acct = acct
+  CopyDefaults(ACCOUNT_DEFAULTS, acct)
+  -- migrations up to 8 work on the flat settings of before 0.8.3
+  db = acct
   if (db.dbVersion or 0) < 2 then
     if db.runeMargin and db.runeMargin < 0.30 then db.runeMargin = 0.30 end
     db.dbVersion = 2
   end
   if db.dbVersion < 3 then
-    for _, c in ipairs(db.custom) do c.group = c.group or "potion" end
+    for _, c in ipairs(acct.custom) do c.group = c.group or "potion" end
     db.dbVersion = 3
   end
   if db.dbVersion < 4 then
@@ -1569,7 +1688,14 @@ local function InitDB()
     if db.manaText == "none" then db.manaTextOn, db.manaText = false, "number" end
     db.dbVersion = 8
   end
-  ns.SetLanguage(db.language)
+  if db.dbVersion < 9 then
+    -- 0.8.3: profiles. The flat settings become "Shared" (Profiles.Migrate)
+    db.dbVersion = 9
+  end
+  ns.Profiles.Init(acct)
+  db = ns.Profiles.ActiveTable()
+  CopyDefaults(DEFAULTS, db)
+  ns.SetLanguage(acct.language)
   ns.db = db
   ns.RebuildLists()
 end
@@ -1577,13 +1703,21 @@ end
 local boot = CreateFrame("Frame")
 boot:RegisterEvent("ADDON_LOADED")
 boot:RegisterEvent("PLAYER_LOGIN")
+boot:RegisterEvent("PLAYER_LEVEL_UP") -- the profiles window shows each character's level
 boot:SetScript("OnEvent", function(self, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON then
     InitDB()
   elseif event == "PLAYER_ENTERING_WORLD" then
     textFails = 0
+  elseif event == "PLAYER_LEVEL_UP" then
+    if acct then ns.Profiles.Level(arg1) end
   elseif event == "PLAYER_LOGIN" then
     if not db then InitDB() end -- saved variables not delivered (old beta builds)
+    -- name, class and level are certain only now: pick this character's profile again
+    ns.Profiles.Init(acct)
+    db = ns.Profiles.ActiveTable()
+    CopyDefaults(DEFAULTS, db)
+    ns.db = db
     ns.RebuildLists() -- player class is known now
     ns.Spells.Rebuild()
     CreateAnchor()
@@ -1593,6 +1727,13 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     end
     C_Timer.NewTicker(0.1, SafeUpdate)
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
-    Print(L.loaded, ns.VERSION)
+    -- a short tip on the very first login, afterwards one line only when the version changes
+    -- (settings from before 0.8.3 have no seenVersion: those players get the version line)
+    if freshInstall then
+      Print(L.firstRun)
+    elseif acct.seenVersion ~= ns.VERSION then
+      Print(L.loaded, ns.VERSION)
+    end
+    acct.seenVersion = ns.VERSION
   end
 end)

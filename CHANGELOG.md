@@ -1,5 +1,17 @@
 # Changelog
 
+**Full Mana Forever 0.8.3**
+
+- Profiles: all characters share one set of settings ("Shared"), or a character uses its own ("This character", switch at the top of the settings). Its own settings start as a copy of the shared ones and are kept when it switches back. "Profiles..." copies another character's settings (with class colour, level and last login), resets the profile in use or deletes the settings of characters you no longer play; each asks first, and the last change can be undone until you log out. Also `/fmf profile`. Your settings so far become "Shared", so nothing changes until you choose. Language and own items stay the same for every character; switched-off items belong to the profile
+- `/fmf hold` now holds mana potions only until the end of the next fight (or the one you are in) and then releases them by itself, with a chat line. While held, the potion icon is grey and says "HOLD" (shrunk to fit the icon) instead of disappearing; the settings show "on hold" for the potion group. The unlocked frame shows the potion without it. Tip: put `/fmf hold` in a macro. The old `/fmf hold` switched the "Mana potions" group off; if it is still off, switch it on in the settings
+- `/fmf test` does the same as `/fmf unlock` (before, it switched a separate test view on and off)
+- Switched-off settings show a grey tick instead of a gold one
+- Settings: "Drinking" is now "When to light up" (it is about every item, not only potions); the rune's health setting ("Keep health above") sits under Runes and the spells' mana setting ("Light up at mana <=") under Own mana spells, greyed out while their group is off
+- Every control in the settings and the item list has a tooltip (each icon group, dropdowns, -/+ buttons, close buttons), also while it is greyed out
+- The item list and the profiles window open over the settings, framed in gold; the settings are dimmed until you close them, so no window can hide behind another. Esc closes one window per press, the settings last. On its own (`/fmf items`) the item list is a normal window
+- The description in the game's addon list says what the addon does, in your game language
+- The tip at login appears only on a new install; after an update one line names the new version, otherwise the addon stays silent
+
 **Full Mana Forever 0.8.2**
 
 - Mana regen turns green when it is above your normal rate: out of combat it is compared with your lowest normal regen since the last level-up or gear change (drinking, Spirit Tap, buffs, ...); in combat Forever hides the value from addons, so only your own Evocation (8 s) and Ley Line reading (15 s) count

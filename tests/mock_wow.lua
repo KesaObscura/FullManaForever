@@ -8,7 +8,7 @@ local methods = {}
 local Widget = { __index = methods }
 function M.noop() end
 for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDrag", "SetAutoFocus",
-  "SetBlendMode", "SetCheckedTexture", "SetClampedToScreen", "SetColorTexture", "SetDesaturated",
+  "SetBlendMode", "SetCheckedTexture", "SetDisabledCheckedTexture", "SetClampedToScreen", "SetColorTexture",
   "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
   "SetHighlightFontObject", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
   "SetMovable", "SetNormalFontObject", "SetNormalTexture", "SetNumeric", "SetOwner", "SetPushedTexture",
@@ -30,10 +30,19 @@ local function new(kind, parent)
 end
 M.new = new
 
-function methods:Show() self.shown = true end
+function methods:Show()
+  local was = self.shown
+  self.shown = true
+  if not was and self.scripts.OnShow then self.scripts.OnShow(self) end
+end
 function methods:Hide()
+  local was = self.shown
   self.shown = false
-  if self.scripts.OnHide then self.scripts.OnHide(self) end
+  if was and self.scripts.OnHide then self.scripts.OnHide(self) end
+end
+function methods:HookScript(k, f)
+  local old = self.scripts[k]
+  self.scripts[k] = old and function(...) old(...); f(...) end or f
 end
 function methods:SetShown(v) if v then self:Show() else self:Hide() end end
 function methods:IsShown() return self.shown end
@@ -50,6 +59,7 @@ function methods:GetPoint() local p = self.points[1] or {} return p[1], p[2], p[
 function methods:GetLeft() return M.left end
 function methods:GetTop() return M.top end
 function methods:GetCenter() return M.cx, M.cy end
+function methods:SetDesaturated(v) self.desaturated = v and true or false end
 function methods:SetScript(k, f) self.scripts[k] = f end
 function methods:GetScript(k) return self.scripts[k] end
 function methods:CreateTexture() return new("Texture", self) end
@@ -59,6 +69,9 @@ function methods:CreateAnimation() return new("Animation", self) end
 function methods:SetText(t) self.text = t end
 function methods:GetText() return self.text end
 function methods:GetStringWidth() return #(tostring(self.text or "")) * 6 end
+function methods:SetTextScale(s) self.textScale = s end
+function methods:Raise() self.raised = (self.raised or 0) + 1 end
+function methods:SetMotionScriptsWhileDisabled(on) self.motionWhileDisabled = on end
 function methods:GetStringHeight() return 12 end
 function methods:GetFontString() self.fs = self.fs or new("FontString", self); return self.fs end
 function methods:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
@@ -159,6 +172,7 @@ function M.reset(opts)
     bags = opts.bags or {}, cooldowns = {}, class = opts.class or "PRIEST",
     raid = false, group = false, combat = false, instance = "none",
     powerFails = false, locale = opts.locale or "enUS",
+    name = opts.name, realm = opts.realm, now = opts.now,
     level = opts.level or 60, minLevel = opts.minLevel or {}, uncached = opts.uncached or {},
   }
   local S = M.state
@@ -204,6 +218,9 @@ function M.reset(opts)
   _G.UnitHealthMax = function() return S.maxHP end
   _G.UnitClass = function() return "Class", S.class end
   _G.UnitLevel = function() return S.level end
+  _G.UnitName = function(u) if u == "player" then return S.name or "Kesa" end end
+  _G.GetRealmName = function() return S.realm or "Forever" end
+  _G.time = function() return S.now or 1000000 end
   _G.UnitIsDeadOrGhost = function() return S.dead or false end
   _G.issecretvalue = isSecret
   _G.C_Item = {
@@ -225,7 +242,7 @@ function M.reset(opts)
     if cd then return cd[1], cd[2], cd[3] == nil and 1 or cd[3] end
     return 0, 0, 1
   end }
-  _G.GetTime = function() return 100 end
+  _G.GetTime = function() return S.time or 100 end
   _G.InCombatLockdown = function() return S.combat end
   _G.IsInInstance = function() count("IsInInstance"); return S.instance ~= "none", S.instance end
   _G.IsInRaid = function() count("IsInRaid"); return S.raid end
@@ -235,7 +252,9 @@ function M.reset(opts)
   _G.SlashCmdList = {}
   _G.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
   _G.unpack = unpack or table.unpack
-  _G.hooksecurefunc = M.noop
+  M.hooks = {}
+  _G.hooksecurefunc = function(name, fn) M.hooks[name] = fn end
+  _G.CloseSpecialWindows = M.noop
   _G.HideUIPanel = function() count("HideUIPanel") end
   _G.SettingsPanel = nil
   _G.Settings = nil
