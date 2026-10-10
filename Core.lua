@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.3"
+ns.VERSION = "0.8.4"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -26,7 +26,8 @@ local DEFAULTS = {
   thresholdMode = "max", -- "max": no waste / "avg": more drinks per fight
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
-  regenText  = true,    -- current mana regen next to the mana bar (also without the bar)
+  regenText  = true,
+  potionSound = false,  -- a short sound when the mana potion cooldown is over    -- current mana regen next to the mana bar (also without the bar)
   textFree   = false,   -- mana numbers, rule seconds and regen can be dragged (frame unlocked)
   textPoints = {},      -- [mana|fsr|regen] = { x, y }: dragged text centers, UIParent units
   manaTextOn = true,    -- mana numbers at the bar (also without the bar)
@@ -1120,11 +1121,15 @@ local function HideLayers(b, from)
   end
 end
 
--- "/fmf hold" on one layer: no glow, the word on it (the grey comes from the caller)
+-- the ready glow: only on an icon that means "use it now" (not held, not a placeholder)
+local function SetGlow(l, on)
+  if l.glowOn ~= on then l.glowOn = on; l.glow:SetShown(on) end
+end
+
+-- "/fmf hold" on one layer: the word on it (the grey and the glow come from the caller)
 local function ShowHeld(b, l, hold)
   if l.held ~= hold then
     l.held = hold
-    l.glow:SetShown(not hold)
     l.holdText:SetText(L.holdLabel)
     l.holdText:SetShown(hold)
     l.holdFitW = nil
@@ -1153,6 +1158,7 @@ local function ShowPreview(i, b, item, n)
   end
   SetLayer(l, item and item.id, n, ph)
   ShowHeld(b, l, false) -- the preview shows the icon as it looks when lit
+  SetGlow(l, item ~= nil) -- a grey placeholder (nothing in the bags) does not glow
   l:SetAlpha(1)
   l.hi = nil
   l:Show()
@@ -1249,6 +1255,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
     SetLayer(l, c.it.id, c.n)
     if hold then l.icon:SetDesaturated(true) end
     ShowHeld(b, l, hold)
+    SetGlow(l, not hold)
     ApplySweep(l, c.it.id)
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
@@ -1371,10 +1378,13 @@ local function UpdateTexts(maxMana)
   ShowBox(bar.manaBox, manaOn)
   local left = visible and FsrShown() or 0
   if left > 0 then
-    bar.fsrText:SetText(("%.1f"):format(left))
+    -- whole seconds, counting down 5, 4, 3, 2, 1 like the action bar (no flicker of tenths)
+    local sec = math.ceil(left - 0.001)
+    if bar.fsrSec ~= sec then bar.fsrSec = sec; bar.fsrText:SetText(tostring(sec)) end
     if not bar.fsrText:IsShown() then bar.fsrText:Show() end
   elseif bar.fsrText:IsShown() then
     bar.fsrText:Hide()
+    bar.fsrSec = nil
   end
   ShowBox(bar.fsrBox, left > 0)
   UpdateRegenText(visible)
@@ -1424,6 +1434,25 @@ local function UpdateBar(maxMana)
   bar:Show()
 end
 
+-- optional sound when the mana potion cooldown is over (item cooldowns are readable in combat,
+-- the mana is not: the sound means "a potion is ready again", not "it fits")
+local POTION_SOUND = 18019 -- SOUNDKIT.UI_BNET_TOAST, a short soft chime
+local potionIndex, potionWaiting
+local function PotionSound()
+  if not potionIndex then
+    for i, g in ipairs(ns.GROUPS) do if g.key == "potion" then potionIndex = i end end
+  end
+  local item = potionIndex and db.potionSound and db.locked and db.enabled.potion and not held
+    and OwnedItem(potionIndex)
+  if not item then potionWaiting = false return end
+  if not CooldownState(item.id) then
+    potionWaiting = true
+  elseif potionWaiting then
+    potionWaiting = false
+    pcall(PlaySound, (SOUNDKIT and SOUNDKIT.UI_BNET_TOAST) or POTION_SOUND)
+  end
+end
+
 local function Update()
   candTick = candTick + 1
   -- the frame rect may not be known yet at login: convert old positions on the first tick
@@ -1445,6 +1474,7 @@ local function Update()
   ns.Spells.Refresh() -- out of combat: read every spell cooldown, also with hidden icons
   groupOK = GroupAllowed()
   playerLevel = ReadPlayerLevel()
+  PotionSound()
   -- one broken group (odd item, API change) must not blank the others
   for i, b in ipairs(buttons) do
     local ok, err = pcall(UpdateButton, i, b, maxMana, maxHP)

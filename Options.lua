@@ -674,6 +674,11 @@ Build = function()
   -- Runes and own spells have one setting each: it sits right under the group.
   local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
   local extras = {
+    potion = function()
+      return Check(col, L.optPotionSound, function() return db.potionSound end,
+        function(v) db.potionSound = v end, L.tipPotionSound,
+        function() return db.enabled.potion end)
+    end,
     rune = function()
       return Stepper(col, PAD + 30, L.optMargin, function() return db.runeMargin end,
         function(v) db.runeMargin = v; ns.InvalidateCurves() end,
@@ -697,10 +702,14 @@ Build = function()
       local row = { cb = cb, st = st, i = i }
       c.y = c.y - GROUP_FULL -- room for the worst case: every group with a status line
       if extras[group.key] then
-        local stp = extras[group.key]()
-        row.extra = stp.label
+        local w = extras[group.key]()
         local key = group.key
-        ActiveIf(function() return db.enabled[key] end, stp)
+        if w.minus then -- a stepper: its label is placed, the value and buttons follow it
+          row.extra = w.label
+          ActiveIf(function() return db.enabled[key] end, w)
+        else -- a checkbox (greys itself out with its group)
+          row.extra = w
+        end
         c.y = c.y - EXTRA_H
       end
       groupRows[#groupRows + 1] = row

@@ -145,7 +145,9 @@ test("options: empty groups keep their status on the same line", function()
   eq(rune.extra.points[1][2], rune.cb, "rune health not under the rune group")
   eq(rune.extra.points[1][5], -22, "rune health after an empty group is not compact")
   eq(rows[3].cb.points[1][2], rune.extra, "next group not under the rune health")
-  eq(rune.cb.points[1][5], -42, "row after a full group")
+  -- the potion sound switch sits under the (full) potion row, the runes under it
+  eq(potion.extra.points[1][5], -38, "sound switch after a full group")
+  eq(rune.cb.points[1][2], potion.extra, "runes not under the sound switch")
 end)
 
 test("options: settings explain themselves on hover", function()

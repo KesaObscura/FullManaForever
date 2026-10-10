@@ -53,6 +53,7 @@ when the icon lights up.
 - **Mana text** like the game's status text: number, percentage or both, with its own switch
   and text size.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
+- **Sound when your potion is ready again** (optional, off by default).
 - **Item list** (`/fmf items`): every supported item, on/off per item, add your own.
 - **Profiles**: one shared set of settings or own settings per character; copy another
   character's settings, reset, delete old ones ("Profiles..." in the settings, `/fmf profile`).

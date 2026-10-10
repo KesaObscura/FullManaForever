@@ -106,4 +106,7 @@ and `/fmf log` (kept in releases for bug reports).
    (texts by Claude, sent by the owner). Reply to CurseForge comments within 1-2 days.
 6. Untested in game: owner's printed list `docs/test-checklist.md` (druid forms, Life Tap, group
    log, Mana Agate, Evocation, Inner Focus buff, launch-day Interface check). Update it as answers come.
-7. After launch: 0.8.4 HUD polish; maybe Wago / WoWInterface mirrors.
+7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is
+   ready again (option, off), no glow on placeholders. Gallery images 03 (rule row/column) and 10
+   show tenths of seconds: re-shoot when convenient. Rest of the HUD polish and 0.9.0 (group)
+   after launch; 0.9.0 needs the group log first. Maybe Wago / WoWInterface mirrors later.
