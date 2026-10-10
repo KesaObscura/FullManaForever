@@ -189,3 +189,33 @@ test("profiles window: every button has a tooltip", function()
   end
   ok(n >= 6, "buttons found: " .. n)
 end)
+
+test("windows: opening a window again brings it to the front; a copy keeps the profiles window on top", function()
+  local saved = { dbVersion = 8 }
+  local ns = M.load(saved)
+  ns.Profiles.Use("own")
+  ns = M.load(saved, { name = "Alt" })
+  ns.ToggleOptions(true)
+  ns.ToggleProfiles(true)
+  ns.ToggleLibrary(true)
+  local pwin, lib = _G.FullManaForeverProfiles, _G.FullManaForeverItems
+  local p0, l0 = pwin.raised or 0, lib.raised or 0
+  ns.ToggleProfiles(true); ns.ToggleLibrary(true)
+  ok((pwin.raised or 0) > p0, "profiles window not raised when opened again")
+  ok((lib.raised or 0) > l0, "item list not raised when opened again")
+  local rows = M.upvalue(M.upvalue(ns.ToggleProfiles, "RefreshProfiles"), "rows")
+  local p1 = pwin.raised
+  rows[1].copy.scripts.OnClick(rows[1].copy); pwin.yes.scripts.OnClick(pwin.yes)
+  eq(ns.Profiles.IsOwn(), true)
+  ok(pwin.raised > p1, "profiles window left behind the rebuilt settings window")
+end)
+
+test("Esc closes the settings and the profiles window", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  ns.ToggleProfiles(true)
+  ok(M.hooks.CloseSpecialWindows, "no Esc hook")
+  M.hooks.CloseSpecialWindows()
+  ok(not _G.FullManaForeverOptions:IsShown(), "settings window stays open on Esc")
+  ok(not _G.FullManaForeverProfiles:IsShown(), "profiles window stays open on Esc")
+end)

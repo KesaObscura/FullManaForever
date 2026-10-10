@@ -353,6 +353,7 @@ function ns.ToggleLibrary(forceShow)
   if not lib then Build() end
   if forceShow or not lib:IsShown() then
     lib:Show()
+    lib:Raise() -- opened again while hidden behind another window: bring it to the front
     RefreshRows()
     if C_Timer and C_Timer.After then C_Timer.After(0, UpdateScrollbar) else UpdateScrollbar() end
   else

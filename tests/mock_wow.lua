@@ -61,6 +61,7 @@ function methods:SetText(t) self.text = t end
 function methods:GetText() return self.text end
 function methods:GetStringWidth() return #(tostring(self.text or "")) * 6 end
 function methods:SetTextScale(s) self.textScale = s end
+function methods:Raise() self.raised = (self.raised or 0) + 1 end
 function methods:SetMotionScriptsWhileDisabled(on) self.motionWhileDisabled = on end
 function methods:GetStringHeight() return 12 end
 function methods:GetFontString() self.fs = self.fs or new("FontString", self); return self.fs end
@@ -242,7 +243,9 @@ function M.reset(opts)
   _G.SlashCmdList = {}
   _G.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
   _G.unpack = unpack or table.unpack
-  _G.hooksecurefunc = M.noop
+  M.hooks = {}
+  _G.hooksecurefunc = function(name, fn) M.hooks[name] = fn end
+  _G.CloseSpecialWindows = M.noop
   _G.HideUIPanel = function() count("HideUIPanel") end
   _G.SettingsPanel = nil
   _G.Settings = nil

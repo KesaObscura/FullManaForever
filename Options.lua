@@ -758,6 +758,7 @@ function ns.ToggleOptions(forceShow)
   if not win then Build() end
   if forceShow or not win:IsShown() then
     win:Show()
+    win:Raise() -- opened again while hidden behind another window: bring it to the front
     ns.RefreshOptions()
   else
     win:Hide()
@@ -768,7 +769,7 @@ end
 -- profiles window: copy from another character, reset, delete, undo
 ------------------------------------------------------------------------
 local pwin, RefreshProfiles
-local PW = 480
+local PW = 540
 
 local function ClassHex(class)
   local c = RAID_CLASS_COLORS and class and RAID_CLASS_COLORS[class]
@@ -863,10 +864,12 @@ local function BuildProfiles()
     r:SetSize(PW - 2 * PAD, 24)
     r.name = Label(r, "")
     r.name:SetPoint("LEFT", 4, 0)
-    r.name:SetWidth(200)
+    r.name:SetWidth(150)
     if r.name.SetWordWrap then r.name:SetWordWrap(false) end
     r.info = Label(r, "", "GameFontHighlightSmall")
-    r.info:SetPoint("LEFT", 210, 0)
+    r.info:SetPoint("LEFT", 160, 0)
+    r.info:SetWidth(170)
+    if r.info.SetWordWrap then r.info:SetWordWrap(false) end
     r.info:SetTextColor(0.7, 0.7, 0.7)
     r.del = Button(r, L.profDelete, 80)
     r.del:SetPoint("RIGHT", 0, 0)
@@ -938,10 +941,22 @@ function ns.ToggleProfiles(forceShow)
   if not pwin then BuildProfiles() end
   if forceShow or not pwin:IsShown() then
     pwin:Show()
+    pwin:Raise()
     RefreshProfiles()
   else
     pwin:Hide()
   end
+end
+
+-- Esc: the game hides the frames listed in UISpecialFrames. In game the settings window stayed
+-- open while the item list and the profiles window closed, so the same close is hooked here
+-- too (a post-hook on our own frames only; nothing of the game is changed)
+if hooksecurefunc and CloseSpecialWindows then
+  hooksecurefunc("CloseSpecialWindows", function()
+    for _, f in ipairs({ win, pwin }) do
+      if f and f:IsShown() then f:Hide() end
+    end
+  end)
 end
 
 -- another profile is in use: the settings window shows its values (built anew, its widgets
@@ -952,7 +967,8 @@ function ns.OnProfileChanged()
     Rebuild()
     if not shown then win:Hide() end
   end
-  if pwin and pwin:IsShown() then RefreshProfiles() end
+  -- the rebuilt settings window is new and would cover the profiles window the click came from
+  if pwin and pwin:IsShown() then RefreshProfiles(); pwin:Raise() end
 end
 
 ------------------------------------------------------------------------
