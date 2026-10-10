@@ -7,6 +7,7 @@
 - `/fmf test` does the same as `/fmf unlock` (before, it switched a separate test view on and off)
 - Switched-off settings show a grey tick instead of a gold one; "Min HP left after rune" and "Spells at mana <=" are greyed out while their group is off
 - Every control in the settings and the item list has a tooltip (each icon group, dropdowns, -/+ buttons, close buttons), also while it is greyed out
+- The description in the game's addon list says what the addon does, in your game language
 - The tip at login appears only on a new install; after an update one line names the new version, otherwise the addon stays silent
 
 **Full Mana Forever 0.8.2**

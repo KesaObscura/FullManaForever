@@ -1,10 +1,10 @@
 # Full Mana Forever
 
-**Stop waiting until you are out of mana.** Full Mana Forever shows a mana potion, rune or mana item **the moment you can use it without wasting a single point**: the item is off cooldown *and* your missing mana is at least what the item restores. Drink on cooldown, stay near full mana, and never panic-chug at 5 %.
+**The right mana potion at the right moment — for World of Warcraft: Forever (WoW Forever, Classic+).**
 
-Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules. Made for healers first, useful for every mana user.
+A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana Tide, ...) lights up the moment it is ready **and** fits into your missing mana: nothing is wasted. Plus a compact mana bar with the **five-second rule (5SR)** and your **live mana regen per second, also in combat**. Made for healers first, useful for every mana user.
 
-> **Tested so far:** works in combat; tested in Forever at low level (priest 16–20, also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat; Ley Line reading on a Skyborne mage; the regen colours while drinking, with Spirit Tap and after Ley Line reading). Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested yet. Please report anything odd — see *Bug reports* below.
+*Features asked for in the comments get built. Tell us what you need: comment here or open an issue on [GitHub](https://github.com/KesaObscura/FullManaForever/issues).*
 
 ## What it does
 
@@ -24,11 +24,15 @@ Built for **World of Warcraft: Forever** (client 1.60.1) and its new addon rules
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
 - **Hold potions.** `/fmf hold` (best in a macro) holds mana potions until the end of the next fight, for when you want the potion cooldown for something else. The potion icon turns grey with "HOLD"; after the fight it releases by itself.
 - Only suggests what you can use: skips items above your level, mage-only items for other classes and battleground-only items outside battlegrounds.
-- 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português, 繁體中文, 简体中文.
+- 9 languages: English, Deutsch, Español (EU and AL), Français, Русский, 한국어, Português, 简体中文, 繁體中文.
 
-## How it works with Forever's addon rules
+## Looking for a mana tick or mp5 tracker?
 
-In Forever your current mana is a *secret value*: addons cannot read it. Full Mana Forever never tries to. It hands the comparison to the game itself (a step curve on `UnitPowerPercent`), and the game shows or hides the icon. Item cooldowns and your maximum mana are readable and handled normally. No automation: the addon never uses an item for you — you press the button.
+Forever's mana regen is continuous: there are no 2-second mana ticks, and addons cannot read your mana or regen in combat, so classic mana tick and mp5 trackers do not work here. Full Mana Forever shows what really counts in Forever: the **five-second rule** countdown after each spell and the **regen running right now, per second**, in and out of combat.
+
+## Built for Forever's addon rules
+
+Forever hides your current mana, your buffs and your spell cooldowns from addons in combat. Full Mana Forever does not try to read them: it hands the mana check to the game itself (a step curve on `UnitPowerPercent`), and the game shows or hides the icon. It reads only what Forever allows (item cooldowns, maximum mana, your own casts). No automation: the addon never uses an item or casts for you, you press the button.
 
 ## Supported items (checked against the Forever database)
 
@@ -56,6 +60,19 @@ In Forever your current mana is a *secret value*: addons cannot read it. Full Ma
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap.
 
+## FAQ
+
+- **Does it work in combat?** Yes, it was built and tested for combat in Forever.
+- **Does it drink for me?** No. The icon tells you when; you press your potion button.
+- **Does it work in WoW Classic Era, Hardcore or retail?** No. It is made for World of Warcraft: Forever (client 1.60.1) and its addon rules.
+- **Why does the icon not light up at 90 % mana?** *No waste*: it waits until the whole potion fits into your missing mana. Want to drink earlier? Switch *Drinking* to *More per fight*.
+- **Different settings for my healer and my mage?** Yes: each character can have its own profile, or copy another character's settings.
+- **How do I save my expensive potions?** Switch single items off in `/fmf items`, or hold potions for one fight with `/fmf hold`.
+
+## Tested so far
+
+Works in combat. Tested in Forever at low level: priest 16–20 (also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat), Ley Line reading on a Skyborne mage, the regen colours while drinking, with Spirit Tap and after Ley Line reading. Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested in the beta yet. Please report anything odd — see *Bug reports* below.
+
 ## Planned
 
 Pre-pull checklist (consumables, buffs), who in your group has Innervate / Mana Tide ready, sound when a potion is ready again, group sync of mana cooldowns (Innervate, Mana Tide) and a helper for the druid or shaman giving them out.
@@ -65,3 +82,7 @@ Pre-pull checklist (consumables, buffs), who in your group has Innervate / Mana 
 Please include the output of `/fmf probe`, your class and level, and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
 For the five-second rule or the regen display: `/fmf log on`, play until it happens, `/fmf log off`, `/reload`, and attach `WTF\Account\ACCOUNTNAME\SavedVariables\FullManaForever.lua` (class, level, casts and regen values; in a group also your group members' names and casts — remove them before sharing if you like).
+
+Source code and issues: [GitHub](https://github.com/KesaObscura/FullManaForever).
+
+Vollständig auf Deutsch · Totalmente en español · Entièrement en français · Полностью на русском · 한국어 완전 지원 · Totalmente em português · 完整简体中文 · 完整繁體中文 — the addon follows your game language.

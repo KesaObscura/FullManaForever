@@ -1,6 +1,15 @@
 ## Interface: 16001
 ## Title: Full Mana Forever
-## Notes: Shows a mana potion, rune or mana item when it is ready and your missing mana is big enough (by default: nothing is wasted).
+## Notes: Lights up the right mana potion, rune, mana gem or own mana spell when it is ready and fits your missing mana. Mana bar with the five-second rule and live mana regen.
+## Notes-deDE: Zeigt den passenden Manatrank, die Rune, den Manaedelstein oder eigenen Manazauber, sobald er bereit ist und in dein fehlendes Mana passt. Manaleiste mit Fünf-Sekunden-Regel und aktueller Manaregeneration.
+## Notes-ruRU: Подсвечивает подходящее зелье маны, руну, камень маны или своё умение, когда оно готово и влезает в недостающую ману. Полоска маны с правилом пяти секунд и текущим регеном.
+## Notes-esES: Muestra la poción de maná, runa, gema de maná o hechizo de maná adecuado cuando está listo y cabe en tu maná que falta. Barra de maná con la regla de los cinco segundos y regeneración en vivo.
+## Notes-esMX: Muestra la poción de maná, runa, gema de maná o hechizo de maná adecuado cuando está listo y cabe en tu maná que falta. Barra de maná con la regla de los cinco segundos y regeneración en vivo.
+## Notes-frFR: Affiche la bonne potion de mana, rune, gemme de mana ou sort de mana dès qu'il est prêt et tient dans votre mana manquant. Barre de mana avec la règle des cinq secondes et la régénération en direct.
+## Notes-ptBR: Mostra a poção de mana, runa, gema de mana ou feitiço de mana certo quando está pronto e cabe na mana que falta. Barra de mana com a regra dos cinco segundos e regeneração ao vivo.
+## Notes-koKR: 준비되었고 부족한 마나에 딱 맞을 때 알맞은 마나 물약, 룬, 마나석 또는 자신의 마나 주문을 표시합니다. 5초 규칙과 실시간 마나 회복이 있는 마나 바.
+## Notes-zhCN: 当合适的法力药水、符文、法力宝石或自身法力技能就绪且恰好补满缺失的法力时将其点亮。带五秒规则和实时法力回复的法力条。
+## Notes-zhTW: 當合適的法力藥水、符文、法力寶石或自身法力技能就緒且剛好補滿缺少的法力時將其點亮。帶五秒規則和即時法力回復的法力條。
 ## Version: 0.8.3
 ## IconTexture: Interface\Icons\INV_Potion_76
 ## AddonCompartmentFunc: FullManaForever_OnCompartmentClick

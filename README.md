@@ -1,11 +1,21 @@
-# Full Mana Forever
+# Full Mana Forever – mana potion, five-second rule and mana regen addon for WoW Forever
 
-An addon for **World of Warcraft: Forever** (client 1.60.1, interface 16001) for healers
-and every other mana user.
+[![Release](https://img.shields.io/github/v/release/KesaObscura/FullManaForever)](https://github.com/KesaObscura/FullManaForever/releases/latest)
+[![CurseForge](https://img.shields.io/curseforge/dt/1717647?label=CurseForge)](https://www.curseforge.com/wow/addons/full-mana-forever)
+[![License: MIT](https://img.shields.io/github/license/KesaObscura/FullManaForever)](LICENSE)
 
-It shows a mana potion, rune or mana item **the moment you can use it without waste**:
-the item is off cooldown *and* your missing mana is at least what it restores. Drink on
-cooldown, stay near full mana, and never panic-chug at 5 %.
+An addon for **World of Warcraft: Forever** (WoW Forever, "Classic+", client 1.60.1) for healers
+and every other mana user. It lights up your **mana potion**, Demonic/Dark Rune, mage mana gem,
+mana item or **own mana spell** (Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap,
+Eureka!, Ley Line reading) **the moment it is ready and fits into your missing mana**, so nothing
+is wasted: drink on cooldown, stay near full mana, and never panic-chug at 5 %. A compact mana bar
+shows the **five-second rule (5SR)** and your **live mana regen per second, also in combat**.
+
+![A mana potion lights up when it fits into the missing mana](docs/images/mana-potion-at-the-right-moment.png)
+
+| Right potion for the missing mana | Live regen and five-second rule | Own mana spells |
+|---|---|---|
+| ![Several potions: the strongest one that will not overflow lights up](docs/images/right-mana-potion-for-missing-mana.png) | ![Regen colours: normal, above normal, five-second rule](docs/images/live-mana-regen-five-second-rule.png) | ![Evocation, Innervate, Eureka! and other mana spells](docs/images/own-mana-spells-evocation-innervate.png) |
 
 ## How it works with Forever's addon rules
 
@@ -46,12 +56,32 @@ when the icon lights up.
 - **Item list** (`/fmf items`): every supported item, on/off per item, add your own.
 - **Profiles**: one shared set of settings or own settings per character; copy another
   character's settings, reset, delete old ones ("Profiles..." in the settings, `/fmf profile`).
-- 10 languages: English, Deutsch, Español (EU/AL), Français, Русский, 한국어, Português,
-  繁體中文, 简体中文.
+- 9 languages: English, Deutsch, Español (EU and AL), Français, Русский, 한국어, Português,
+  简体中文, 繁體中文. The addon follows your game language.
 
 Supported items and their restore values are in [`Data.lua`](Data.lua); they were checked
 against the Wowhead Forever database (build 1.60.1). Dreamless Sleep Potion is off by
 default because it puts you to sleep for 12 seconds.
+
+## Looking for a mana tick or mp5 tracker?
+
+Forever's mana regen is continuous: there are no 2-second mana ticks, and addons cannot read
+your mana or regen in combat, so classic mana tick and mp5 trackers do not work there. Full Mana
+Forever shows what counts in Forever instead: the five-second rule countdown after each spell
+and the regen running right now, per second, in and out of combat.
+
+## FAQ
+
+- **Does it work in combat?** Yes, it was built and tested for combat in Forever.
+- **Does it drink for me?** No. The icon tells you when; you press your potion button.
+- **Does it work in WoW Classic Era, Hardcore or retail?** No. It is made for World of
+  Warcraft: Forever (client 1.60.1) and its addon rules.
+- **Why does the icon not light up at 90 % mana?** *No waste*: it waits until the whole potion
+  fits into your missing mana. Switch *Drinking* to *More per fight* to drink earlier.
+- **Different settings per character?** Yes: Shared or an own profile per character, and copy
+  another character's settings.
+- **Missing a feature?** Ask in the CurseForge comments or open an issue here: requests are
+  read, and features asked for there get built.
 
 ## Install
 
@@ -100,7 +130,8 @@ your group members: remove them before you share the file, if you like.
 ## Development
 
 Plain Lua 5.1, no libraries, no Blizzard templates. Files load in TOC order:
-`Locale.lua` → `Data.lua` → `Regen.lua` → `Core.lua` → `Options.lua` → `Library.lua` → `Diag.lua`.
+`Locale.lua` → `Data.lua` → `Regen.lua` → `Spells.lua` → `Profiles.lua` → `Core.lua` → `Options.lua` →
+`Library.lua` → `Diag.lua`.
 
 Tests run outside the game against a small mock of the WoW API:
 

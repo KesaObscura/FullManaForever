@@ -20,7 +20,7 @@ and `/fmf log` (kept in releases for bug reports).
   the item list.
 - **Run the tests after every change:** `lua5.1 tests/run.lua` must end with `0 failed`.
 - **After every change, hand the owner a test zip** built from the committed state:
-  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
+  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!docs' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
   (same contents as `.pkgmeta` packages).
 - Work on the session branch; `main` changes only through a PR the owner merges.
 
@@ -40,7 +40,9 @@ and `/fmf log` (kept in releases for bug reports).
   moment it is ready and nothing is wasted. Plus a mana bar with the five-second rule and your
   live mana regen. For WoW Forever." Gallery image descriptions: also at most 256.
 - GitHub release: tag `vX.Y.Z` on the release commit, not a pre-release, same changelog text
-  and zip. This session cannot push tags; the owner creates the tag with the release.
+  and zip. Title "Full Mana Forever X.Y.Z – WoW Forever mana addon"; body = two-line pitch,
+  install line (CurseForge app or unzip into Interface/AddOns), the changelog, bug-report link.
+  `docs/images` (README images, social preview) is not part of the addon zip. This session cannot push tags; the owner creates the tag with the release.
 
 ## Facts about Forever (for the regen / five-second-rule feature, 0.7.0)
 
