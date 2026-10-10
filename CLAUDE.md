@@ -94,9 +94,10 @@ and `/fmf log` (kept in releases for bug reports).
 1. Owner tests 0.8.3 profiles in game (blocks everything else).
 2. 0.8.3 step 3: settings order and wording (thresholds under their groups, "Drinking" ->
    "When to light up" in all languages); new settings screenshot for the gallery.
-3. Release 0.8.3 (~14-15 Oct): merge PR (new README with docs/images goes live), owner tags
-   v0.8.3, GitHub release in the new format, new CurseForge description (CURSEFORGE.md), new
-   gallery image for profiles and /fmf hold.
+3. Release 0.8.3 on 11 Oct (owner: one release per day until the beta ends): merge PR (new README with docs/images goes live), owner tags
+   v0.8.3, GitHub release in the new format, new CurseForge description (CURSEFORGE.md); gallery:
+   06_settings replaced (0.8.3 window), 13_profiles_hold new (docs/gallery). Then: owner's
+   CurseForge author profile (avatar/bio/links) wanted.
 4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions); 16-20 Oct
    only fixes. 21 Oct (beta end): the most stable and complete version is out.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),

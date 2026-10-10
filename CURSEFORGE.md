@@ -71,7 +71,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 ## Tested so far
 
-Works in combat. Tested in Forever at low level: priest 16–20 (also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat), Ley Line reading on a Skyborne mage, the regen colours while drinking, with Spirit Tap and after Ley Line reading. Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested in the beta yet. Please report anything odd — see *Bug reports* below.
+Works in combat. Tested in Forever at low level: priest 16–20 (also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat), Ley Line reading on a Skyborne mage, the regen colours while drinking, with Spirit Tap and after Ley Line reading, per-character profiles across several characters and `/fmf hold` in and out of combat. Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested in the beta yet. Please report anything odd — see *Bug reports* below.
 
 ## Planned
 

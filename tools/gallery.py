@@ -180,6 +180,17 @@ if __name__ == "__main__":
         make("08_unlocked.png", "Easy to place",
              "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
              [(crop("images/141.webp", (1150, 132, 1480, 240), 2.9), "")], top=190)
+    if only("06v3"):
+        # 0.8.3 window: profile switch in the title, thresholds under their groups
+        make("06_settings.png", "Settings that explain themselves",
+             "Every part has its own switch and text size. Hover any option for a short explanation.",
+             [(crop("images/249.png", (0, 0, 924, 618), 0.86), "")], top=140)
+    if only("13"):
+        make("13_profiles_hold.png", "Profiles and potions on hold",
+             "Shared settings or your own per character. /fmf hold keeps potions for the next fight.",
+             [(crop("images/246.png", (219, 262, 760, 436), 1.15), "Copy another character's settings"),
+              (crop("images/222.webp", (1060, 140, 1375, 235), 1.5), "/fmf hold: grey until the fight ends")],
+             top=250)
     if only("06n"):
         # 0.8.2 window: every part has its own switch, switched-off settings stay greyed out
         make("06_settings.png", "Settings that explain themselves",
