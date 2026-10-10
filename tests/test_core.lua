@@ -1500,15 +1500,15 @@ test("0.8.4: whole seconds; a placeholder does not glow; optional sound when the
   M.state.cooldowns[3385] = { t0 + 200, 120 }
   at(201); eq(#M.sounds, 0, "sound while on cooldown")
   at(321); eq(#M.sounds, 1, "no sound when the potion is ready again")
-  ok(tostring(M.sounds[1]):find("Sounds\\potion%-ready%.ogg"), "not the addon's own sound: " .. tostring(M.sounds[1]))
+  ok(tostring(M.sounds[1]):find("Sounds\\drop%-and%-bell%.ogg"), "not the addon's own sound: " .. tostring(M.sounds[1]))
   at(322); eq(#M.sounds, 1, "sound repeats")
   -- a wand shot's short lock is no potion cooldown
   M.state.cooldowns[3385] = { t0 + 400, 1.8 }
   at(400.5); at(403)
   eq(#M.sounds, 1, "sound after a wand shot")
-  -- the file cannot be played: the ready check instead
-  M.state.noSoundFile = true
+  -- another of the three sounds
+  ns.db.potionSoundKind = "crystal"
   ns.PlayPotionSound()
-  eq(M.sounds[#M.sounds], 8960, "no fallback sound")
+  ok(tostring(M.sounds[#M.sounds]):find("crystal%-rise%.ogg"), "picked sound not played")
   _G.GetTime = real
 end)

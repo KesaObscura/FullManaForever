@@ -101,7 +101,8 @@ test("options: stepper buttons and dropdowns line up in fixed columns", function
   local widths = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     -- the profile switch sits in the title row, not in a column
-    if w.entries and w.entries[1].value ~= "shared" then widths[w.w] = true end
+    -- the profile switch (title row) and the sound choice (under a group) are not in the column
+    if w.entries and w.entries[1].value ~= "shared" and w.entries[1].value ~= "drop" then widths[w.w] = true end
   end
   local nw = 0
   for _ in pairs(widths) do nw = nw + 1 end
@@ -142,12 +143,13 @@ test("options: empty groups keep their status on the same line", function()
   eq(potion.st.points[1][2], potion.cb, "potion status not below its checkbox")
   eq(rune.st.points[1][2], rune.cb.label, "empty rune status not next to the name")
   -- the rune's own setting sits right under the (compact) rune row, the next group under it
-  eq(rune.extra.points[1][2], rune.cb, "rune health not under the rune group")
-  eq(rune.extra.points[1][5], -22, "rune health after an empty group is not compact")
-  eq(rows[3].cb.points[1][2], rune.extra, "next group not under the rune health")
+  eq(rune.extras[1].points[1][2], rune.cb, "rune health not under the rune group")
+  eq(rune.extras[1].points[1][5], -22, "rune health after an empty group is not compact")
+  eq(rows[3].cb.points[1][2], rune.extras[1], "next group not under the rune health")
   -- the potion sound switch sits under the (full) potion row, the runes under it
-  eq(potion.extra.points[1][5], -38, "sound switch after a full group")
-  eq(rune.cb.points[1][2], potion.extra, "runes not under the sound switch")
+  eq(potion.extras[1].points[1][5], -38, "sound switch after a full group")
+  eq(potion.extras[2].points[1][2], potion.extras[1], "sound choice not under the sound switch")
+  eq(rune.cb.points[1][2], potion.extras[2], "runes not under the sound choice")
 end)
 
 test("options: settings explain themselves on hover", function()
@@ -458,7 +460,16 @@ test("options: switching the potion sound on plays it once; whole seconds greyed
   ok(snd and whole, "switches not found")
   snd:SetChecked(true); snd.scripts.OnClick(snd)
   eq(ns.db.potionSound, true); eq(#M.sounds, 1, "no sound to try it")
+  local kind
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "drop" then kind = w end
+  end
+  ok(kind and kind:IsEnabled(), "sound choice missing or greyed out with the sound on")
+  kind.Select("glass")
+  eq(ns.db.potionSoundKind, "glass"); eq(#M.sounds, 2, "picked sound not played")
+  ok(M.sounds[2]:find("glass%-notes%.ogg"), "wrong file: " .. M.sounds[2])
   snd:SetChecked(false); snd.scripts.OnClick(snd)
-  eq(#M.sounds, 1, "sound when switched off")
+  eq(#M.sounds, 2, "sound when switched off")
+  ok(not kind:IsEnabled(), "sound choice usable with the sound off")
   ok(not whole:IsEnabled(), "whole seconds usable with the rule off")
 end)

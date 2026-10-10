@@ -28,6 +28,7 @@ local DEFAULTS = {
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,
   potionSound = false,  -- a short sound when the mana potion cooldown is over
+  potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
   fsrWhole   = true,    -- the rule's seconds as 5, 4, 3 ... (false: tenths, 4.3)    -- current mana regen next to the mana bar (also without the bar)
   textFree   = false,   -- mana numbers, rule seconds and regen can be dragged (frame unlocked)
   textPoints = {},      -- [mana|fsr|regen] = { x, y }: dragged text centers, UIParent units
@@ -1437,7 +1438,6 @@ end
 
 -- optional sound when the mana potion cooldown is over (item cooldowns are readable in combat,
 -- the mana is not: the sound means "a potion is ready again", not "it fits")
-local POTION_SOUND = 8960 -- fallback: the ready check sound, in the game since the beginning
 local potionIndex, potionWaiting
 local function PotionSound()
   if not potionIndex then
@@ -1454,13 +1454,12 @@ local function PotionSound()
   end
 end
 
--- the addon's own sound (a drop and a bell, tools/sound.py "b"), on the Master channel so it is
--- heard even with sound effects turned down; the ready check if the file cannot be played
-local POTION_SOUND_FILE = "Interface\\AddOns\\FullManaForever\\Sounds\\potion-ready.ogg"
+-- the addon's own sounds (made by tools/sound.py), on the Master channel so they are heard even
+-- with sound effects turned down
+local SOUND_FILES = { drop = "drop-and-bell.ogg", crystal = "crystal-rise.ogg", glass = "glass-notes.ogg" }
 function ns.PlayPotionSound()
-  local ok, willPlay = pcall(PlaySoundFile, POTION_SOUND_FILE, "Master")
-  if ok and willPlay then return end
-  pcall(PlaySound, (SOUNDKIT and SOUNDKIT.READY_CHECK) or POTION_SOUND, "Master")
+  local file = SOUND_FILES[db.potionSoundKind] or SOUND_FILES.drop
+  pcall(PlaySoundFile, "Interface\\AddOns\\FullManaForever\\Sounds\\" .. file, "Master")
 end
 
 local function Update()

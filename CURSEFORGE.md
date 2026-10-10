@@ -21,7 +21,8 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
 - **Item list.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category.
 - **Profiles per character.** All characters share one set of settings, or a character gets its own (a copy of the shared ones to start with). Copy the settings of another character in one click, reset a profile or delete the settings of characters you no longer play; one undo if you clicked the wrong one. Language and your own items stay the same for all.
-- **Sound when your potion is ready again** (optional): a short chime when the mana potion cooldown is over, also in combat.
+- **Sound when your potion is ready again** (optional): a short sound when the mana potion cooldown is over, also in combat; three sounds of the addon's own to choose from.
+- **Five-second rule in whole seconds** (5, 4, 3 ...) or with tenths, as you like.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
 - **Hold potions.** `/fmf hold` (best in a macro) holds mana potions until the end of the next fight, for when you want the potion cooldown for something else. The potion icon turns grey with "HOLD"; after the fight it releases by itself.
 - Only suggests what you can use: skips items above your level, mage-only items for other classes and battleground-only items outside battlegrounds.

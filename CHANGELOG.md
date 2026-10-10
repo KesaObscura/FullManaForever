@@ -2,7 +2,7 @@
 
 **Full Mana Forever 0.8.4**
 
-- New option under Mana potions: "Sound when ready again" plays a short sound of its own (a drop and a bell) when your mana potion cooldown is over, also in combat (off by default; you hear it once when you switch it on)
+- New option under Mana potions: "Sound when ready again" plays a short sound when your mana potion cooldown is over, also in combat (off by default; you hear it once when you switch it on). Three sounds of the addon's own to choose from: Drop and bell, Crystal rise, Glass notes
 - The five-second rule counts down in whole seconds (5, 4, 3, 2, 1); new option "Whole seconds" under Five-second rule, switch it off for tenths
 - On the unlocked frame only icons you carry glow; grey placeholders do not
 
