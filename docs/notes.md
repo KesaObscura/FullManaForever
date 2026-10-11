@@ -172,4 +172,6 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   user names (e.g. commenters) in texts; "features asked for in the comments get built" is fine.
   CurseForge avatar: own flask with an infinity sign (no new logo needed). 9 languages (esMX uses
   the esES texts), not 10.
-
+- Litany of Light (Forever priest talent, owner's Wowhead screenshot): a healing spell gives back
+  20 % of its base cost if the previous heal was a different spell. Instant mana after the cast,
+  no regen and no buff: the addon sees it as normal mana; nothing to build for it.
