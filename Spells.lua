@@ -23,6 +23,10 @@ local amount = {}          -- [entry] = mana it gives (fit spells, from the desc
 local texture = {}         -- [spell ID] = icon
 local waiting              -- entry whose cooldown starts with the next spell (Inner Focus)
 local dirty = true
+-- S.Ready results of this tick (asked several times per tick; two tables, nothing allocated)
+local memo, memoLeft, memoAt = {}, {}, nil
+local function Forget() wipe(memo); wipe(memoLeft) end
+local nextAmount = 0       -- GetTime() of the next try to read a fit spell's mana text
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
 
@@ -74,8 +78,8 @@ end
 -- which of the spells does this character have (out of combat; the book may change in combat)
 function S.Rebuild()
   if InCombatLockdown() then dirty = true return end
-  wipe(known); wipe(byID); wipe(amount)
-  waiting = nil
+  local had = next(known) ~= nil
+  wipe(known); wipe(byID); wipe(amount); Forget()
   local want = {}
   for _, sp in ipairs(ns.SPELLS) do
     if ns.ForMyClass(sp) then
@@ -94,7 +98,11 @@ function S.Rebuild()
       if sp.fit then amount[sp] = AmountFromText(id) end
     end
   end
+  -- Inner Focus still waits for the next spell when the book changes (talent, new rank)
+  if waiting and not known[waiting] then waiting = nil end
   dirty = false
+  -- the auto bar length counts the spell group only while a spell is known
+  if (next(known) ~= nil) ~= had and ns.Layout then ns.Layout(true) end
 end
 
 function S.AnyKnown()
@@ -123,7 +131,7 @@ end
 
 -- ready, secondsLeft (nil: not known when it is ready). In combat the game's cooldown is
 -- secret and not even asked for; a spell whose cooldown was never read counts as not ready.
-function S.Ready(sp)
+local function ReadyNow(sp)
   local id = known[sp]
   if not id then return false, 0 end
   if not InCombatLockdown() then
@@ -148,6 +156,13 @@ function S.Ready(sp)
   return false, left
 end
 
+function S.Ready(sp)
+  local now = GetTime()
+  if memoAt ~= now then Forget(); memoAt = now end
+  if memo[sp] == nil then memo[sp], memoLeft[sp] = ReadyNow(sp) end
+  return memo[sp], memoLeft[sp]
+end
+
 -- a fit spell (Life Tap) is only shown once its mana is known: without it there is no
 -- health check either
 local function Usable(sp)
@@ -155,23 +170,27 @@ local function Usable(sp)
   return S.Ready(sp)
 end
 
--- the first spell to show now (known, ready), and its ID. Every known spell is checked,
--- so the cooldowns of all of them are read while the player is out of combat.
+-- the first spell to show now (known, ready), and its ID. S.Refresh reads the cooldowns
+-- of all of them every tick out of combat.
 function S.Candidate()
-  local first, firstID
   for _, sp in ipairs(ns.SPELLS) do
-    if known[sp] and Usable(sp) and not first then first, firstID = sp, known[sp] end
+    if known[sp] and Usable(sp) then return sp, known[sp] end
   end
-  return first, firstID
 end
 
 -- out of combat, every tick: read every cooldown (also when the slot is hidden, e.g. "only
 -- in combat") and the mana of fit spells whose text was not loaded at login
 function S.Refresh()
+  Forget() -- a new tick: every spell is asked again
   if InCombatLockdown() then return end
+  local now = GetTime()
+  local retry = now >= nextAmount -- a missing mana text is asked for once a second
   for sp, id in pairs(known) do
     S.Ready(sp)
-    if sp.fit and not amount[sp] then amount[sp] = AmountFromText(id) end
+    if retry and sp.fit and not amount[sp] then
+      amount[sp] = AmountFromText(id)
+      nextAmount = now + 1
+    end
   end
 end
 
@@ -244,6 +263,7 @@ end
 -- Inner Focus waits: its cooldown starts with the next spell, which uses up its buff.
 local function OnCast(id)
   if id == nil or IsSecret(id) then return end
+  Forget()
   local sp = byID[id]
   if waiting and sp ~= waiting and UsesMana(id) then
     local cd = Cooldown(waiting, known[waiting] or waiting.id)

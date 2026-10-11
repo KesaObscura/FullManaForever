@@ -249,3 +249,53 @@ test("popups: over the settings, settings dimmed; Esc closes one window per pres
   ok(FullManaForeverItems:IsShown())
   ok(not win.shade.shown)
 end)
+
+test("profiles: undo of a delete brings the profile back and keeps later changes", function()
+  local saved = { dbVersion = 8 }
+  local ns = M.load(saved, { class = "MAGE", level = 30 })
+  ns.Profiles.Use("own"); ns.db.iconSize = 80
+  ns = M.load(saved, { name = "Alt" })
+  local P = ns.Profiles
+  ok(P.Delete("Kesa-Forever"))
+  ns.db.iconSize = 99 -- a change after the delete
+  ok(P.Undo())
+  eq(#P.Others(), 1, "delete not undone")
+  eq(saved.profiles["Kesa-Forever"].iconSize, 80, "deleted profile not restored")
+  eq(ns.db.iconSize, 99, "undo took back a later change")
+  eq(saved.chars["Kesa-Forever"].class, "MAGE", "character not restored")
+end)
+
+test("profiles: a switch with the settings closed builds nothing and does not show them", function()
+  local saved = { dbVersion = 8, iconSize = 60 }
+  local ns = M.load(saved)
+  ns.ToggleOptions(true); ns.ToggleOptions() -- built once, closed
+  local win = _G.FullManaForeverOptions
+  local shownOnce = false
+  win:HookScript("OnShow", function() shownOnce = true end)
+  local frames = M.created
+  for _ = 1, 5 do ns.Profiles.Use("own"); ns.Profiles.Use("shared") end
+  eq(M.created, frames, "frames built for a closed window")
+  ok(not shownOnce, "closed settings shown during a switch")
+  ns.Profiles.Use("own"); ns.db.iconSize = 80
+  ns.ToggleOptions(true)
+  local size
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == ns.L.optSize .. ":" then size = w end
+  end
+  eq(size.value.text, "80", "settings opened with the old profile")
+end)
+
+test("profiles window follows a language change", function()
+  local ns = M.load({ dbVersion = 8 })
+  ns.ToggleOptions(true)
+  ns.ToggleProfiles(true); ns.ToggleProfiles()
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
+  end
+  ns.ToggleProfiles(true)
+  local found
+  for _, f in ipairs(M.all) do
+    if f.kind == "FontString" and f.text == "Profile" and f.parent == _G.FullManaForeverProfiles then found = true end
+  end
+  ok(found, "profiles window still in English")
+end)

@@ -330,7 +330,9 @@ local function PlaceGroups(force)
   end
 end
 
+local stale -- the closed window still shows another profile: built anew when it opens
 local function Rebuild()
+  stale = false
   local point
   if win then
     point = { win:GetPoint() }
@@ -511,6 +513,7 @@ Build = function()
     if panelButton then panelButton:SetText(L.optOpen); FitWidth(panelButton, 220) end
     Rebuild()
     if ns.RebuildLibrary then ns.RebuildLibrary(true) end
+    if ns.DropProfiles then ns.DropProfiles() end
   end)
   c.Right(lang)
   c.Row(langLabel, PAD + 4, 34)
@@ -820,6 +823,7 @@ end
 function ns.ToggleOptions(forceShow)
   if not win then Build() end
   if forceShow or not win:IsShown() then
+    if stale then Rebuild() end
     win:Show()
     win:Raise() -- opened again while hidden behind another window: bring it to the front
     ns.RefreshOptions()
@@ -1050,6 +1054,11 @@ local function BuildProfiles()
   ns.RegisterPopup(pwin, "profiles")
 end
 
+-- the language changed: the profiles window is built anew, in the new language, when it opens
+function ns.DropProfiles()
+  if pwin then pwin:Hide(); pwin = nil end
+end
+
 function ns.ToggleProfiles(forceShow)
   if not pwin then BuildProfiles() end
   if forceShow or not pwin:IsShown() then
@@ -1082,10 +1091,10 @@ end
 -- another profile is in use: the settings window shows its values (built anew, its widgets
 -- hold the old profile), the profiles window its state
 function ns.OnProfileChanged()
+  -- a closed window is built when it opens next: no new frames per switch, and it never
+  -- shows for a moment (that would move an open item list onto it)
   if win then
-    local shown = win:IsShown()
-    Rebuild()
-    if not shown then win:Hide() end
+    if win:IsShown() then Rebuild() else stale = true end
   end
   -- the rebuilt settings window is new and would cover the profiles window the click came from
   if pwin and pwin:IsShown() then RefreshProfiles(); pwin:Raise() end

@@ -1,5 +1,18 @@
 # Changelog
 
+**Full Mana Forever 0.8.6**
+
+Stability and speed, found in a full review of the code; what the addon does stays the same.
+
+- Inner Focus: if your spell book changed while its buff was up (new rank, talent), the icon no longer stays away until you leave combat
+- Learning your first mana spell (or losing the last one) updates the auto bar length at once, not only after the icons change
+- Undo in the profiles window takes back only that one change (a deleted profile comes back), not settings you changed afterwards
+- Switching profiles with the settings closed no longer builds the settings window again each time (less memory) and no longer moves an open item list
+- After a language change the profiles window and the "HOLD" word on the potion use the new language
+- A damaged saved position (for example an edited settings file) no longer stops the addon at login; the frame goes back to its default place
+- A mana band whose lower and upper edge are the same is never shown (before, the game got two curve points at one value)
+- Less work per update: spell cooldowns and the battleground check are read once per update, a missing Life Tap text is asked for once a second
+
 **Full Mana Forever 0.8.5**
 
 - Regen above your normal rate also shows a small green up arrow after the number, not only the green colour

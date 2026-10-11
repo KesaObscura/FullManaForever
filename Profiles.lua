@@ -20,7 +20,7 @@ P.ACCOUNT = {
 
 local root  -- FullManaForeverDB
 local me    -- this character's key, nil while the game does not tell the name
-local undo  -- one step back per session: profiles and characters before the last change
+local undo  -- one step back per session: the profile (and character) the last change touched
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
 
@@ -96,8 +96,11 @@ function P.Level(lvl)
   if c and type(lvl) == "number" and not IsSecret(lvl) then c.level = lvl end
 end
 
-local function Snapshot()
-  undo = { profiles = DeepCopy(root.profiles), chars = DeepCopy(root.chars) }
+-- only what the change touches is kept, so undo does not take back later changes
+-- (settings changed after a delete, other characters' logins)
+local function Snapshot(key, charKey)
+  undo = { key = key, profile = DeepCopy(root.profiles[key]), charKey = charKey,
+    char = charKey and DeepCopy(root.chars[charKey]) }
 end
 
 local function Changed()
@@ -121,7 +124,7 @@ end
 -- this character gets its own profile as a copy of another one (a character key or Shared)
 function P.CopyFrom(name)
   if not me or not root.profiles[name] or name == me then return false end
-  Snapshot()
+  Snapshot(me, me)
   root.profiles[me] = DeepCopy(root.profiles[name])
   root.chars[me].profile = me
   Changed()
@@ -130,7 +133,7 @@ end
 
 -- the profile in use back to the defaults (language and own items are not in it)
 function P.Reset()
-  Snapshot()
+  Snapshot(P.ActiveName())
   root.profiles[P.ActiveName()] = {}
   Changed()
   return true
@@ -139,7 +142,7 @@ end
 -- the own profile of another character; that character uses Shared at its next login
 function P.Delete(key)
   if key == me or key == SHARED or not root.profiles[key] then return false end
-  Snapshot()
+  Snapshot(key, key)
   root.profiles[key] = nil
   root.chars[key] = nil
   return true
@@ -149,7 +152,13 @@ function P.CanUndo() return undo ~= nil end
 
 function P.Undo()
   if not undo then return false end
-  root.profiles, root.chars = undo.profiles, undo.chars
+  root.profiles[undo.key] = undo.profile
+  local ck = undo.charKey
+  if ck == me and root.chars[me] and undo.char then
+    root.chars[me].profile = undo.char.profile -- level and last login stay current
+  elseif ck then
+    root.chars[ck] = undo.char
+  end
   undo = nil
   Changed()
   return true

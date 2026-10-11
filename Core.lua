@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.5"
+ns.VERSION = "0.8.6"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -188,10 +188,14 @@ local function GroupAllowed()
   return db.showSolo
 end
 
+local bgTick, bgValue -- asked once per update tick
+local candTick = 0
 local function InBattleground()
-  if not IsInInstance then return false end
-  local _, kind = IsInInstance()
-  return kind == "pvp"
+  if bgTick == candTick then return bgValue end
+  local kind
+  if IsInInstance then kind = select(2, IsInInstance()) end
+  bgTick, bgValue = candTick, kind == "pvp"
+  return bgValue
 end
 
 ------------------------------------------------------------------------
@@ -349,7 +353,6 @@ end
 -- ready items of a shared-cooldown group, strongest first, one per distinct restore.
 -- Called several times per tick (icons, bar, options), so the result is computed once
 -- per tick and all tables are reused: nothing is allocated in steady state.
-local candTick = 0
 local candRes, candAll, candPool, seen = {}, {}, {}, {}
 
 local function BandCandidates(i)
@@ -430,6 +433,10 @@ local EPS = 0.0001
 local function BandCurve(lo, hi)
   local c = C_CurveUtil.CreateColorCurve()
   c:SetType(Enum.LuaCurveType.Step)
+  if lo and lo >= 0 and lo >= hi then
+    c:AddPoint(0, CreateColor(1, 1, 1, 0)) -- an empty band: never shown
+    return c
+  end
   if lo and lo >= 0 then
     c:AddPoint(0, CreateColor(1, 1, 1, 0))
     c:AddPoint((lo + EPS) * Scale(), CreateColor(1, 1, 1, 1))
@@ -707,7 +714,12 @@ local function CreateTextBox(key, width)
   return box
 end
 
-local function TextFree(key) return db.textFree and db.textPoints[key] ~= nil end
+-- a dragged text's place; a damaged saved value counts as "at the bar"
+local function TextPoint(key)
+  local p = type(db.textPoints) == "table" and db.textPoints[key]
+  if type(p) == "table" and type(p[1]) == "number" and type(p[2]) == "number" then return p end
+end
+local function TextFree(key) return db.textFree and TextPoint(key) ~= nil end
 
 local function CreateBar()
   bar = CreateFrame("StatusBar", nil, anchor)
@@ -976,7 +988,7 @@ function ns.PositionBar()
     local box, scale = bar[field], TextScale(key)
     box:SetScale(scale)
     if TextFree(key) then
-      local p = db.textPoints[key]
+      local p = TextPoint(key)
       box:ClearAllPoints()
       box:SetPoint("CENTER", UIParent, "BOTTOMLEFT", p[1] / scale, p[2] / scale)
       texts[key]:ClearAllPoints()
@@ -1019,6 +1031,20 @@ local function IsPinned(p)
   return p and p[1] == "TOPLEFT" and p[3] == "BOTTOMLEFT"
 end
 
+-- the saved frame position; a damaged one (edited file, old bug) goes back to the default
+local POINTS = { TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
+  RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true }
+local function PlaceAnchor()
+  local p = db.point
+  if not (type(p) == "table" and POINTS[p[1]] and POINTS[p[3]]
+    and type(p[4]) == "number" and type(p[5]) == "number") then
+    p = { unpack(DEFAULTS.point) }
+    db.point = p
+  end
+  anchor:ClearAllPoints()
+  anchor:SetPoint(p[1], UIParent, p[3], p[4], p[5])
+end
+
 function ns.ResetPosition()
   db.point = { unpack(DEFAULTS.point) }
   db.textPoints = {} -- the texts go back to the bar
@@ -1037,8 +1063,9 @@ end
 
 local function CreateAnchor()
   anchor = CreateFrame("Frame", "FullManaForeverAnchor", UIParent)
-  local p = db.point
-  anchor:SetPoint(p[1], UIParent, p[3], p[4], p[5])
+  -- the position is ours (db.point, per profile), not the game's layout cache
+  if anchor.SetDontSavePosition then anchor:SetDontSavePosition(true) end
+  PlaceAnchor()
   anchor:SetMovable(true)
   anchor:SetClampedToScreen(true)
   anchor:RegisterForDrag("LeftButton")
@@ -1073,9 +1100,7 @@ function ns.ApplyProfile()
   ns.RebuildLists()
   ns.InvalidateCurves()
   if anchor then
-    local p = db.point
-    anchor:ClearAllPoints()
-    anchor:SetPoint(p[1], UIParent, p[3], p[4], p[5])
+    PlaceAnchor()
     if not IsPinned(db.point) then PinTopLeft() end
     ns.PositionBar()
     ns.Layout(true)
@@ -1137,8 +1162,8 @@ end
 
 -- "/fmf hold" on one layer: the word on it (the grey and the glow come from the caller)
 local function ShowHeld(b, l, hold)
-  if l.held ~= hold then
-    l.held = hold
+  if l.held ~= hold or (hold and l.holdLang ~= ns.lang) then
+    l.held, l.holdLang = hold, ns.lang
     l.holdText:SetText(L.holdLabel)
     l.holdText:SetShown(hold)
     l.holdFitW = nil
