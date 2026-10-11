@@ -211,7 +211,7 @@ function P.Others()
   return list
 end
 
--- a character with its own profile by name: "Kesa Li", "Kesa Li-Realm" or only "Kesa" when
+-- a character with its own profile by name: "Anna Stone", "Anna Stone-Realm" or only "Anna" when
 -- no other character has that first name; case does not matter (Latin letters)
 function P.Find(text)
   text = text and text:lower()
