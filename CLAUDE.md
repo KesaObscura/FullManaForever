@@ -94,9 +94,10 @@ and `/fmf log` (kept in releases for bug reports).
 1. Owner tests 0.8.3 profiles in game (blocks everything else).
 2. 0.8.3 step 3: settings order and wording (thresholds under their groups, "Drinking" ->
    "When to light up" in all languages); new settings screenshot for the gallery.
-3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 (11 Oct). CurseForge uploads by the owner:
+3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 and 0.8.6 (11 Oct). CurseForge uploads by the owner:
    0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold
-   new), 0.8.4 on Monday 12 Oct, then one per day.
+   new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description: /fmf profile copy
+   with the surname).
 3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
    what the addon does, each with a test that fails on the old code. Left out on purpose:
    secret nil comparisons, longUntil d==0, OwnedItem caching. Also: character keys with the
