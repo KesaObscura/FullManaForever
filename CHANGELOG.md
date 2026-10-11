@@ -4,6 +4,7 @@
 
 Stability and speed, found in a full review of the code; what the addon does stays the same.
 
+- Profiles know Forever's surnames: two characters with the same first name no longer share one profile; your own settings move over by themselves. `/fmf profile copy` takes the full name (`/fmf profile copy Kesa Li`), or only the first name when it is unique
 - Inner Focus: if your spell book changed while its buff was up (new rank, talent), the icon no longer stays away until you leave combat
 - Learning your first mana spell (or losing the last one) updates the auto bar length at once, not only after the icons change
 - Undo in the profiles window takes back only that one change (a deleted profile comes back), not settings you changed afterwards

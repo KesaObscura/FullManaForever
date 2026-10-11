@@ -1583,7 +1583,7 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     if sub == "shared" or sub == "own" then
       if not P.Use(sub) then Print(L.profNoChar) return end
     elseif sub == "copy" then
-      local key, name = nil, args[3]
+      local key, name = nil, args[3] and table.concat(args, " ", 3) -- "Name Surname"
       if name == "shared" then
         key, name = P.SHARED, L.profShared
       else

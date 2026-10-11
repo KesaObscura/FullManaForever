@@ -1012,7 +1012,7 @@ local function BuildProfiles()
     -- what can be copied: Shared (only onto an own profile) and every other character's own
     local list = {}
     if P.IsOwn() then list[1] = { key = P.SHARED, shared = true } end
-    local myRealm = (P.Me() or ""):match("%-(.*)$")
+    local myRealm = P.MyRealm()
     for _, o in ipairs(P.Others()) do list[#list + 1] = o end
     for i, o in ipairs(list) do
       local r = Row(i)

@@ -176,6 +176,13 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   20 % of its base cost if the previous heal was a different spell. Instant mana after the cast,
   no regen and no buff: the addon sees it as normal mana; nothing to build for it.
 
+- Character names (owner, 11 Oct, beta): one big server per region, no realms to choose.
+  `UnitName("player")` and `UnitFullName("player")` return the first name and then the
+  **surname** (where other clients return the realm); `GetRealmName()` returns the beta server's
+  name. Profile keys are therefore "First Surname-Realm" (0.8.6; before only the first name).
+  The realm name may change at launch, which would give characters new keys (beta characters
+  probably do not carry over anyway).
+
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 
 ManaMaster (CurseForge 1718932) tracks mana spent/saved per fight with a history panel and a

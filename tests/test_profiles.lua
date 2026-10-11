@@ -299,3 +299,31 @@ test("profiles window follows a language change", function()
   end
   ok(found, "profiles window still in English")
 end)
+
+test("profiles: Forever surnames are part of the key; old keys move over with their profile", function()
+  -- before 0.8.6 the key was the first name only
+  local saved = { dbVersion = 9, profiles = { Shared = {}, ["Kesa-Forever"] = { iconSize = 80 } },
+    chars = { ["Kesa-Forever"] = { profile = "Kesa-Forever", class = "PRIEST" } } }
+  local ns = M.load(saved, { surname = "Li" })
+  local P = ns.Profiles
+  eq(P.Me(), "Kesa Li-Forever")
+  eq(saved.chars["Kesa-Forever"], nil, "old key left behind")
+  eq(saved.chars["Kesa Li-Forever"].profile, "Kesa Li-Forever", "own profile not kept")
+  eq(ns.db.iconSize, 80, "own settings lost by the new key")
+  eq(P.MyName(), "Kesa Li")
+  -- another character with the same first name gets its own record
+  ns = M.load(saved, { surname = "Mun", class = "MAGE" })
+  P = ns.Profiles
+  eq(P.Me(), "Kesa Mun-Forever")
+  eq(P.IsOwn(), false, "second Kesa took the first one's profile")
+  local others = P.Others()
+  eq(#others, 1); eq(others[1].name, "Kesa Li"); eq(others[1].class, "PRIEST")
+  eq(P.Find("kesa li").key, "Kesa Li-Forever", "full name not found")
+  eq(P.Find("kesa").key, "Kesa Li-Forever", "only Kesa with a profile not found by first name")
+  SlashCmdList.FULLMANAFOREVER("profile copy Kesa Li")
+  eq(ns.db.iconSize, 80, "/fmf profile copy with a surname")
+  -- two with the same first name: the first name alone is not enough
+  saved.profiles["Kesa Ra-Forever"] = {}
+  saved.chars["Kesa Ra-Forever"] = { profile = "Kesa Ra-Forever" }
+  eq(P.Find("kesa"), nil, "ambiguous first name picked one")
+end)
