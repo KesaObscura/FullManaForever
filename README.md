@@ -100,7 +100,7 @@ otherwise the game does not load it.
 |---|---|
 | `/fmf` | open the settings (also in Options → AddOns and the addon menu at the minimap) |
 | `/fmf items` | open the item list |
-| `/fmf profile` | profile in use and characters with own settings; `/fmf profile shared` / `own` switches, `copy <name>` takes over another character's settings, `undo` takes back the last copy |
+| `/fmf profile` | profile in use and characters with own settings; `/fmf profile shared` / `own` switches, `copy <name>` takes over another character's settings (first name and surname, or the first name alone when it is unique), `undo` takes back the last copy |
 | `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |
 | `/fmf unlock` / `/fmf lock` | move the icons |
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |

@@ -20,7 +20,7 @@ P.ACCOUNT = {
 
 local root  -- FullManaForeverDB
 local me    -- this character's key, nil while the game does not tell the name
-local undo  -- one step back per session: profiles and characters before the last change
+local undo  -- one step back per session: the profile (and character) the last change touched
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
 
@@ -32,14 +32,22 @@ local function DeepCopy(t)
 end
 P.DeepCopy = DeepCopy
 
+-- "Name Surname-Realm". Forever characters have a surname: UnitName("player") returns it
+-- second (where other clients return the realm), so two characters may share a first name.
+-- Also returns the name as shown, the realm, and the key used before 0.8.6 (first name only).
 local function CharKey()
   if not UnitName then return nil end
-  local ok, name = pcall(UnitName, "player")
+  local ok, name, surname = pcall(UnitName, "player")
   if not ok or type(name) ~= "string" or IsSecret(name) or name == "" then return nil end
   if UNKNOWNOBJECT and name == UNKNOWNOBJECT then return nil end
   local realm = GetRealmName and GetRealmName()
   if type(realm) ~= "string" or IsSecret(realm) or realm == "" then realm = "?" end
-  return name .. "-" .. realm:gsub("%s", "")
+  realm = realm:gsub("%s", "")
+  local full = name
+  if type(surname) == "string" and not IsSecret(surname) and surname ~= "" then
+    full = name .. " " .. surname
+  end
+  return full .. "-" .. realm, full, realm, name .. "-" .. realm
 end
 
 -- 0.8.3: the settings so far become the shared profile, every character starts on it
@@ -60,9 +68,17 @@ end
 function P.Init(r)
   root = r
   P.Migrate(r)
-  me = CharKey()
+  local full, realm, oldKey
+  me, full, realm, oldKey = CharKey()
   if me then
+    -- 0.8.6: keys get the surname; the character's record and own profile move along
+    if oldKey ~= me and not r.chars[me] and r.chars[oldKey] then
+      r.chars[me], r.chars[oldKey] = r.chars[oldKey], nil
+      if r.profiles[oldKey] then r.profiles[me], r.profiles[oldKey] = r.profiles[oldKey], nil end
+      if r.chars[me].profile == oldKey then r.chars[me].profile = me end
+    end
     local c = r.chars[me] or { profile = SHARED }
+    c.name, c.realm = full, realm
     r.chars[me] = c
     local okC, _, class = pcall(UnitClass, "player")
     if okC and type(class) == "string" and not IsSecret(class) then c.class = class end
@@ -73,7 +89,20 @@ function P.Init(r)
 end
 
 function P.Me() return me end
-function P.MyName() return me and me:match("^(.-)%-") or me end
+local function Split(key) -- "Name Surname-Realm" -> name, realm (the realm has no "-")
+  local name, realm = key:match("^(.*)%-([^%-]*)$")
+  return name or key, realm
+end
+
+function P.MyName()
+  local c = me and root.chars[me]
+  return c and c.name or (me and (Split(me)))
+end
+
+function P.MyRealm()
+  local c = me and root.chars[me]
+  return c and c.realm or (me and select(2, Split(me)))
+end
 
 -- name of the profile this character uses (a missing one falls back to Shared)
 function P.ActiveName()
@@ -96,8 +125,11 @@ function P.Level(lvl)
   if c and type(lvl) == "number" and not IsSecret(lvl) then c.level = lvl end
 end
 
-local function Snapshot()
-  undo = { profiles = DeepCopy(root.profiles), chars = DeepCopy(root.chars) }
+-- only what the change touches is kept, so undo does not take back later changes
+-- (settings changed after a delete, other characters' logins)
+local function Snapshot(key, charKey)
+  undo = { key = key, profile = DeepCopy(root.profiles[key]), charKey = charKey,
+    char = charKey and DeepCopy(root.chars[charKey]) }
 end
 
 local function Changed()
@@ -121,7 +153,7 @@ end
 -- this character gets its own profile as a copy of another one (a character key or Shared)
 function P.CopyFrom(name)
   if not me or not root.profiles[name] or name == me then return false end
-  Snapshot()
+  Snapshot(me, me)
   root.profiles[me] = DeepCopy(root.profiles[name])
   root.chars[me].profile = me
   Changed()
@@ -130,7 +162,7 @@ end
 
 -- the profile in use back to the defaults (language and own items are not in it)
 function P.Reset()
-  Snapshot()
+  Snapshot(P.ActiveName())
   root.profiles[P.ActiveName()] = {}
   Changed()
   return true
@@ -139,7 +171,7 @@ end
 -- the own profile of another character; that character uses Shared at its next login
 function P.Delete(key)
   if key == me or key == SHARED or not root.profiles[key] then return false end
-  Snapshot()
+  Snapshot(key, key)
   root.profiles[key] = nil
   root.chars[key] = nil
   return true
@@ -149,7 +181,13 @@ function P.CanUndo() return undo ~= nil end
 
 function P.Undo()
   if not undo then return false end
-  root.profiles, root.chars = undo.profiles, undo.chars
+  root.profiles[undo.key] = undo.profile
+  local ck = undo.charKey
+  if ck == me and root.chars[me] and undo.char then
+    root.chars[me].profile = undo.char.profile -- level and last login stay current
+  elseif ck then
+    root.chars[ck] = undo.char
+  end
   undo = nil
   Changed()
   return true
@@ -161,8 +199,8 @@ function P.Others()
   local list = {}
   for key, c in pairs(root.chars) do
     if key ~= me and root.profiles[key] then
-      local name, realm = key:match("^(.-)%-(.*)$")
-      list[#list + 1] = { key = key, name = name or key, realm = realm, class = c.class,
+      local name, realm = Split(key)
+      list[#list + 1] = { key = key, name = c.name or name, realm = c.realm or realm, class = c.class,
         level = c.level, seen = c.seen or 0 }
     end
   end
@@ -173,7 +211,8 @@ function P.Others()
   return list
 end
 
--- a character with its own profile by name ("Kesa" or "Kesa-Realm"), case does not matter
+-- a character with its own profile by name: "Anna Stone", "Anna Stone-Realm" or only "Anna" when
+-- no other character has that first name; case does not matter (Latin letters)
 function P.Find(text)
   text = text and text:lower()
   if not text or text == "" then return nil end
@@ -183,4 +222,12 @@ function P.Find(text)
   for _, o in ipairs(P.Others()) do
     if o.name:lower() == text then return o end
   end
+  local found
+  for _, o in ipairs(P.Others()) do
+    if (o.name:match("^(%S+)") or ""):lower() == text then
+      if found then return nil end -- two characters with this first name: say the surname too
+      found = o
+    end
+  end
+  return found
 end

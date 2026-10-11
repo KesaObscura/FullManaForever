@@ -249,3 +249,81 @@ test("popups: over the settings, settings dimmed; Esc closes one window per pres
   ok(FullManaForeverItems:IsShown())
   ok(not win.shade.shown)
 end)
+
+test("profiles: undo of a delete brings the profile back and keeps later changes", function()
+  local saved = { dbVersion = 8 }
+  local ns = M.load(saved, { class = "MAGE", level = 30 })
+  ns.Profiles.Use("own"); ns.db.iconSize = 80
+  ns = M.load(saved, { name = "Alt" })
+  local P = ns.Profiles
+  ok(P.Delete("Kesa-Forever"))
+  ns.db.iconSize = 99 -- a change after the delete
+  ok(P.Undo())
+  eq(#P.Others(), 1, "delete not undone")
+  eq(saved.profiles["Kesa-Forever"].iconSize, 80, "deleted profile not restored")
+  eq(ns.db.iconSize, 99, "undo took back a later change")
+  eq(saved.chars["Kesa-Forever"].class, "MAGE", "character not restored")
+end)
+
+test("profiles: a switch with the settings closed builds nothing and does not show them", function()
+  local saved = { dbVersion = 8, iconSize = 60 }
+  local ns = M.load(saved)
+  ns.ToggleOptions(true); ns.ToggleOptions() -- built once, closed
+  local win = _G.FullManaForeverOptions
+  local shownOnce = false
+  win:HookScript("OnShow", function() shownOnce = true end)
+  local frames = M.created
+  for _ = 1, 5 do ns.Profiles.Use("own"); ns.Profiles.Use("shared") end
+  eq(M.created, frames, "frames built for a closed window")
+  ok(not shownOnce, "closed settings shown during a switch")
+  ns.Profiles.Use("own"); ns.db.iconSize = 80
+  ns.ToggleOptions(true)
+  local size
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == ns.L.optSize .. ":" then size = w end
+  end
+  eq(size.value.text, "80", "settings opened with the old profile")
+end)
+
+test("profiles window follows a language change", function()
+  local ns = M.load({ dbVersion = 8 })
+  ns.ToggleOptions(true)
+  ns.ToggleProfiles(true); ns.ToggleProfiles()
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
+  end
+  ns.ToggleProfiles(true)
+  local found
+  for _, f in ipairs(M.all) do
+    if f.kind == "FontString" and f.text == "Profile" and f.parent == _G.FullManaForeverProfiles then found = true end
+  end
+  ok(found, "profiles window still in English")
+end)
+
+test("profiles: Forever surnames are part of the key; old keys move over with their profile", function()
+  -- before 0.8.6 the key was the first name only
+  local saved = { dbVersion = 9, profiles = { Shared = {}, ["Kesa-Forever"] = { iconSize = 80 } },
+    chars = { ["Kesa-Forever"] = { profile = "Kesa-Forever", class = "PRIEST" } } }
+  local ns = M.load(saved, { surname = "Stone" })
+  local P = ns.Profiles
+  eq(P.Me(), "Kesa Stone-Forever")
+  eq(saved.chars["Kesa-Forever"], nil, "old key left behind")
+  eq(saved.chars["Kesa Stone-Forever"].profile, "Kesa Stone-Forever", "own profile not kept")
+  eq(ns.db.iconSize, 80, "own settings lost by the new key")
+  eq(P.MyName(), "Kesa Stone")
+  -- another character with the same first name gets its own record
+  ns = M.load(saved, { surname = "Moon", class = "MAGE" })
+  P = ns.Profiles
+  eq(P.Me(), "Kesa Moon-Forever")
+  eq(P.IsOwn(), false, "second Kesa took the first one's profile")
+  local others = P.Others()
+  eq(#others, 1); eq(others[1].name, "Kesa Stone"); eq(others[1].class, "PRIEST")
+  eq(P.Find("kesa stone").key, "Kesa Stone-Forever", "full name not found")
+  eq(P.Find("kesa").key, "Kesa Stone-Forever", "only Kesa with a profile not found by first name")
+  SlashCmdList.FULLMANAFOREVER("profile copy Kesa Stone")
+  eq(ns.db.iconSize, 80, "/fmf profile copy with a surname")
+  -- two with the same first name: the first name alone is not enough
+  saved.profiles["Kesa Reed-Forever"] = {}
+  saved.chars["Kesa Reed-Forever"] = { profile = "Kesa Reed-Forever" }
+  eq(P.Find("kesa"), nil, "ambiguous first name picked one")
+end)

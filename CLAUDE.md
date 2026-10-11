@@ -4,7 +4,7 @@ WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries
 Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Profiles.lua → Core.lua →
 Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Profiles.lua (0.8.3):
 `FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion)
-plus `profiles[Shared|Name-Realm]` and `chars[Name-Realm]` = {profile, class, level, seen}; Core's
+plus `profiles[Shared|Name Surname-Realm]` and `chars[key]` = {profile, class, level, seen, name, realm}; Core's
 `db` is the active profile, `acct` the root; `ns.ApplyProfile` re-reads everything on a switch. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).
 
@@ -94,12 +94,15 @@ and `/fmf log` (kept in releases for bug reports).
 1. Owner tests 0.8.3 profiles in game (blocks everything else).
 2. 0.8.3 step 3: settings order and wording (thresholds under their groups, "Drinking" ->
    "When to light up" in all languages); new settings screenshot for the gallery.
-3. Released on GitHub: 0.8.3 and 0.8.4 (10 Oct). CurseForge uploads by the owner: 0.8.3 on 11 Oct
-   (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold new), 0.8.4 on
-   Monday 12 Oct. 0.8.5 starts 11 Oct (owner).
-3b. 0.8.5 (polish, daily releases help the summed downloads): regen up arrow, bigger defaults.
-   When it is tested: three agents with the same task review the whole code for bugs, stability
-   and performance WITHOUT changing what the addon does; Claude merges their findings.
+3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 (11 Oct). CurseForge uploads by the owner:
+   0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold
+   new), 0.8.4 on Monday 12 Oct, then one per day.
+3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
+   what the addon does, each with a test that fails on the old code. Left out on purpose:
+   secret nil comparisons, longUntil d==0, OwnedItem caching. Also: character keys with the
+   surname (owner's /dump: UnitName("player") returns first name and surname; GetRealmName is the
+   beta server's name).
+   Tested in game by the owner (all fixes) except the surname keys.
 4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions); 16-20 Oct
    only fixes. 21 Oct (beta end): the most stable and complete version is out.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),

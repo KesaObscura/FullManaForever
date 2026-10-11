@@ -1050,6 +1050,8 @@ test("Life Tap waits for its text: no icon without the health check", function()
   ok(not spellSlot(ns), "Life Tap shown without knowing its mana")
   desc[1454] = "Converts 300 Health into 300 Mana for you."
   M.tick()
+  ok(not spellSlot(ns), "the missing text is asked for at most once a second")
+  at(101, function() M.tick() end)
   ok(spellSlot(ns), "Life Tap not shown once its text is loaded")
   noSpellApis()
 end)
@@ -1521,4 +1523,112 @@ test("regen above normal also shows an up arrow (not colour alone)", function()
   regenApis(36.3, 20.8)
   _G.GetTime = (function(r) return function() return r() + 1 end end)(GetTime); M.tick()
   ok(bar(ns).regenUp.shown, "no arrow above normal")
+end)
+
+-- 0.8.6: fixes from the code review
+
+test("Inner Focus still waits for the next spell after the spell book changes", function()
+  local ns = M.load(nil, { class = "PRIEST" })
+  local cds = spellApis({ 14751 }, { base = { [14751] = 180 } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2; M.tick()
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 14751)
+  cds[14751] = { 0, 0, false } -- buff up, cooldown waits
+  M.tick()
+  M.Fire("SPELLS_CHANGED") -- a new rank or talent out of combat
+  spellApis({ 14751 }, { secretCd = true, base = { [14751] = 180 } })
+  M.state.combat = true
+  at(200, function() M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 2050) end) -- the next spell
+  at(390, function() M.tick() end)
+  ok(spellSlot(ns), "Inner Focus not back 180 s after the buff was used")
+  M.state.combat = false
+  noSpellApis()
+end)
+
+test("auto bar length follows the spell book (first mana spell learned)", function()
+  local ns = M.load({ vertical = true, iconSize = 48, iconGap = 6 }, { class = "MAGE" })
+  spellApis({})
+  ns.Spells.Rebuild()
+  M.tick()
+  local bar = M.upvalue(ns.PositionBar, "bar")
+  local h1 = bar.h
+  spellApis({ 12051 })
+  M.Fire("SPELLS_CHANGED")
+  eq(bar.h, h1 + 48 + 6, "bar length after learning Evocation")
+  noSpellApis()
+end)
+
+test("own spells: cooldowns are read once per tick, a missing Life Tap text once a second", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051 })
+  local reads, real = 0, C_Spell.GetSpellCooldown
+  C_Spell.GetSpellCooldown = function(id) reads = reads + 1; return real(id) end
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2
+  M.tick(); reads = 0
+  ns.ToggleOptions(true) -- the settings ask for the spells too
+  at(101, function() M.tick() end)
+  eq(reads, 1, "cooldown read again in the same tick")
+  noSpellApis()
+end)
+
+test("battleground check once per tick", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.tick(); M.calls = {}
+  M.tick()
+  ok((M.calls.IsInInstance or 0) <= 1, "IsInInstance per tick: " .. tostring(M.calls.IsInInstance))
+end)
+
+test("a damaged saved position or text place does not break the login", function()
+  local saved = { point = { "CENTER", "UIParent" }, textFree = true, textPoints = { mana = "x", fsr = { 1 } } }
+  local ns = M.load(saved)
+  local p = ns.db.point
+  ok(type(p[4]) == "number" and type(p[5]) == "number", "position not repaired")
+  local a = _G.FullManaForeverAnchor.points[1]
+  ok(a and type(a[4]) == "number", "frame without a valid point")
+  ok(ns.Layout and true, "login stopped")
+end)
+
+test("an empty mana band (lower edge = upper edge) is never shown", function()
+  local ns = M.load(nil)
+  -- the local function, reached through the upvalues of the addon's functions
+  local seenFn, Band = {}, nil
+  local function find(f)
+    if Band or seenFn[f] then return end
+    seenFn[f] = true
+    local i = 1
+    while true do
+      local n, v = debug.getupvalue(f, i)
+      if not n then return end
+      if n == "BandCurve" then Band = v return end
+      if type(v) == "function" then find(v) end
+      i = i + 1
+    end
+  end
+  for _, f in pairs(ns) do if type(f) == "function" then find(f) end end
+  for _, fr in ipairs(M.all) do
+    for _, sc in pairs(fr.scripts or {}) do if type(sc) == "function" then find(sc) end end
+  end
+  ok(Band, "BandCurve not found")
+  local c = Band(0.5, 0.5)
+  local xs = {}
+  for _, pt in ipairs(M.upvalue(c.AddPoint, "pts")) do
+    ok(not xs[pt[1]], "two curve points at " .. pt[1]); xs[pt[1]] = true
+  end
+  for _, x in ipairs({ 0, 0.3, 0.5, 0.50005, 0.7, 1 }) do
+    eq(c:Evaluate(x).a, 0, "shown at " .. x)
+  end
+end)
+
+test("HOLD follows a language change", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2; M.tick()
+  SlashCmdList.FULLMANAFOREVER("hold")
+  M.tick()
+  local ht = buttons(ns)[1].layers[1].holdText
+  eq(ht.text, "HOLD")
+  ns.acct.language = "deDE"; ns.SetLanguage("deDE")
+  M.tick()
+  eq(ht.text, "HALT", "HOLD still in the old language")
 end)
