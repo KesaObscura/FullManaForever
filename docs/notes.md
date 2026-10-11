@@ -105,7 +105,7 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   the GitHub release, and prepare the images (`tools/gallery.py`, descriptions <= 256) then.
   On CurseForge since 0.8.2: 12 images in this order: hero ("Drink at the right moment"), regen at a
   glance, right potion, rule row, rule column, just the regen, move texts, mana text, item list,
-  easy to place, own spells, settings. Featured (star, under the description): hero, regen at a
+  easy to place, own spells, profiles and hold (13, since 0.8.3), settings (0.8.3 window). Featured (star, under the description): hero, regen at a
   glance, right potion, rule row, own spells.
 - Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
   progress is already taken off); the addon uses the real value, so an icon lights up only when
