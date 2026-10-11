@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.8.5**
+
+- Regen above your normal rate also shows a small green up arrow after the number, not only the green colour
+- A little bigger for new players: icon size 48 (was 44) and bar thickness 16 (was 14); your own sizes stay as they are ("Reset size" goes to the new sizes)
+
 **Full Mana Forever 0.8.4**
 
 - New option under Mana potions: "Sound when ready again" plays a short sound when your mana potion cooldown is over, also in combat (off by default; you hear it once when you switch it on). Three sounds of the addon's own to choose from: Drop and bell, Crystal rise, Glass notes

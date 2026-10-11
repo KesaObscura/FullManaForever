@@ -105,7 +105,7 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   the GitHub release, and prepare the images (`tools/gallery.py`, descriptions <= 256) then.
   On CurseForge since 0.8.2: 12 images in this order: hero ("Drink at the right moment"), regen at a
   glance, right potion, rule row, rule column, just the regen, move texts, mana text, item list,
-  easy to place, own spells, settings. Featured (star, under the description): hero, regen at a
+  easy to place, own spells, profiles and hold (13, since 0.8.3), settings (0.8.3 window). Featured (star, under the description): hero, regen at a
   glance, right potion, rule row, own spells.
 - Idea for 0.8.1: the player frame of the game shows predicted mana (the cost of the cast in
   progress is already taken off); the addon uses the real value, so an icon lights up only when
@@ -172,4 +172,24 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   user names (e.g. commenters) in texts; "features asked for in the comments get built" is fine.
   CurseForge avatar: own flask with an infinity sign (no new logo needed). 9 languages (esMX uses
   the esES texts), not 10.
+- Litany of Light (Forever priest talent, owner's Wowhead screenshot): a healing spell gives back
+  20 % of its base cost if the previous heal was a different spell. Instant mana after the cast,
+  no regen and no buff: the addon sees it as normal mana; nothing to build for it.
 
+## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
+
+ManaMaster (CurseForge 1718932) tracks mana spent/saved per fight with a history panel and a
+Details plugin; it targets Forever too. Ideas may be used, code only with Apache-2.0 attribution.
+Its in-game findings on Forever:
+- `GetManaRegen` leaves out Blessing of Wisdom (12 mp5: same rates with and without it, level ~20
+  mage); gear mp5 is included, also within the five-second rule. mp5 buffs keep working within
+  the rule. So our regen text does not show BoW (and probably Mana Spring): checklist 3a checks it.
+- Registering `COMBAT_LOG_EVENT_UNFILTERED` on Forever shows the "blocked action" pop-up; the
+  Combat Log tab stores combat lines as protected tokens. No combat log for addons.
+- `UnitPower` (mana) secret also out of combat for them. `UnitPowerMax` readable.
+- In combat `C_UnitAuras.GetAuraDataByIndex` errors for some buffs ("Auras cannot be accessed when
+  secret"); `GetAuraDataByAuraInstanceID` per known instance tells whether a buff is still up.
+- They found drinking NOT in `GetManaRegen`; our eighth log shows drinking IS in `GetPowerRegen`
+  (15.50 -> 36.30). Our log is first-hand; theirs may be older or a different function.
+- Forever loads `<Addon>_Camelot.toc` (Details does); the BigWigs packager knows the `forever` game
+  type from v2.6.0. Our plain `FullManaForever.toc` with Interface 16001 loads fine.

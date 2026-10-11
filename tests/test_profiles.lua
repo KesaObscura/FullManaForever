@@ -77,7 +77,7 @@ test("profiles: another character copies, the copy can be undone; reset and dele
   -- reset of the own profile leaves Shared alone
   P.Use("own"); ns.db.iconSize = 70
   P.Reset()
-  eq(ns.db.iconSize, 44, "reset did not bring the default back")
+  eq(ns.db.iconSize, 48, "reset did not bring the default back")
   eq(saved.profiles.Shared.iconSize, 60, "reset changed Shared")
   P.Undo()
   eq(ns.db.iconSize, 70, "reset not undone")

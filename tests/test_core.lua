@@ -193,7 +193,7 @@ test("tick marks follow a bar thickness change", function()
   local t = bar(ns).ticks[1][1]
   local before = t.front.h
   ns.db.barThickness = 30; ns.Layout(true); M.tick()
-  eq(t.front.h, before + 16, "tick height after thickness 14 -> 30")
+  eq(t.front.h, before + 14, "tick height after thickness 16 -> 30")
 end)
 
 test("own amount for a known rune keeps it in the rune slot", function()
@@ -219,12 +219,12 @@ test("reset size restores icon and bar sizes, keeps position and other settings"
   M.tick()
   SlashCmdList.FULLMANAFOREVER("reset size")
   M.tick()
-  eq(ns.db.iconSize, 44); eq(ns.db.iconGap, 6); eq(ns.db.barThickness, 14); eq(ns.db.barLength, 0)
+  eq(ns.db.iconSize, 48); eq(ns.db.iconGap, 6); eq(ns.db.barThickness, 16); eq(ns.db.barLength, 0)
   eq(ns.db.fsrScale, 1, "text size")
   eq(ns.db.barColor, "teal", "color")
   eq(ns.db.point[4], 100, "x"); eq(ns.db.point[5], 500, "y")
-  eq(buttons(ns)[1].outer.w, 44, "icon width")
-  eq(bar(ns).h, 14, "bar thickness")
+  eq(buttons(ns)[1].outer.w, 48, "icon width")
+  eq(bar(ns).h, 16, "bar thickness")
 end)
 
 test("options: reset size button resets the sizes", function()
@@ -237,7 +237,7 @@ test("options: reset size button resets the sizes", function()
   for _, f in ipairs(made) do if f.text == ns.L.optResetSize then btn = f end end
   ok(btn, "no reset size button")
   btn.scripts.OnClick(btn)
-  eq(ns.db.iconSize, 44)
+  eq(ns.db.iconSize, 48)
 end)
 
 -- level requirement -------------------------------------------------------------
@@ -461,11 +461,11 @@ test("bar markers stay inside the bar; the main one is thicker", function()
   local ns = M.load({ vertical = false }, { bags = { [3385] = 2, [2455] = 2 } })
   M.state.manaPct = 0.95; M.tick()
   local ticks = bar(ns).ticks[1]
-  eq(ticks[1].front.h, 14, "main marker sticks out")
+  eq(ticks[1].front.h, 16, "main marker sticks out")
   eq(ticks[1].front.w, 3, "main marker not thicker")
   eq(ticks[1].front.alpha, 1)
   ok(ticks[2].front.shown, "second marker missing")
-  eq(ticks[2].front.h, 14); eq(ticks[2].front.w, 2)
+  eq(ticks[2].front.h, 16); eq(ticks[2].front.w, 2)
 end)
 
 test("the unlocked frame (test mode) shows the five-second rule without casting", function()
@@ -1511,4 +1511,14 @@ test("0.8.4: whole seconds; a placeholder does not glow; optional sound when the
   ns.PlayPotionSound()
   ok(tostring(M.sounds[#M.sounds]):find("crystal%-rise%.ogg"), "picked sound not played")
   _G.GetTime = real
+end)
+
+
+test("regen above normal also shows an up arrow (not colour alone)", function()
+  local ns = M.load(nil)
+  regenApis(15.5, 0); M.tick()
+  ok(not bar(ns).regenUp.shown, "arrow at normal regen")
+  regenApis(36.3, 20.8)
+  _G.GetTime = (function(r) return function() return r() + 1 end end)(GetTime); M.tick()
+  ok(bar(ns).regenUp.shown, "no arrow above normal")
 end)

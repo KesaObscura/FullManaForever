@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.4"
+ns.VERSION = "0.8.5"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -40,11 +40,11 @@ local DEFAULTS = {
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
-  barThickness = 14,
+  barThickness = 16,
   barLength  = 0,       -- 0 = auto: room for every group switched on (at least 3)
   barColor   = "blue",
   iconGap    = 6,
-  iconSize   = 44,
+  iconSize   = 48,
   runeMargin = 0.30, -- health% that must remain AFTER the rune hit (also Life Tap)
   spellThreshold = 0.50, -- own mana spells (Evocation, Innervate, ...) light up at or below this mana%
   enabled    = { potion = true, rune = true, gem = true, herb = true, gear = true, spell = true },
@@ -766,6 +766,13 @@ local function CreateBar()
   -- current regen ("14.8/s"), under the mana numbers or right of the bar
   bar.regen = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.regen, "GameFontHighlightSmall", true) -- has letters ("/с", "/秒")
+  -- regen above normal: a small up arrow after the number, so it is not told by colour alone
+  bar.regenUp = bar.regenBox:CreateTexture(nil, "OVERLAY")
+  bar.regenUp:SetTexture("Interface\\Buttons\\Arrow-Up-Up")
+  bar.regenUp:SetSize(16, 16)
+  bar.regenUp:SetVertexColor(0.45, 1, 0.45)
+  bar.regenUp:SetPoint("LEFT", bar.regen, "RIGHT", 0, 1)
+  bar.regenUp:Hide()
   bar:Hide()
 end
 
@@ -1365,6 +1372,7 @@ local function UpdateRegenText(visible)
     else
       bar.regen:SetTextColor(0.6, 0.85, 1)
     end
+    bar.regenUp:SetShown(boosted and not inRule and true or false)
     bar.regen:Show()
     box:Show()
   elseif box:IsShown() then
