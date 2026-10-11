@@ -769,7 +769,7 @@ local function CreateBar()
   -- regen above normal: a small up arrow after the number, so it is not told by colour alone
   bar.regenUp = bar.regenBox:CreateTexture(nil, "OVERLAY")
   bar.regenUp:SetTexture("Interface\\Buttons\\Arrow-Up-Up")
-  bar.regenUp:SetSize(12, 12)
+  bar.regenUp:SetSize(16, 16)
   bar.regenUp:SetVertexColor(0.45, 1, 0.45)
   bar.regenUp:SetPoint("LEFT", bar.regen, "RIGHT", 0, 1)
   bar.regenUp:Hide()
