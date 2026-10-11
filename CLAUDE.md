@@ -97,6 +97,9 @@ and `/fmf log` (kept in releases for bug reports).
 3. Released on GitHub: 0.8.3 and 0.8.4 (10 Oct). CurseForge uploads by the owner: 0.8.3 on 11 Oct
    (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold new), 0.8.4 on
    Monday 12 Oct. 0.8.5 starts 11 Oct (owner).
+3b. 0.8.5 (polish, daily releases help the summed downloads): regen up arrow, bigger defaults.
+   When it is tested: three agents with the same task review the whole code for bugs, stability
+   and performance WITHOUT changing what the addon does; Claude merges their findings.
 4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions); 16-20 Oct
    only fixes. 21 Oct (beta end): the most stable and complete version is out.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
