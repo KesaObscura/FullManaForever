@@ -63,8 +63,12 @@ and `/fmf log` (kept in releases for bug reports).
   are ignored. Melee and bows do not do this.
 - Potions, food, wand and procs (Eureka!) report no mana cost and never start the rule.
   Drinking is part of `GetPowerRegen`; "Adventurous thrill" is not.
-- `GetSpellBaseCooldown` works for any spell ID; talents via `C_ClassTalents` + `C_Traits`.
-  TrainerSpells is "All Rights Reserved": never copy its data or code into this repo.
+- `GetSpellBaseCooldown` and `C_Spell.GetSpellLevelLearned` (Evocation 12051 -> 20) work for
+  any spell ID; talents via `C_ClassTalents` + `C_Traits`.
+- Research scans are the owner's local scanner addon (FullManaForeverScan), never in this repo
+  or the addon, and never described in public texts. It may read TrainerSpells, Questie and
+  AtlasLoot in the owner's client as hints; only single facts we need, checked against the
+  game's own API, go into `Data.lua` (no bulk copies of other addons' tables or code).
 - Mana spell IDs, ranks and cooldowns: `Data.lua` and `docs/notes.md`.
 
 ## Owner decisions in force

@@ -1,5 +1,5 @@
 -- Full Mana Forever - own spells that give or save mana (0.8.0).
--- Facts from /fmf scan in Forever: own casts and their spell IDs are readable in combat;
+-- Facts read in Forever: own casts and their spell IDs are readable in combat;
 -- spell cooldowns are readable out of combat and SECRET in combat; GetSpellBaseCooldown
 -- works for every spell. So the cooldown is read exactly out of combat, and in combat it
 -- is counted from the player's own cast. A spell is never shown as ready too early: if in

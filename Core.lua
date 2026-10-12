@@ -1627,8 +1627,6 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     if ns.Probe5SR then ns.Probe5SR() end
   elseif cmd == "log" then
     if ns.LogCommand then ns.LogCommand(args[2]) end
-  elseif cmd == "scan" then
-    if ns.Scan then ns.Scan(args[2]) end
   elseif cmd == "probe" then
     Probe()
   elseif cmd == "debug" then

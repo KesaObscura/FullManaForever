@@ -484,42 +484,6 @@ test("the unlocked frame (test mode) shows the five-second rule without casting"
   noRegenApis()
 end)
 
-test("/fmf scan writes spells, talents and use items with the game's descriptions", function()
-  local ns = M.load(nil)
-  _G.Enum.SpellBookItemType = { Spell = 1, FutureSpell = 3 }
-  _G.C_SpellBook = {
-    GetNumSpellBookSkillLines = function() return 1 end,
-    GetSpellBookSkillLineInfo = function() return { name = "Holy", itemIndexOffset = 0, numSpellBookItems = 2 } end,
-    GetSpellBookItemInfo = function(i)
-      if i == 1 then return { spellID = 14751, name = "Inner Focus" } end
-      return { spellID = 14522, name = "Meditation", isPassive = true, itemType = 3 }
-    end,
-  }
-  _G.C_Spell = {
-    GetSpellDescription = function(id) return id == 14751 and "Your next spell\ncosts no mana." or "Regen while casting." end,
-    GetSpellPowerCost = function() return { { type = 0, cost = 0 } } end,
-    GetSpellCooldown = function() return { startTime = 0, duration = 0 } end,
-    GetSpellName = function(id) return "Spell" .. id end,
-  }
-  _G.GetInventoryItemID = function(_, slot) if slot == 13 then return 23027 end end
-  _G.C_Item.GetItemSpell = function(id) if id == 23027 then return "Warmth", 29166 end end
-  _G.C_Container.GetContainerNumSlots = function() return 0 end
-  _G.GetSpellBaseCooldown = function(id) return id == 14751 and 180000 or 0, 1500 end
-  SlashCmdList.FULLMANAFOREVER("scan")
-  _G.GetSpellBaseCooldown = nil
-  local all = table.concat(FullManaForeverLog.lines, "\n")
-  ok(all:find("cd=0+0 base=180", 1, true), "base cooldown missing: " .. all)
-  ok(all:find("---- scan", 1, true), "no scan header")
-  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 base=180 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
-  ok(all:find("14522 Meditation (passive) (not learned yet)", 1, true), "passive or future spell not marked")
-  ok(all:find("item slot13 23027", 1, true), "use item missing")
-  ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
-  ok(all:find("known 29166", 1, true), "spells above level 1 not asked for")
-  ok(all:find("talents: old API missing", 1, true), "missing talent API not reported")
-  ok(all:find("scan v", 1, true) and all:find("level=", 1, true), "no header")
-  _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
-end)
-
 test("five-second seconds never cover the mana numbers or the frame label", function()
   local ns = M.load({ vertical = false, fsrScale = 2 }, { bags = POT })
   local b = bar(ns)
@@ -650,9 +614,6 @@ test("/fmf log on with a full log says so instead of claiming it runs", function
   local all = table.concat(M.printed, "\n")
   ok(all:find("log full", 1, true), "no full message")
   ok(not all:find("log ON", 1, true), "claims the log runs")
-  SlashCmdList.FULLMANAFOREVER("scan")
-  eq(#FullManaForeverLog.lines, 6000, "scan wrote past the limit")
-  ok(table.concat(M.printed, "\n"):find("scan lines dropped", 1, true), "scan does not say lines were dropped")
 end)
 
 test("a failing sample does not keep the probe running", function()
@@ -703,43 +664,6 @@ test("/fmf log records max health and the potion cooldowns as the game reports t
   ok(all:find("pots 3385 x2 cd=95+120 en=0 ready=false", 1, true), "potion cooldown not logged: " .. all)
   ok(select(2, all:gsub("pots 3385", "")) >= 2, "potions missing in cast or sample line")
   noDiagApis()
-end)
-
-test("/fmf scan trainer lists the trainer spells of TrainerSpells with the game's texts", function()
-  local ns = M.load(nil)
-  SlashCmdList.FULLMANAFOREVER("scan trainer")
-  ok(table.concat(M.printed, "\n"):find("TrainerSpells is not loaded", 1, true), "missing addon not reported")
-  _G.TrainerSpellsBuiltin = { PRIEST = { [10] = { [13908] = { cost = 15, rank = 1, race = { "Dwarf", "Human" } },
-    [2006] = { cost = 285, rank = 1 } } }, WARRIOR = { [1] = { [100] = { cost = 10 } } } }
-  local requested = 0
-  _G.C_Spell = { GetSpellName = function(id) return "Spell" .. id end,
-    GetSpellDescription = function(id) return "Text " .. id end,
-    RequestLoadSpellData = function() requested = requested + 1 end }
-  SlashCmdList.FULLMANAFOREVER("scan trainer")
-  local all = table.concat(FullManaForeverLog.lines, "\n")
-  _G.TrainerSpellsBuiltin, _G.C_Spell = nil, nil
-  eq(requested, 2, "texts requested for the mana classes only")
-  ok(all:find("trainer PRIEST L10 2006 Spell2006 r1", 1, true), "trainer line: " .. all)
-  ok(all:find("13908 Spell13908 r1 race=Dwarf/Human", 1, true), "racial spell not marked")
-  ok(not all:find("WARRIOR", 1, true), "class without mana scanned")
-end)
-
-test("/fmf scan reads talents through the trait API", function()
-  local ns = M.load(nil)
-  _G.C_ClassTalents = { GetActiveConfigID = function() return 7 end }
-  _G.C_Traits = {
-    GetConfigInfo = function() return { treeIDs = { 1 } } end,
-    GetTreeNodes = function() return { 11 } end,
-    GetNodeInfo = function() return { entryIDs = { 21 }, currentRank = 5, maxRanks = 5 } end,
-    GetEntryInfo = function() return { definitionID = 31 } end,
-    GetDefinitionInfo = function() return { spellID = 15270 } end,
-  }
-  _G.C_Spell = { GetSpellName = function() return "Spirit Tap" end,
-    GetSpellDescription = function() return "50% while casting" end }
-  SlashCmdList.FULLMANAFOREVER("scan")
-  local all = table.concat(FullManaForeverLog.lines, "\n")
-  _G.C_ClassTalents, _G.C_Traits, _G.C_Spell = nil, nil, nil
-  ok(all:find("talent tree=1 node=11 15270 Spirit Tap 5/5 : 50% while casting", 1, true), "talent line: " .. all)
 end)
 
 test("/fmf log records group members' casts and the chat test", function()
@@ -1119,16 +1043,6 @@ test("perf: little garbage per tick with percent and number text", function()
   local kb = (collectgarbage("count") - before) / 200
   collectgarbage("restart")
   ok(kb < 1.5, ("%.2f KB garbage per tick"):format(kb))
-end)
-
-test("/fmf scan trainer does not break without C_Spell", function()
-  local ns = M.load(nil)
-  _G.TrainerSpellsBuiltin = { PRIEST = { [1] = { [1243] = { cost = 10 } } } }
-  _G.C_Spell = nil
-  local okRun = pcall(SlashCmdList.FULLMANAFOREVER, "scan trainer")
-  _G.TrainerSpellsBuiltin = nil
-  ok(okRun, "scan trainer errored")
-  ok(table.concat(FullManaForeverLog.lines, "\n"):find("trainer PRIEST L1 1243", 1, true), "line missing")
 end)
 
 test("ptBR names Life Tap correctly", function()

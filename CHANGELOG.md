@@ -65,8 +65,6 @@ Stability and speed, found in a full review of the code; what the addon does sta
 - New: your own mana spells get an icon slot, like the consumables: Evocation (mage), Innervate (druid, on yourself), Mana Tide Totem (shaman), Inner Focus (priest), Life Tap (warlock) and the racials Eureka! (gnome) and Ley Line reading (Skyborne). A spell lights up when it is ready and your mana is at or below "Spells at mana" (50 % by default), shown by a turquoise marker on the mana bar. Life Tap lights up like a potion when its mana fits and keeps the same minimum health as runes
 - Fixed: potions and other items no longer disappear while you shoot a wand or cast; the short global cooldown the game puts on items too was taken for the item's own cooldown
 - In combat Forever hides spell cooldowns from addons, so the addon counts them from your own cast; out of combat it reads them exactly. A spell is never shown as ready too early
-- For bug reports and research: `/fmf scan` also lists mana spells of later levels with the game's own descriptions and base cooldowns, reads talents through the newer talent API and names your race
-- `/fmf scan trainer` lists every trainer spell of the mana classes when the addon TrainerSpells is installed
 - The log also records group members' Innervate and Mana Tide; `/fmf log chat` tests whether the addon may send chat and addon messages
 
 **Full Mana Forever 0.7.1**
@@ -75,7 +73,7 @@ Stability and speed, found in a full review of the code; what the addon does sta
 - Icons in a row: the five-second seconds sit left of the bar, so they no longer cover the mana numbers at large text sizes
 - Icons in a column: with the frame unlocked, the "Full Mana Forever" label moves above the five-second seconds
 - Settings: "Lock frame" and "Test mode" are one switch now, "Unlock frame (test mode)": it makes the frame movable and shows everything that is switched on. `/fmf test` does the same as `/fmf unlock`
-- New for bug reports: `/fmf scan` writes your spells, talents and items with a "Use:" effect into the log; the log also records spell cooldowns, current mana costs, maximum health and the cooldowns of your mana potions
+- For bug reports the log also records spell cooldowns, current mana costs, maximum health and the cooldowns of your mana potions
 - Safety: a rune is hidden when the game does not report your maximum health (no health check means no risk)
 - Safety: an item whose cooldown has not started yet is never shown as ready (in Forever potion cooldowns start at once, so a potion comes back after 2 minutes, also in the same fight)
 - The regen text turns gold during the five-second rule even when the gold strip is switched off
@@ -83,8 +81,8 @@ Stability and speed, found in a full review of the code; what the addon does sta
 - Settings: dropdowns near the bottom of the screen open upwards instead of off screen
 - Item list: equipped gear is recognised the same way as by the icons
 - Less work in raids: only your own casts are watched
-- `/fmf log on` with a full log says so instead of claiming to record; `/fmf scan` says when lines did not fit
-- In-game help lists `probe 5sr`, `log on|off|clear` and `scan`; Russian texts use one form of address
+- `/fmf log on` with a full log says so instead of claiming to record
+- In-game help lists `probe 5sr` and `log on|off|clear`; Russian texts use one form of address
 
 **Full Mana Forever 0.7.0**
 

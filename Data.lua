@@ -67,7 +67,7 @@ ns.GROUPS = {
   },
 }
 
--- Own spells, first ready one wins (texts and cooldowns from /fmf scan in Forever).
+-- Own spells, first ready one wins (texts and cooldowns read in Forever).
 -- id: any rank; the player's own rank is found by name in the spell book.
 -- cd: seconds, used in combat where the game's cooldown is secret (the game's base cooldown
 -- is preferred when it can be read). Without "fit" the icon lights up at or below the
