@@ -714,13 +714,6 @@ Build = function()
       ActiveIf(function() return db.enabled.rune end, s)
       return { s.label }
     end,
-    spell = function()
-      local s = Stepper(col, PAD + 30, L.optSpellThr, function() return db.spellThreshold end,
-        function(v) db.spellThreshold = v; ns.InvalidateCurves() end,
-        { step = 0.05, lo = 0.10, hi = 0.90, tip = L.tipSpellThr, fmt = pct })
-      ActiveIf(function() return db.enabled.spell end, s)
-      return { s.label }
-    end,
   }
   local first = true
   for i, group in ipairs(ns.GROUPS) do

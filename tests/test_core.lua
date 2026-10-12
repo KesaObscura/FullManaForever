@@ -146,7 +146,7 @@ test("old saved data: the macro cleanup flag and the old test mode are dropped",
   local ns = M.load({ dbVersion = 6, cleanMacros = true, test = false })
   eq(ns.db.cleanMacros, nil, "macro flag kept")
   eq(ns.db.test, nil, "test key kept")
-  eq(ns.acct.dbVersion, 9)
+  eq(ns.acct.dbVersion, 10)
 end)
 
 -- performance ------------------------------------------------------------------
@@ -556,7 +556,7 @@ end)
 
 test("a new install has nothing to migrate", function()
   local ns = M.load(nil)
-  eq(ns.acct.dbVersion, 9)
+  eq(ns.acct.dbVersion, 10)
   eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
   eq(ns.db.manaTextOn, true, "mana numbers off on a new install")
 end)
@@ -730,6 +730,7 @@ local function spellApis(book, opts)
     GetSpellName = function(id) return opts.names and opts.names[id] or ("Spell" .. id) end,
     GetSpellTexture = function(id) return "tex" .. id end,
     GetSpellDescription = function(id) return opts.desc and opts.desc[id] or "" end,
+    GetSpellLevelLearned = function(id) return opts.learned and opts.learned[id] or 0 end,
     GetSpellCooldown = function(id)
       if opts.secretCd then return M.secret({}) end
       local c = cds[id] or { 0, 0 }
@@ -746,15 +747,15 @@ end
 local function noSpellApis() _G.C_SpellBook, _G.C_Spell, _G.GetSpellBaseCooldown = nil, nil, nil end
 local function spellSlot(ns) return slotVisible(ns, SPELL_SLOT) end
 
-test("Evocation lights up when ready and mana is at or below the setting", function()
+test("Evocation lights up when ready and mana is at or below its own threshold (35 %)", function()
   local ns = M.load(nil, { class = "MAGE" })
   spellApis({ 12051 })
   ns.Spells.Rebuild()
-  M.state.manaPct = 0.6; M.tick()
-  ok(not spellSlot(ns), "shown above 50%")
   M.state.manaPct = 0.4; M.tick()
+  ok(not spellSlot(ns), "shown above 35%")
+  M.state.manaPct = 0.3; M.tick()
   local vis, l = spellSlot(ns)
-  ok(vis, "hidden at 40%")
+  ok(vis, "hidden at 30%")
   eq(l.icon.texture, "tex12051")
   noSpellApis()
 end)
@@ -832,7 +833,7 @@ test("unlocked frame previews the own spell; options show its status", function(
   for _, r in ipairs(M.upvalue(ns.RefreshOptions, "groupRows")) do
     if ns.GROUPS[r.i].spells then found = r.st.text end
   end
-  ok(found and found:find(ns.L.stSpellReady:format("Inner Focus", 50), 1, true), "status: " .. tostring(found))
+  ok(found and found:find(ns.L.stSpellReady:format("Inner Focus", 75), 1, true), "status: " .. tostring(found))
   noSpellApis()
 end)
 
@@ -999,7 +1000,7 @@ test("a cast of a lower rank starts the cooldown too; spells of later levels do 
   noSpellApis()
 end)
 
-test("options: spell status names the spell that comes back first; no colon after <=", function()
+test("options: spell status names the spell that comes back first", function()
   local ns = M.load(nil, { class = "MAGE" })
   local cds = spellApis({ 12051, 1259823 }, { names = { [12051] = "Evocation", [1259823] = "Eureka" } })
   cds[12051], cds[1259823] = { 90, 480 }, { 90, 120 }
@@ -1010,11 +1011,6 @@ test("options: spell status names the spell that comes back first; no colon afte
     if ns.GROUPS[r.i].spells then st = r.st.text end
   end
   ok(st and st:find("Eureka", 1, true), "status: " .. tostring(st))
-  local found
-  for _, w in pairs(M.upvalue(ns.RefreshOptions, "widgets")) do
-    if w.label and w.label.text == ns.L.optSpellThr then found = true end
-  end
-  ok(found, "label of the spell threshold has a colon after <=")
   noSpellApis()
 end)
 
@@ -1047,7 +1043,7 @@ end)
 
 test("ptBR names Life Tap correctly", function()
   local ns = M.load(nil, { locale = "ptBR" })
-  ok(ns.L.tipSpellThr:find("Tributo de Vida", 1, true), "wrong spell name in ptBR")
+  ok(ns.L.tipSpellFit:find("Tributo de Vida", 1, true), "wrong spell name in ptBR")
 end)
 
 test("the spell marker follows the spell the icon shows", function()
@@ -1545,4 +1541,111 @@ test("HOLD follows a language change", function()
   ns.acct.language = "deDE"; ns.SetLanguage("deDE")
   M.tick()
   eq(ht.text, "HALT", "HOLD still in the old language")
+end)
+
+-- 0.8.7: spells in the item list, one icon per ready spell, a threshold per spell
+
+local function spellIcon(ns, k) -- k-th spell icon (1 = the group's own button)
+  local b = buttons(ns)
+  local i = k == 1 and SPELL_SLOT or #ns.GROUPS + k - 1
+  return slotVisible(ns, i), b[i]
+end
+
+test("every ready spell past its threshold gets its own icon", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.6; M.tick()
+  local v1, b1 = spellIcon(ns, 1)
+  ok(v1, "Eureka! (90 %) not lit at 60 %")
+  ok(not spellIcon(ns, 2), "Evocation (35 %) lit at 60 %")
+  M.state.manaPct = 0.3; M.tick()
+  ok(spellIcon(ns, 1) and spellIcon(ns, 2), "not both lit at 30 %")
+  local _, b2 = spellIcon(ns, 2)
+  -- highest threshold first: lit icons come first, an unlit one never leaves a gap before them
+  eq(b1.layers[1].icon.texture, "tex1259823"); eq(b2.layers[1].icon.texture, "tex12051")
+  ok(b2.outer.points[1][4] > b1.outer.points[1][4], "second spell icon not next to the first")
+  -- the auto bar counts the spell group once, not per icon
+  local before = ns.AutoBarLength()
+  ns.Spells.SetEnabled(ns.SPELLS[1], false) -- Evocation off
+  M.tick()
+  ok(not spellIcon(ns, 2), "switched-off spell still has an icon")
+  eq(ns.AutoBarLength(), before, "bar length changed with one of two spells off")
+  noSpellApis()
+end)
+
+test("each spell has its own threshold; a switched-off group hides every spell icon", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  ns.Spells.SetThreshold(ns.SPELLS[1], 0.7) -- Evocation
+  M.state.manaPct = 0.6; M.tick()
+  ok(spellIcon(ns, 1) and spellIcon(ns, 2), "own threshold ignored")
+  ns.db.enabled.spell = false; M.tick()
+  ok(not buttons(ns)[SPELL_SLOT].outer.shown and not buttons(ns)[#ns.GROUPS + 1].outer.shown,
+    "spell icons left with the group off")
+  noSpellApis()
+end)
+
+test("old common spell threshold: a changed one is kept for every spell, 50 % gives the defaults", function()
+  local saved = { dbVersion = 9, profiles = { Shared = { spellThreshold = 0.3 }, ["Kesa-Forever"] = { spellThreshold = 0.5 } },
+    chars = {} }
+  local ns = M.load(saved)
+  local sh, own = saved.profiles.Shared, saved.profiles["Kesa-Forever"]
+  eq(sh.spellThreshold, nil); eq(own.spellThreshold, nil)
+  eq(sh.spellThr.evocation, 0.3); eq(sh.spellThr.eureka, 0.3)
+  eq(sh.spellThr.lifetap, nil, "Life Tap got a threshold")
+  eq(next(own.spellThr or {}), nil, "untouched 50 % copied")
+  eq(saved.dbVersion, 10)
+end)
+
+test("item list: spells of the class with their state, threshold -/+ and on/off", function()
+  local ns = M.load(nil, { class = "MAGE", level = 10 })
+  spellApis({ 1259823 }, { learned = { [12051] = 20 }, names = { [12051] = "Evocation", [1259823] = "Eureka!" } })
+  ns.Spells.Rebuild()
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "rows")
+  local evo, eur, n = nil, nil, 0
+  for _, r in ipairs(rows) do
+    if r.sp and r.frame.shown then
+      n = n + 1
+      if r.sp.key == "evocation" then evo = r end
+      if r.sp.key == "eureka" then eur = r end
+    end
+  end
+  eq(n, 2, "spells listed (Evocation, Eureka!; no other class or race)")
+  ok(evo.owned.text:find(ns.L.libLevel:format(20), 1, true), "level reason: " .. evo.owned.text)
+  ok(eur.owned.text:find(ns.L.libKnown, 1, true), "known: " .. eur.owned.text)
+  eq(eur.amount.text, ns.L.libSpellThr:format(90))
+  eur.minus.scripts.OnClick(eur.minus)
+  eq(eur.amount.text, ns.L.libSpellThr:format(85), "- did not lower the threshold")
+  ok(math.abs(ns.db.spellThr.eureka - 0.85) < 1e-9, "stored threshold")
+  for _ = 1, 3 do eur.plus.scripts.OnClick(eur.plus) end
+  ok(not eur.plus:IsEnabled(), "+ not greyed out at 95 %")
+  eur.cb:SetChecked(false); eur.cb.scripts.OnClick(eur.cb)
+  eq(ns.db.spellOff.eureka, true, "spell not switched off")
+  ok(not ns.Spells.AnyActive(), "switched-off spell still active")
+  noSpellApis()
+end)
+
+test("item list: why a spell is missing (level, talent, trainer); Life Tap fits instead of a threshold", function()
+  local ns = M.load(nil, { class = "PRIEST", level = 30 })
+  spellApis({}, { learned = {} })
+  ns.Spells.Rebuild()
+  eq(select(1, ns.Spells.Status(ns.SPELLS[5])), "talent", "Inner Focus is a talent")
+  ns = M.load(nil, { class = "MAGE", level = 30 })
+  spellApis({}, { learned = { [12051] = 20 } })
+  ns.Spells.Rebuild()
+  eq(ns.Spells.Status(ns.SPELLS[1]), "trainer", "level reached, not learned")
+  ns = M.load(nil, { class = "WARLOCK" })
+  spellApis({ 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana." } })
+  ns.Spells.Rebuild()
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "rows")
+  local tap
+  for _, r in ipairs(rows) do if r.sp and r.sp.key == "lifetap" and r.frame.shown then tap = r end end
+  ok(tap, "Life Tap not listed")
+  eq(tap.amount.text, ns.L.libSpellFit)
+  ok(not tap.minus.shown and not tap.plus.shown, "Life Tap has -/+")
+  noSpellApis()
 end)

@@ -419,7 +419,7 @@ test("every control in the settings and the item list has a tooltip, also while 
 end)
 
 
-test("options: the rune and spell thresholds are greyed out while their group is off", function()
+test("options: the rune threshold is greyed out while runes are off; spells have none here", function()
   local ns = M.load({ enabled = { rune = false } })
   ns.ToggleOptions(true)
   local margin, spellThr
@@ -427,13 +427,12 @@ test("options: the rune and spell thresholds are greyed out while their group is
     if w.minus and w.label and w.label.text == ns.L.optMargin .. ":" then margin = w end
     if w.minus and w.label and w.label.text == ns.L.optSpellThr then spellThr = w end
   end
-  ok(margin and spellThr, "thresholds not found")
+  ok(margin, "rune threshold not found")
+  eq(spellThr, nil, "common spell threshold still in the settings")
   ok(not margin.plus:IsEnabled(), "rune threshold usable with runes off")
-  ok(spellThr.plus:IsEnabled(), "spell threshold greyed out although spells are on")
-  ns.db.enabled.rune, ns.db.enabled.spell = true, false
+  ns.db.enabled.rune = true
   ns.RefreshOptions()
   ok(margin.plus:IsEnabled(), "rune threshold stays grey after switching on")
-  ok(not spellThr.plus:IsEnabled(), "spell threshold usable with spells off")
 end)
 
 

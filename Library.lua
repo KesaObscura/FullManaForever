@@ -30,10 +30,42 @@ local function OwnedText(it, group)
   return "|cff888888" .. L.libMissing .. "|r"
 end
 
+-- own spells: learned, or why not yet (level from the game, talent, trainer)
+local function SpellStatusText(sp)
+  local st, need, talent = ns.Spells.Status(sp)
+  if st == "known" then return "|cff66ff66" .. L.libKnown .. "|r" end
+  if st == "level" then
+    return "|cffff5555" .. L.libLevel:format(need) .. (talent and (", " .. L.libTalent) or "") .. "|r"
+  end
+  if st == "talent" then return "|cffff5555" .. L.libTalent .. "|r" end
+  return "|cff888888" .. L.libTrainer .. "|r"
+end
+
+local SPELL_STEP, SPELL_LO, SPELL_HI = 0.05, 0.10, 0.95
+
+local function SpellID(sp) return ns.Spells.ID(sp) or sp.id end
+
 local function RowOnEnter(self)
   GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-  pcall(GameTooltip.SetItemByID, GameTooltip, self.it.id)
+  if self.sp then
+    pcall(GameTooltip.SetSpellByID, GameTooltip, SpellID(self.sp))
+  else
+    pcall(GameTooltip.SetItemByID, GameTooltip, self.it.id)
+  end
   GameTooltip:Show()
+end
+
+-- a tooltip whose text follows the row (a pooled row shows an item or a spell)
+local function RowTip(frame, fn)
+  if frame.SetMotionScriptsWhileDisabled then frame:SetMotionScriptsWhileDisabled(true) end
+  frame:SetScript("OnEnter", function(self)
+    local title, text = fn()
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText(title, 1, 1, 1)
+    GameTooltip:AddLine(text, 0.82, 0.82, 0.82, true)
+    GameTooltip:Show()
+  end)
+  frame:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
 local function RowOnLeave() GameTooltip:Hide() end
@@ -50,11 +82,19 @@ local function NewRow()
   hl:SetColorTexture(1, 1, 1, 0.04)
 
   ui.WithRegistry(rowReg, function()
-    r.cb = ui.Check(row, "", function() return ns.IsItemEnabled(row.it) end,
-      function(v) ns.SetItemEnabled(row.it.id, v) end, L.tipItemCb)
+    r.cb = ui.Check(row, "", function()
+      if row.sp then return ns.Spells.Enabled(row.sp) end
+      return ns.IsItemEnabled(row.it)
+    end, function(v)
+      if row.sp then ns.Spells.SetEnabled(row.sp, v) else ns.SetItemEnabled(row.it.id, v) end
+    end, L.tipItemCb)
   end)
   r.cb:SetPoint("LEFT", 0, 0)
   r.cb.label:Hide()
+  RowTip(r.cb, function()
+    local name = r.name:GetText() or ""
+    return name, row.sp and L.tipSpellCb or L.tipItemCb
+  end)
 
   r.icon = row:CreateTexture(nil, "ARTWORK")
   r.icon:SetSize(24, 24)
@@ -70,11 +110,46 @@ local function NewRow()
   r.amount:SetPoint("LEFT", row, "LEFT", AMOUNT_X, 0)
   r.amount:SetWidth(AMOUNT_W)
   if r.amount.SetWordWrap then r.amount:SetWordWrap(false) end
+  -- a spell's threshold explains itself; over an item the item's own tooltip stays
+  local amountTip = CreateFrame("Frame", nil, row)
+  amountTip:SetPoint("TOPLEFT", r.amount, "TOPLEFT")
+  amountTip:SetPoint("BOTTOMRIGHT", r.amount, "BOTTOMRIGHT")
+  amountTip:EnableMouse(true)
+  amountTip:SetScript("OnEnter", function(self)
+    if not row.sp then return RowOnEnter(row) end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    if row.sp.fit then
+      GameTooltip:SetText(L.libSpellFit, 1, 1, 1)
+      GameTooltip:AddLine(L.tipSpellFit, 0.82, 0.82, 0.82, true)
+    else
+      GameTooltip:SetText(L.optSpellThr, 1, 1, 1)
+      GameTooltip:AddLine(L.tipSpellThr, 0.82, 0.82, 0.82, true)
+    end
+    GameTooltip:Show()
+  end)
+  amountTip:SetScript("OnLeave", RowOnLeave)
 
   -- "not in bags" gets the rest of the row: it can never run into the amount
   r.owned = ui.Label(row, "", "GameFontHighlightSmall")
   r.owned:SetJustifyH("RIGHT")
   if r.owned.SetWordWrap then r.owned:SetWordWrap(false) end
+
+  -- own spells: their mana threshold, - / + next to it (Life Tap: "when it fits", no buttons)
+  local function Step(d)
+    local sp = row.sp
+    local v = ns.Spells.Threshold(sp)
+    v = math.floor((v + d) / SPELL_STEP + 0.5) * SPELL_STEP
+    ns.Spells.SetThreshold(sp, math.max(SPELL_LO, math.min(SPELL_HI, v)))
+    r.Refresh()
+  end
+  r.minus = ui.Button(row, "-", 18, 18)
+  r.minus:SetPoint("LEFT", row, "LEFT", AMOUNT_X + 44, 0)
+  r.minus:SetScript("OnClick", function() Step(-SPELL_STEP) end)
+  r.plus = ui.Button(row, "+", 18, 18)
+  r.plus:SetPoint("LEFT", r.minus, "RIGHT", 2, 0)
+  r.plus:SetScript("OnClick", function() Step(SPELL_STEP) end)
+  ui.Tip(r.minus, L.optSpellThr, L.tipSpellThr)
+  ui.Tip(r.plus, L.optSpellThr, L.tipSpellThr)
 
   r.del = ui.Button(row, "x", 20, 18)
   r.del:SetPoint("RIGHT", row, "RIGHT", -EDGE, 0)
@@ -82,6 +157,30 @@ local function NewRow()
   ui.Tip(r.del, L.libRemove, L.tipItemDel)
 
   r.frame = row
+  -- texts that change while the list is open (name, status, threshold, tick)
+  r.Refresh = function()
+    if r.sp then
+      local sp = r.sp
+      r.name:SetText(ns.Spells.Name(SpellID(sp)) or "?")
+      r.owned:SetText(SpellStatusText(sp))
+      if sp.fit then
+        r.amount:SetText(L.libSpellFit)
+      else
+        local v = ns.Spells.Threshold(sp)
+        r.amount:SetText(L.libSpellThr:format(math.floor(v * 100 + 0.5)))
+        r.minus:SetEnabled(v > SPELL_LO + 0.001)
+        r.plus:SetEnabled(v < SPELL_HI - 0.001)
+      end
+    elseif r.it then
+      local n = ui.ItemName(r.it.id)
+      if r.it.custom then n = n .. " |cff4fa3ff(" .. L.libOwn .. ")|r" end
+      if r.it.sleep then n = n .. " |cffff8844" .. L.libSleep .. "|r" end
+      if r.it.pvp then n = n .. " |cffaaaaaa" .. L.libPvp .. "|r" end
+      r.name:SetText(n)
+      r.owned:SetText(OwnedText(r.it, r.group))
+    end
+    r.cb.Refresh()
+  end
   return r
 end
 
@@ -118,7 +217,8 @@ end
 local function BuildContent()
   local y, n, hn = -2, 0, 0
   for gi, group in ipairs(ns.GROUPS) do
-    if ns.ForMyClass(group) and not group.spells then
+    local spells = group.spells and ns.Spells.ListForMe()
+    if ns.ForMyClass(group) and (not spells or #spells > 0) then
       hn = hn + 1
       local h = Header(hn)
       h.label:SetText(L["grp_" .. group.key])
@@ -126,27 +226,35 @@ local function BuildContent()
       h.label:SetPoint("TOPLEFT", 0, y)
       h.label:Show(); h.line:Show()
       y = y - 24
-      for _, it in ipairs(ns.FullList(gi)) do
+      for _, entry in ipairs(spells or ns.FullList(gi)) do
         n = n + 1
         local r = rows[n] or NewRow()
         rows[n] = r
-        r.it, r.group, r.frame.it = it, group, it
+        local sp = spells and entry or nil
+        local it = not spells and entry or nil
+        r.it, r.sp, r.group, r.frame.it, r.frame.sp = it, sp, group, it, sp
         r.frame:ClearAllPoints()
         r.frame:SetPoint("TOPLEFT", 0, y)
         r.frame:SetPoint("RIGHT", content, "RIGHT", 0, 0)
-        r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
-        r.amount:SetText(L.libRestore:format(it.max))
+        if sp then
+          r.icon:SetTexture(ns.Spells.Texture(SpellID(sp)))
+        else
+          r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
+          r.amount:SetText(L.libRestore:format(it.max))
+        end
+        r.minus:SetShown(sp and not sp.fit or false)
+        r.plus:SetShown(sp and not sp.fit or false)
         r.owned:ClearAllPoints()
         r.owned:SetPoint("LEFT", r.frame, "LEFT", AMOUNT_X + AMOUNT_W + 4, 0)
-        r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it.custom and -(28 + EDGE) or -EDGE, 0)
-        r.del:SetShown(it.custom and true or false)
+        r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it and it.custom and -(28 + EDGE) or -EDGE, 0)
+        r.del:SetShown(it and it.custom and true or false)
         r.frame:Show()
         y = y - ROW
       end
       y = y - 8
     end
   end
-  for k = n + 1, #rows do rows[k].frame:Hide(); rows[k].it = nil end
+  for k = n + 1, #rows do rows[k].frame:Hide(); rows[k].it, rows[k].sp = nil, nil end
   for k = hn + 1, #headers do headers[k].label:Hide(); headers[k].line:Hide() end
   content:SetHeight(-y + 4)
   UpdateScrollbar()
@@ -154,15 +262,7 @@ end
 
 local function RefreshRows()
   for _, r in ipairs(rows) do
-    if r.it then
-      local n = ui.ItemName(r.it.id)
-      if r.it.custom then n = n .. " |cff4fa3ff(" .. L.libOwn .. ")|r" end
-      if r.it.sleep then n = n .. " |cffff8844" .. L.libSleep .. "|r" end
-      if r.it.pvp then n = n .. " |cffaaaaaa" .. L.libPvp .. "|r" end
-      r.name:SetText(n)
-      r.owned:SetText(OwnedText(r.it, r.group))
-      r.cb.Refresh()
-    end
+    if r.it or r.sp then r.Refresh() end
   end
   for _, w in ipairs(reg) do w.Refresh() end
 end
