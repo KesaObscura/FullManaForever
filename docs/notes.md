@@ -183,6 +183,17 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   The realm name may change at launch, which would give characters new keys (beta characters
   probably do not carry over anyway).
 
+- Mana spells checked in Forever (12 Oct, all mana classes): `GetSpellLevelLearned` gives
+  Evocation 20, Innervate 40, Life Tap 6 (rank 1; 11689 rank 6 at 56), Mana Tide Totem 25 (talent;
+  Classic had 40), Inner Focus 0 (talent: no level). Ley Line reading is "Read Ley Line"
+  (1259705). Dark Pact (18220) does not exist in Forever. Other active mana spells found are buffs
+  to keep up (Water Shield, Mana Spring Totem, Blessing/Seal of Wisdom, Mage Armor), mana drains
+  (Drain Mana, Viper Sting, Mana Burn) or conjured gems: none fits "ready, then lights up".
+- Items found that the addon does not list yet: Combat Mana Potion 18841 (same spell as Superior
+  Mana Potion), Mageblood Elixir 20007 (regen elixir), mana oils, EZ-Thro Mana Bomb 260818 (new,
+  text not loaded yet), Crisp Spring Water 252031 (new water). The first item pass missed slow
+  texts; a second pass is needed before adding numbers.
+
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 
 ManaMaster (CurseForge 1718932) tracks mana spent/saved per fight with a history panel and a
