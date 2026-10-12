@@ -64,11 +64,11 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   again in the same fight. Spell cooldowns (`C_Spell.GetSpellCooldown`) are SECRET in combat
   and readable out of combat — for 0.8.0, spell readiness cannot be read in combat. The
   potion cast in this log was Restore Mana 437 (no cost).
-- Scans for 0.8.0 (owner's local scanner, not part of the addon or this repo): the spell book
+- Scans for 0.8.0 (owner's private tooling): the spell book
   does not list spells of later levels. `GetSpellBaseCooldown` works for any spell ID, also
   unlearned ones. Talents: the old talent API is gone; `C_ClassTalents.GetActiveConfigID` +
-  `C_Traits` read the talent tree with ranks (priest: 54 talents). Other addons' tables
-  (TrainerSpells, Questie, AtlasLoot) are hints only, read in the owner's client.
+  `C_Traits` read the talent tree with ranks (priest: 54 talents). Other addons' tables are
+  hints only, never copied.
 - Mana spells in Forever (ID, level, base cooldown s): Innervate 29166 (druid 40, 360; +400 %
   regen, 100 % while casting, 20 s), Evocation 12051 (mage 20, 480; +1500 % for 8 s, channeled),
   Mana Tide Totem 16190/17359 (shaman, 300; group, every 3 s for 12 s), Life Tap 1454/11689

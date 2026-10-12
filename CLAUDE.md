@@ -65,10 +65,9 @@ and `/fmf log` (kept in releases for bug reports).
   Drinking is part of `GetPowerRegen`; "Adventurous thrill" is not.
 - `GetSpellBaseCooldown` and `C_Spell.GetSpellLevelLearned` (Evocation 12051 -> 20) work for
   any spell ID; talents via `C_ClassTalents` + `C_Traits`.
-- Research scans are the owner's local scanner addon (FullManaForeverScan), never in this repo
-  or the addon, and never described in public texts. It may read TrainerSpells, Questie and
-  AtlasLoot in the owner's client as hints; only single facts we need, checked against the
-  game's own API, go into `Data.lua` (no bulk copies of other addons' tables or code).
+- Research data comes from the owner's private tooling, not from this addon: never add scan
+  commands here or describe them in public texts. Only single facts we need, checked against
+  the game's own API, go into `Data.lua` (no bulk copies of other addons' tables or code).
 - Mana spell IDs, ranks and cooldowns: `Data.lua` and `docs/notes.md`.
 
 ## Owner decisions in force
