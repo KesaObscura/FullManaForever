@@ -18,6 +18,7 @@ local NEVER = math.huge    -- readyAt while the cooldown waits (Inner Focus unti
 local known = {}           -- [entry] = the player's spell ID (highest rank in the book)
 local byID = {}            -- [spell ID] = entry, every rank in the book (ranks share a cooldown)
 local readyAt = {}         -- [entry] = GetTime() when the spell is ready again
+local cdLen = {}           -- [entry] = length of that cooldown (for the countdown on the icon)
 local seen = {}            -- [entry] = true once its cooldown was read out of combat
 local amount = {}          -- [entry] = mana it gives (fit spells, from the description)
 local texture = {}         -- [spell ID] = icon
@@ -202,7 +203,7 @@ local function ReadyNow(sp)
       if enabled == false then
         readyAt[sp] = NEVER
       elseif dur > SHORT and start > 0 then
-        readyAt[sp] = start + dur
+        readyAt[sp], cdLen[sp] = start + dur, dur
         if waiting == sp then waiting = nil end -- the game counts it already
       elseif readyAt[sp] ~= NEVER or waiting ~= sp then
         readyAt[sp] = nil
@@ -231,6 +232,24 @@ local function Usable(sp)
   return S.Ready(sp)
 end
 
+-- shown on the icons: usable, or its cooldown ends within db.cdShow seconds (grey, counting
+-- down; a cooldown that waits, like Inner Focus while its buff is up, is not shown early)
+local function Showable(sp)
+  if sp.fit and not amount[sp] then return false end
+  local ready, left = S.Ready(sp)
+  if ready then return true end
+  local x = ns.db and ns.db.cdShow or 0
+  return x > 0 and left ~= nil and left > 0 and left <= x
+end
+
+-- start and length of the running cooldown (countdown on the icon), nil while ready or unknown
+function S.Countdown(sp)
+  local ready, left = S.Ready(sp)
+  local len = cdLen[sp]
+  if ready or not left or left <= 0 or not len then return nil end
+  return readyAt[sp] - len, len
+end
+
 -- the first spell to show now (known, switched on, ready), and its ID. S.Refresh reads the
 -- cooldowns of all of them every tick out of combat.
 function S.Candidate()
@@ -239,7 +258,8 @@ function S.Candidate()
   end
 end
 
--- every spell to show now, highest threshold first, at most ns.SPELL_ICONS (out is reused).
+-- every spell to show now (ready, or its cooldown nearly over: db.cdShow), highest threshold
+-- first, at most ns.SPELL_ICONS (out is reused).
 -- The mana check is secret (the game hides an icon above its threshold), so a ready spell
 -- keeps its slot while unlit; highest first, the lit icons always come first, without gaps.
 local order = {}
@@ -250,7 +270,7 @@ end
 function S.Candidates(out, maxMana)
   wipe(out)
   for i, sp in ipairs(ns.SPELLS) do
-    if Active(sp) and Usable(sp) then
+    if Active(sp) and Showable(sp) then
       sp.idx = i
       order[sp] = S.Threshold(sp, maxMana)
       out[#out + 1] = sp
@@ -367,6 +387,7 @@ local function OnCast(id)
   if waiting and sp ~= waiting and UsesMana(id) then
     local cd = Cooldown(waiting, known[waiting] or waiting.id)
     readyAt[waiting] = cd > GCD and GetTime() + cd or nil
+    cdLen[waiting] = cd
     waiting = nil
   end
   if not sp then return end
@@ -375,7 +396,7 @@ local function OnCast(id)
     return
   end
   local cd = Cooldown(sp, id)
-  if cd > GCD then readyAt[sp] = GetTime() + cd end
+  if cd > GCD then readyAt[sp], cdLen[sp] = GetTime() + cd, cd end
 end
 
 local frame = CreateFrame("Frame")

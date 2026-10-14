@@ -639,6 +639,11 @@ Build = function()
   col = c.frame
   -- when the icons are shown at all
   c.Row(Header(col, L.optVisibility), PAD, 24)
+  -- icons also show (grey, counting down) this many seconds before their cooldown ends
+  local cdShow = Stepper(col, PAD + 4, L.optCdShow, function() return db.cdShow or 0 end,
+    function(v) db.cdShow = v end, { step = 5, lo = 0, hi = 60, tip = L.tipCdShow,
+      fmt = function(v) return v > 0 and L.cdShowSec:format(v) or L.cdShowOff end })
+  c.Row(cdShow.label, PAD + 4, 28)
   c.Row(Check(col, L.optCombat, function() return db.onlyCombat end, function(v) db.onlyCombat = v end,
     L.tipCombat))
   local showLabel = Label(col, L.optShowIn .. ":")

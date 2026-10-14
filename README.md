@@ -54,6 +54,8 @@ when the icon lights up.
 - **Mana text** like the game's status text: number, percentage or both, with its own switch
   and text size.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
+- **See it coming**: icons already show in the last seconds of their cooldown (5 s by default,
+  up to 60), grey and counting down like the action bar; at 0 only when ready.
 - **Sound when your potion is ready again** (optional, off by default): three sounds of the addon's own.
 - **Items and spells** (`/fmf items`): every supported item, on/off per item, add your own;
   your class's mana spells with their threshold and, if you lack one, why (level, talent,
