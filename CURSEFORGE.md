@@ -38,11 +38,11 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 
 ## Supported items (checked against the Forever database)
 
-- **Mana potions** (shared cooldown): Major, Major Rejuvenation, Superior, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Dreamless Sleep (off by default — it puts you to sleep for 12 s).
+- **Mana potions** (shared cooldown): Major, Major Rejuvenation, Superior, Combat, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Dreamless Sleep and Greater Dreamless Sleep (off by default — they put you to sleep for 12 s).
 - **Runes:** Demonic Rune, Dark Rune.
 - **Mana gems (mage):** Ruby, Citrine, Jade, Agate.
 - **Other:** Night Dragon's Breath, Major/Superior Mana Draught (battlegrounds only).
-- **Gear:** Warmth of Forgiveness, Major/Minor Recombobulator, Robe of the Archmage (mage).
+- **Gear:** Warmth of Forgiveness, Celestial Orb, Energy Cloak, Major/Minor Recombobulator, Arcane Orb, Ley Orb, Robe of the Archmage (mage).
 
 ## Commands
 

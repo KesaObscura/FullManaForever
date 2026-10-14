@@ -5,6 +5,7 @@
 - The item list is now "Items and spells": your class's own mana spells (Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and your race's Eureka! or Ley Line reading) are listed there with on/off, and a spell you do not have yet says why: the level it is learned at (read from the game), a talent, or the trainer
 - Each spell has its own mana threshold, set with - / + in the list, with sensible defaults: Eureka! 90 %, Inner Focus 75 %, Ley Line reading 70 %, Mana Tide Totem 60 %, Innervate 40 %, Evocation 35 %. Life Tap still lights up when its mana fits. The common setting "Light up at mana <=" is gone; if you had changed it, every spell keeps your value
 - Several spells ready at once each get their own icon (up to 3), highest threshold first, so lit icons never leave a gap
+- New items, checked against the game's own texts: Combat Mana Potion, Greater Dreamless Sleep Potion (off by default, like Dreamless Sleep), Energy Cloak (its use effect is new in Forever), Celestial Orb, Arcane Orb and Ley Orb
 
 **Full Mana Forever 0.8.6**
 
