@@ -62,7 +62,7 @@ and `/fmf log` (kept in releases for bug reports).
   3 s or less are ignored for readiness and shown as a sweep; spell cooldowns read as 5 s or less
   are ignored. Melee and bows do not do this.
 - Potions, food, wand and procs (Eureka!) report no mana cost and never start the rule.
-  Drinking is part of `GetPowerRegen`; "Adventurous thrill" is not.
+  Drinking is part of `GetPowerRegen`; "Thrill of Adventure" (was "Adventurous Thrill") is not.
 - `GetSpellBaseCooldown` and `C_Spell.GetSpellLevelLearned` (Evocation 12051 -> 20) work for
   any spell ID; talents via `C_ClassTalents` + `C_Traits`.
 - Research data comes from the owner's private tooling, not from this addon: never add scan
