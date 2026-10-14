@@ -19,8 +19,27 @@ local BOOST_SPELLS = {        -- [spell] = seconds of raised regen (own casts on
 }
 local baseline
 local boostUntil = 0
+local SICKNESS = 15007        -- Resurrection Sickness: -75 % attributes for up to 10 min
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
+
+-- is the regen lowered for a while (Resurrection Sickness or any other debuff on Spirit or
+-- Intellect)? Such a value must not become the normal regen, or normal regen turns green
+-- once the debuff ends (0.8.9). Out of combat only, where stats and auras are readable.
+local function Lowered()
+  if UnitStat then
+    for _, stat in ipairs({ 4, 5 }) do          -- 4 Intellect, 5 Spirit
+      local ok, _, _, _, neg = pcall(UnitStat, "player", stat)
+      if ok and not IsSecret(neg) and type(neg) == "number" and neg < 0 then return true end
+    end
+  end
+  local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+  if get then
+    local ok, aura = pcall(get, SICKNESS)
+    if ok and aura ~= nil and not IsSecret(aura) then return true end
+  end
+  return false
+end
 
 -- does this spell cost mana right now? (cost includes reductions such as Eureka)
 local function CostsMana(id)
@@ -79,8 +98,8 @@ function ns.RegenText()
   if not okF then return nil end
   local boosted = GetTime() < boostUntil
   if not inRule and not IsSecret(base) and type(base) == "number" and base > 0 then
-    if not baseline or base < baseline then baseline = base end
-    boosted = boosted or base > baseline * BOOST_RATIO + 0.05
+    if (not baseline or base < baseline) and not Lowered() then baseline = base end
+    boosted = boosted or (baseline ~= nil and base > baseline * BOOST_RATIO + 0.05)
   end
   return text, inRule, boosted
 end

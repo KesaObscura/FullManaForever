@@ -1,5 +1,9 @@
 # Changelog
 
+**Full Mana Forever 0.8.9**
+
+- Regen colour after death: the lowered regen under Resurrection Sickness (or any other debuff on Spirit or Intellect) is no longer taken as your normal regen, so your normal regen no longer turns green with the up arrow once the debuff ends
+
 **Full Mana Forever 0.8.8**
 
 - New setting "Show icons before ready" (top of Visibility, 5 s by default, off to 60 in steps of 5): potions, runes, gems, other consumables, gear and your own spells already show in the last seconds of their cooldown, grey and without glow, with the game's own countdown on them like on the action bar ("1:55", "3m", "5"). When the cooldown is over they light up as before; at 0 they only show when ready. The mana rules stay the same, and spell cooldowns are counted from your cast in combat as before

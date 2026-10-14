@@ -1229,6 +1229,40 @@ test("a new level or other gear learns the normal regen again", function()
   noRegenApis()
 end)
 
+test("regen lowered by Resurrection Sickness is not learned as normal (0.8.9)", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  local base, neg, sick = 3.9, -12, true
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  _G.UnitStat = function(_, i) return 40, 40 + neg, 0, neg end
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if sick and id == 15007 then return { spellId = 15007 } end end }
+  local real = GetTime
+  _G.GetTime = function() return 101 end
+  M.tick()                                   -- under the debuff: nothing learned, not green
+  eq(bar(ns).regen.color[1], 0.6, "lowered regen shown green")
+  base, neg, sick = 15.5, 0, false          -- debuff gone: this is normal regen
+  _G.GetTime = function() return 102 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "normal regen after the debuff counted as raised")
+  ok(not bar(ns).regenUp.shown, "arrow after the debuff")
+  base = 25                                  -- a real boost still turns green
+  _G.GetTime = function() return 103 end
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.45, "raised regen not green")
+  -- the aura alone (stats not lowered) also keeps the value out
+  M.Fire("PLAYER_LEVEL_UP", 22)
+  base, sick = 3.9, true
+  _G.GetTime = function() return 104 end
+  M.tick()
+  base, sick = 15.5, false
+  _G.GetTime = function() return 105 end
+  M.tick()
+  _G.GetTime = real
+  eq(bar(ns).regen.color[1], 0.6, "aura: normal regen counted as raised")
+  _G.UnitStat, _G.C_UnitAuras = nil, nil
+  noRegenApis()
+end)
+
 test("regen text can be dragged on its own and goes back with /fmf reset", function()
   local ns = M.load({ textFree = true }, { bags = POT })
   regenApis(14.75, 0)
