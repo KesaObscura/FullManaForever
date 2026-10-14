@@ -327,3 +327,22 @@ test("profiles: Forever surnames are part of the key; old keys move over with th
   saved.chars["Kesa Reed-Forever"] = { profile = "Kesa Reed-Forever" }
   eq(P.Find("kesa"), nil, "ambiguous first name picked one")
 end)
+
+test("Esc after a language change: the item list closes first, then the settings", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
+  end
+  ns.ToggleLibrary(true)
+  local function Esc()
+    for _, name in ipairs(UISpecialFrames) do
+      local f = _G[name]
+      if f and f:IsShown() then f:Hide() end
+    end
+    M.hooks.CloseSpecialWindows()
+  end
+  Esc()
+  ok(not FullManaForeverItems:IsShown(), "item list still open after Esc")
+  ok(FullManaForeverOptions:IsShown(), "first Esc closed the settings")
+end)

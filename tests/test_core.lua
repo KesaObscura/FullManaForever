@@ -1663,20 +1663,21 @@ test("a spell on cooldown has no mark on the bar; every ready spell has its own"
   noSpellApis()
 end)
 
-test("a bar set shorter than the icon column: the mana text goes below the column, not over the icons", function()
+test("a bar set shorter than the icon column: the texts go beside the bar, away from the icons", function()
   local ns = M.load({ vertical = true, iconSize = 48, iconGap = 6, barLength = 100 }, { class = "MAGE" })
   spellApis({ 12051, 1259823 })
   ns.Spells.Rebuild()
   M.tick()
   local b = bar(ns)
   local p = b.manaBox.points[1]
-  local slots = 0
-  for _, g in ipairs(ns.GROUPS) do
-    if ns.db.enabled[g.key] and ns.ForMyClass(g) then slots = slots + (g.spells and 2 or 1) end
-  end
-  local column = 48 * slots + 6 * (slots - 1)
-  eq(p[5], -4 - (column - 100), "mana text not below the icon column")
-  ns.db.barLength = 0; ns.Layout(true) -- auto: the bar has room for every icon
-  eq(b.manaBox.points[1][5], -4, "mana text moved away from an auto-length bar")
+  eq(p[1], "BOTTOMRIGHT", "bar left of the icons: texts not left of the bar")
+  eq(p[3], "BOTTOMLEFT")
+  ok(p[4] < 0, "texts not outside the bar")
+  ns.db.barSide = "right"; ns.Layout(true)
+  p = b.manaBox.points[1]
+  eq(p[1], "BOTTOMLEFT", "bar right of the icons: texts not right of the bar"); eq(p[3], "BOTTOMRIGHT")
+  ns.db.barLength = 0; ns.Layout(true) -- auto: the bar has room for every icon, texts under it
+  p = b.manaBox.points[1]
+  eq(p[1], "TOP"); eq(p[3], "BOTTOM"); eq(p[5], -4)
   noSpellApis()
 end)

@@ -933,20 +933,36 @@ function ns.PositionBar()
     -- the rule's seconds sit above the bar: the frame label (unlocked) goes above them
     local fsrRoom = db.fsr and (math.ceil(14 * (db.fsrScale or 1)) + 4) or 0
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8 + fsrRoom)
-    -- a bar set shorter than the column of icons that can appear: the texts go below the
-    -- column, not next to the last icons (fixed place, so they never jump when icons light up)
-    local below = -4 - math.max(0, Span(IconSlots()) - (bar:GetHeight() or 0))
-    bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, below)
-    bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
-    -- the regen sits under the mana numbers, or under the bar when they were dragged away
+    -- under the bar the texts are wider than the bar and reach next to the icons. A bar set
+    -- shorter than the column of icons that can appear would put them over the last icons:
+    -- then they go beside the bar, on the side away from the icons, at its lower end (a fixed
+    -- place, counted from every icon that can appear, so they never jump when icons light up)
     bar.regenBox:ClearAllPoints()
-    if manaFree then
-      bar.regenBox:SetPoint("TOP", bar, "BOTTOM", 0, below)
-    else
-      bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
-    end
     bar.regen:ClearAllPoints()
-    bar.regen:SetPoint("TOP", bar.regenBox, "TOP", 0, 0)
+    local short = Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
+    if short then
+      local right = db.barSide == "right" -- bar right of the icons: texts right of the bar
+      local side, edge, dx = right and "LEFT" or "RIGHT", right and "BOTTOMRIGHT" or "BOTTOMLEFT", right and 4 or -4
+      local up = math.ceil(14 * (db.regenScale or 1)) + 4 -- the regen line fits under the numbers
+      bar.manaBox:SetPoint("BOTTOM" .. side, bar, edge, dx, up)
+      bar.text:SetPoint(side, bar.manaBox, side, 0, 0)
+      if manaFree then
+        bar.regenBox:SetPoint("BOTTOM" .. side, bar, edge, dx, 0)
+      else
+        bar.regenBox:SetPoint("TOP" .. side, bar.text, "BOTTOM" .. side, 0, -2)
+      end
+      bar.regen:SetPoint(side, bar.regenBox, side, 0, 0)
+    else
+      bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+      bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
+      -- the regen sits under the mana numbers, or under the bar when they were dragged away
+      if manaFree then
+        bar.regenBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+      else
+        bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
+      end
+      bar.regen:SetPoint("TOP", bar.regenBox, "TOP", 0, 0)
+    end
     bar.fsr:ClearAllPoints()
     bar.fsr:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
