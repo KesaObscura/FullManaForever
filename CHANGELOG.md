@@ -2,7 +2,7 @@
 
 **Full Mana Forever 0.8.9**
 
-- Regen colour after death: the lowered regen under Resurrection Sickness (or any other debuff on Spirit or Intellect) is no longer taken as your normal regen, so your normal regen no longer turns green with the up arrow once the debuff ends
+- Regen colour after death: the lowered regen under Resurrection Sickness (or anything else that takes at least half of your Spirit or Intellect) is no longer taken as your normal regen; gear with a few points less Spirit still counts as normal, so your normal regen no longer turns green with the up arrow once the debuff ends
 
 **Full Mana Forever 0.8.8**
 

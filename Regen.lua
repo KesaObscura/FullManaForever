@@ -23,14 +23,19 @@ local SICKNESS = 15007        -- Resurrection Sickness: -75 % attributes for up 
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
 
--- is the regen lowered for a while (Resurrection Sickness or any other debuff on Spirit or
--- Intellect)? Such a value must not become the normal regen, or normal regen turns green
--- once the debuff ends (0.8.9). Out of combat only, where stats and auras are readable.
+-- is the regen lowered for a while (Resurrection Sickness: -75 % Spirit and Intellect)?
+-- Such a value must not become the normal regen, or normal regen turns green once the
+-- debuff ends (0.8.9). Only a big cut counts: gear and small debuffs with a few points
+-- less Spirit stay part of the normal regen. Out of combat only (stats, auras readable).
+local LOWERED = 0.5           -- at least half of the stat taken away
 local function Lowered()
   if UnitStat then
     for _, stat in ipairs({ 4, 5 }) do          -- 4 Intellect, 5 Spirit
-      local ok, _, _, _, neg = pcall(UnitStat, "player", stat)
-      if ok and not IsSecret(neg) and type(neg) == "number" and neg < 0 then return true end
+      local ok, _, eff, _, neg = pcall(UnitStat, "player", stat)
+      if ok and not IsSecret(eff) and not IsSecret(neg) and type(eff) == "number"
+        and type(neg) == "number" and neg < 0 and -neg >= (eff - neg) * LOWERED then
+        return true
+      end
     end
   end
   local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
