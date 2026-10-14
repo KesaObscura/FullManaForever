@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.7"
+ns.VERSION = "0.8.8"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -19,6 +19,7 @@ local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
   locked     = true,
   onlyCombat = false,
+  cdShow = 5,           -- seconds before its cooldown ends an icon already shows (grey, counting down); 0: off
   showSolo   = true,    -- where to show: alone / in a party / in a raid (any combination)
   showParty  = true,
   showRaid   = true,
@@ -288,6 +289,7 @@ end
 -- 5 s leaves room for slow wands.
 local SHORT_CD = 5
 local longUntil = {} -- [item] = GetTime() when its own (long) cooldown ends
+local longStart = {} -- [item] = start of that cooldown (for the countdown on the icon)
 -- the last short cooldown seen on any item: the game puts it on spells too, where it cannot be
 -- read in combat, so the spell icon borrows it for its sweep
 local lockStart, lockDur
@@ -298,7 +300,7 @@ CooldownState = function(id)
     return true, 0
   end
   if s and d and d > 0 and d <= SHORT_CD and s + d > GetTime() then lockStart, lockDur = s, d end
-  if s and d and d > SHORT_CD then longUntil[id] = s + d end
+  if s and d and d > SHORT_CD then longUntil[id], longStart[id] = s + d, s end
   -- the game may report a wand shot's short cooldown while the item's own still runs
   local own = longUntil[id]
   if own and d and d <= SHORT_CD then
@@ -310,12 +312,28 @@ CooldownState = function(id)
   -- while wanding (the icon shows the short wait as a sweep instead, see ApplySweep)
   if d and d > 0 and d <= SHORT_CD then return true, 0 end
   -- enable 0: the cooldown waits for something (e.g. the end of combat) before it runs
-  if enable == 0 or enable == false then return false, (d and d > 0) and d or 0 end
+  if enable == 0 or enable == false then return false, (d and d > 0) and d or 0, true end
   if not s or not d or d == 0 then return true, 0 end
   local left = s + d - GetTime()
   return left <= 0.05, math.max(left, 0)
 end
 ns.CooldownState = function(id) return CooldownState(id) end
+
+-- shown on the icons: ready, or its own cooldown ends within db.cdShow seconds (then the icon
+-- is grey and counts down). Returns show, secondsLeft (0 when ready)
+local function Soon(id)
+  local ready, left, waits = CooldownState(id)
+  if ready then return true, 0 end
+  local x = db.cdShow or 0
+  if not waits and x > 0 and left and left > 0 and left <= x then return true, left end
+  return false, left
+end
+
+-- start and duration of an item's own cooldown (for the countdown), nil when unknown
+local function OwnCooldown(id)
+  local fin, st = longUntil[id], longStart[id]
+  if fin and st and fin > GetTime() then return st, fin - st end
+end
 
 -- start, duration of a short item cooldown (wand shot) that is still running, else nil
 local function ShortCooldown(id)
@@ -370,10 +388,12 @@ local function BandCandidates(i)
   for idx, it in ipairs(lists[i]) do
     if Usable(it, bg) then
       local n = C_Item.GetItemCount(it.id)
-      if not IsSecret(n) and n and n > 0 and CooldownState(it.id) then
+      local show, left = false, 0
+      if not IsSecret(n) and n and n > 0 then show, left = Soon(it.id) end
+      if show then
         local e = pool[#all + 1] or {}
         pool[#all + 1] = e
-        e.it, e.n, e.r, e.idx = it, n, Restore(it), idx
+        e.it, e.n, e.r, e.idx, e.left = it, n, Restore(it), idx, left
         all[#all + 1] = e
       end
     end
@@ -1143,19 +1163,25 @@ end
 local function ClearSweep(l)
   if l.sweep and l.sweepStart then
     if l.sweep.Clear then l.sweep:Clear() else l.sweep:SetCooldown(0, 0) end
-    l.sweepStart = nil
+    l.sweepStart, l.sweepMode = nil, nil
   end
 end
 
--- the sweep is set only when a new short cooldown starts, not every tick
-local function SweepAt(l, s, d)
+-- the sweep is set only when a new cooldown starts, not every tick. mode "lock": a wand shot's
+-- short wait, no numbers; "own": the item's or spell's own cooldown shown early (db.cdShow),
+-- with the game's countdown numbers like on the action bar
+local function SetSweep(l, s, d, mode)
   if not l.sweep then return end
   if not s then ClearSweep(l) return end
-  if l.sweepStart ~= s then
+  if l.sweepStart ~= s or l.sweepMode ~= mode then
+    if l.sweep.SetHideCountdownNumbers then l.sweep:SetHideCountdownNumbers(mode ~= "own") end
     l.sweep:SetCooldown(s, d)
-    l.sweepStart = s
+    l.sweepStart, l.sweepMode = s, mode
   end
 end
+
+local function SweepAt(l, s, d) SetSweep(l, s, d, "lock") end
+local function CountdownAt(l, s, d) SetSweep(l, s, d, "own") end
 
 local function ApplySweep(l, id) SweepAt(l, ShortCooldown(id)) end
 
@@ -1277,7 +1303,10 @@ local function UpdateSpellButtons(b, maxMana, maxHP, on)
       local l = bk.layers[1]
       SetLayer(l, -id, nil, S.Texture(id))
       if db.locked then
-        SweepAt(l, SpellLock())
+        local cs, cd = S.Countdown(sp) -- nearly ready (db.cdShow): grey, counting down, no glow
+        l.icon:SetDesaturated(cs ~= nil)
+        SetGlow(l, cs == nil)
+        if cs then CountdownAt(l, cs, cd) else SweepAt(l, SpellLock()) end
         ApplyBand(l, nil, S.Threshold(sp, maxMana))
         ApplyHpGate(bk, S.HpCost(sp), maxHP)
       else
@@ -1308,10 +1337,12 @@ local function UpdateButton(i, b, maxMana, maxHP)
     cands = BandCandidates(i)
   else
     local item, n = OwnedItem(i)
-    if item and CooldownState(item.id) then
+    local show, left = false, 0
+    if item then show, left = Soon(item.id) end
+    if show then
       local single = b.single or { {} }
       b.single = single
-      single[1].it, single[1].n = item, n
+      single[1].it, single[1].n, single[1].left = item, n, left
       cands = single
     else
       cands = NONE
@@ -1326,10 +1357,11 @@ local function UpdateButton(i, b, maxMana, maxHP)
   for k, c in ipairs(cands) do
     local l = b.layers[k]
     SetLayer(l, c.it.id, c.n)
-    if hold then l.icon:SetDesaturated(true) end
+    local cooling = (c.left or 0) > 0 -- shown early: grey, no glow, the game's countdown on it
+    if hold or cooling then l.icon:SetDesaturated(true) end
     ShowHeld(b, l, hold)
-    SetGlow(l, not hold)
-    ApplySweep(l, c.it.id)
+    SetGlow(l, not hold and not cooling)
+    if cooling then CountdownAt(l, OwnCooldown(c.it.id)) else ApplySweep(l, c.it.id) end
     -- strongest first: band (threshold of the stronger item, own threshold]
     local lo = k > 1 and Threshold(cands[k - 1].it, maxMana) or nil
     ApplyBand(l, lo, Threshold(c.it, maxMana))

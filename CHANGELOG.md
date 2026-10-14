@@ -1,5 +1,9 @@
 # Changelog
 
+**Full Mana Forever 0.8.8**
+
+- New setting "Show icons before ready" (top of Visibility, 5 s by default, off to 60 in steps of 5): potions, runes, gems, other consumables, gear and your own spells already show in the last seconds of their cooldown, grey and without glow, with the game's own countdown on them like on the action bar ("1:55", "3m", "5"). When the cooldown is over they light up as before; at 0 they only show when ready. The mana rules stay the same, and spell cooldowns are counted from your cast in combat as before
+
 **Full Mana Forever 0.8.7**
 
 - The item list is now "Items and spells" (also the button in the settings): your class's own mana spells (Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and your race's Eureka! or Ley Line reading) are listed there with on/off, and a spell you do not have yet says why: the level it is learned at (read from the game), a talent, or the trainer

@@ -97,6 +97,8 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   when the owner asks): 09_own_spells (new), 08_unlocked (5 icons) and 06_settings (two halves)
   replace the 0.7.0 ones on CurseForge. All row images were re-shot with the 0.8.x bar (0.8.1/0.8.2
   uploads); every image on CurseForge is current as of 0.8.2.
+- 0.8.7 (14 Oct): 06_settings (entry 06v4) and 07_item_list (entry 07v2, "Items and spells" with
+  the own spells) re-made from the owner's English screenshots.
 - The finished gallery images (as on CurseForge) are kept in `docs/gallery/`. The in-game source
   screenshots are NOT in the repo (they show character names and chat): the owner keeps them;
   `tools/gallery.py` expects them as `<workdir>/images/<n>.webp`, numbers from the old session.

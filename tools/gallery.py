@@ -185,6 +185,18 @@ if __name__ == "__main__":
         make("06_settings.png", "Settings that explain themselves",
              "Every part has its own switch and text size. Hover any option for a short explanation.",
              [(crop("images/249.png", (0, 0, 924, 618), 0.86), "")], top=140)
+    if only("06v4"):
+        # 0.8.7 window: "Move texts freely" under unlock, no common spell threshold
+        make("06_settings.png", "Settings that explain themselves",
+             "Every part has its own switch and text size. Hover any option for a short explanation.",
+             [(crop("images/300.webp", (281, 118, 1161, 765), 0.84), "")], top=140)
+    if only("07v2"):
+        # 0.8.7 "Items and spells": level and count per item, own spells with threshold and state
+        LIB2 = (411, 141, 1031, 741)
+        make("07_item_list.png", "Items and spells",
+             "Every supported item and your class's mana spells: switch each on or off, set each spell's threshold.",
+             [(crop("images/301.webp", LIB2, 0.78), "Potions: level and how many you carry"),
+              (crop("images/302.webp", LIB2, 0.78), "Gear and your own mana spells")], top=150)
     if only("13"):
         make("13_profiles_hold.png", "Profiles and potions on hold",
              "Shared settings or your own per character. /fmf hold keeps potions for the next fight.",

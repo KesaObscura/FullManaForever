@@ -762,6 +762,7 @@ end)
 
 test("own spell on cooldown: exact out of combat, counted from the cast in combat", function()
   local ns = M.load(nil, { class = "MAGE" })
+  ns.db.cdShow = 0 -- the icon is not shown before it is ready (counting checked here)
   local cds = spellApis({ 12051 }, { base = { [12051] = 480 } })
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2
@@ -943,6 +944,7 @@ end)
 
 test("Inner Focus: its cooldown starts when the next spell uses the buff", function()
   local ns = M.load(nil, { class = "PRIEST" })
+  ns.db.cdShow = 0 -- the icon is not shown before it is ready (counting checked here)
   local cds = spellApis({ 14751 }, { base = { [14751] = 180 } })
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2; M.tick()
@@ -1072,6 +1074,7 @@ end)
 
 test("Ley Line reading waits its 2 minutes after a cast in combat, base cooldown unreadable", function()
   local ns = M.load(nil, { class = "PRIEST" })
+  ns.db.cdShow = 0 -- the icon is not shown before it is ready (counting checked here)
   spellApis({ 1259705 }) -- GetSpellBaseCooldown reports 0
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2; M.tick() -- read once out of combat: ready
@@ -1680,4 +1683,79 @@ test("a bar set shorter than the icon column: the texts go beside the bar, away 
   p = b.manaBox.points[1]
   eq(p[1], "TOP"); eq(p[3], "BOTTOM"); eq(p[5], -4)
   noSpellApis()
+end)
+
+-- 0.8.8: icons show before their cooldown ends (db.cdShow seconds), grey, counting down
+
+test("a potion shows db.cdShow seconds before its cooldown ends: grey, no glow, the game's countdown", function()
+  local ns = M.load({ cdShow = 10 }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 0, 120 } -- ends at 120; GetTime is 100: 20 s left
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "shown 20 s before (setting 10 s)")
+  M.state.time = 112 -- 8 s left
+  M.tick()
+  local vis, l = slotVisible(ns, 1)
+  ok(vis, "not shown 8 s before its cooldown ends")
+  ok(l.icon.desaturated, "cooling potion not grey")
+  ok(not l.glow.shown, "cooling potion glows")
+  eq(l.sweep.cdStart, 0); eq(l.sweep.cdDur, 120)
+  eq(l.sweep.hideNumbers, false, "no countdown numbers")
+  M.state.time = 121 -- ready
+  M.tick()
+  vis, l = slotVisible(ns, 1)
+  ok(vis and not l.icon.desaturated and l.glow.shown, "ready potion not lit")
+  M.state.time = nil
+end)
+
+test("cdShow 0: nothing shows before it is ready; a wand lock still has no numbers", function()
+  local ns = M.load({ cdShow = 0 }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 99, 2 } -- a wand shot's short lock
+  M.tick()
+  local vis, l = slotVisible(ns, 1)
+  ok(vis, "potion hidden by a wand lock")
+  eq(l.sweep.hideNumbers, true, "numbers on a wand lock")
+  M.state.cooldowns[3385] = { 0, 101 } -- 1 s left of its own cooldown
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "shown before ready with the setting off")
+end)
+
+test("a spell shows before its cooldown ends, counted from the cast in combat, grey with numbers", function()
+  local ns = M.load({ cdShow = 10 }, { class = "MAGE" })
+  spellApis({ 12051 }, { base = { [12051] = 480 } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2; M.tick()
+  ok(spellSlot(ns), "ready Evocation hidden")
+  spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
+  M.state.combat = true
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051)
+  at(560, function() M.tick() end) -- 20 s left
+  ok(not buttons(ns)[SPELL_SLOT].outer.shown, "shown 20 s before")
+  at(575, function() M.tick() end) -- 5 s left
+  local vis, l = spellSlot(ns)
+  ok(vis, "not shown 5 s before")
+  ok(l.icon.desaturated and not l.glow.shown, "cooling spell not grey or still glowing")
+  eq(l.sweep.cdDur, 480); eq(l.sweep.hideNumbers, false)
+  M.state.combat = false
+  noSpellApis()
+end)
+
+test("settings: 'Show before ready' sits above 'Show only in combat', 0 to 60 s in steps of 5", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local st, combat
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == ns.L.optCdShow .. ":" then st = w end
+    if w.label and w.label.text == ns.L.optCombat then combat = w end
+  end
+  ok(st and combat, "settings not found")
+  ok(st.label.points[1][5] > combat.points[1][5], "not above 'Show only in combat'")
+  ok(st.value.points[1][5] < 0 and st.minus.points[1][5] < 0, "value and -/+ not on the line under the label")
+  ok(combat.points[1][5] <= st.label.points[1][5] - 48, "'Show only in combat' not under the value line")
+  eq(st.value.text, ns.L.cdShowSec:format(5), "default not 5 s")
+  st.minus.scripts.OnClick(st.minus)
+  eq(ns.db.cdShow, 0); eq(st.value.text, ns.L.cdShowOff)
+  for _ = 1, 20 do st.plus.scripts.OnClick(st.plus) end
+  eq(ns.db.cdShow, 60, "not capped at 60 s")
 end)

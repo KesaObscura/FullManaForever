@@ -24,6 +24,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Sound when your potion is ready again** (optional): a short sound when the mana potion cooldown is over, also in combat; three sounds of the addon's own to choose from.
 - **Five-second rule in whole seconds** (5, 4, 3 ...) or with tenths, as you like.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
+- **See it coming.** Potions, runes, gems, gear and your own spells already show in the last seconds of their cooldown — grey, counting down like your action bar — so you are ready the moment they light up. 5 seconds by default, up to 60, or off.
 - **Hold potions.** `/fmf hold` (best in a macro) holds mana potions until the end of the next fight, for when you want the potion cooldown for something else. The potion icon turns grey with "HOLD"; after the fight it releases by itself.
 - Only suggests what you can use: skips items above your level, mage-only items for other classes and battleground-only items outside battlegrounds.
 - 9 languages: English, Deutsch, Español (EU and AL), Français, Русский, 한국어, Português, 简体中文, 繁體中文.
