@@ -97,7 +97,10 @@ and `/fmf log` (kept in releases for bug reports).
 
 1. Done: 0.8.3 profiles tested by the owner; settings order and wording (step 3) shipped.
 3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 and 0.8.6 (11 Oct), 0.8.7 (14 Oct, items and
-   spells list, tested by the owner). CurseForge uploads by the owner:
+   spells list, tested by the owner), 0.8.8 (14 Oct, icons before ready).
+3c. Open (owner: decide after the scanner run): gaps in the icon column. A ready item above its
+   mana threshold keeps its (invisible) slot in combat (mana is secret). Options: sort all slots by
+   threshold (no gaps, group order not fixed), pack only out of combat, or keep as is. CurseForge uploads by the owner:
    0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold
    new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description: /fmf profile copy
    with the surname).
