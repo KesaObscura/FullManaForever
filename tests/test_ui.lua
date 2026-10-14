@@ -363,7 +363,7 @@ test("options: 'Move texts freely' sits under unlock and only works while unlock
   eq(sp[5], rp[5], "reset size not on the row of reset position")
   eq(rp[4] + reset.w + 8, sp[4], "gap between the reset buttons")
   eq(sp[4] + resetSize.w, 440 - rp[4], "reset buttons do not fill the row")
-  eq(freeCb.points[1][4], unlockCb.points[1][4], "free text switch not under unlock")
+  eq(freeCb.points[1][4], unlockCb.points[1][4] + 26, "free text switch not indented under unlock")
   ok(freeCb.points[1][5] < unlockCb.points[1][5] and rp[5] < freeCb.points[1][5], "order: unlock, free texts, resets")
 end)
 
@@ -445,7 +445,7 @@ test("options: 'Move texts freely' is one row under unlock in every language", f
       if w.label and w.label.text == ns.L.optUnlock then unlockCb = w end
       if w.label and w.label.text == ns.L.optTextFree then freeCb = w end
     end
-    eq(freeCb.points[1][4], unlockCb.points[1][4], lang .. ": free text switch not under unlock")
+    eq(freeCb.points[1][4], unlockCb.points[1][4] + 26, lang .. ": free text switch not indented under unlock")
     ok(freeCb.points[1][5] < unlockCb.points[1][5], lang .. ": free text switch not one row down")
   end
 end)

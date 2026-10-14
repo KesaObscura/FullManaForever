@@ -494,7 +494,7 @@ Build = function()
     function() return not db.locked end)
   -- always one row under unlock, in every language (side by side only where it fitted, the
   -- layout jumped when the language changed)
-  c.Row(freeCb)
+  c.Row(freeCb, PAD + 26) -- a sub-setting of unlock: indented like "Whole seconds"
   -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
   local reset = Button(col, L.optReset, HALF)
   reset:SetWidth(HALF)

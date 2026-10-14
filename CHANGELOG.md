@@ -7,6 +7,7 @@
 - Several spells ready at once each get their own icon (up to 3), highest threshold first, so lit icons never leave a gap
 - The automatic bar length has room for every spell icon. A bar you set shorter than the icon column keeps your length; the mana numbers and the regen then sit beside the bar, on the side away from the icons, instead of over the last icons
 - Esc after a language change works as before: first the item list, then the settings, the third press opens the game menu (the rebuilt windows did not take over their names, so Esc looked at the old ones)
+- Settings: "Move texts freely" always sits under "Unlock frame", indented, in every language (it jumped when the language changed)
 - In the list, notes after a name ("own", "sleep 12 s!", "BG only") are never cut off; a long name ends in "..." instead (the full name is in its tooltip). The window is a little wider
 - Each ready spell has its own mark on the mana bar; a spell on cooldown has none (before, the first spell's mark stayed while it was on cooldown)
 - New items, checked against the game's own texts: Combat Mana Potion, Greater Dreamless Sleep Potion (off by default, like Dreamless Sleep), Energy Cloak (its use effect is new in Forever), Celestial Orb, Arcane Orb and Ley Orb
