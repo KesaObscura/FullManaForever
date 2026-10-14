@@ -1,5 +1,15 @@
 # Changelog
 
+**Full Mana Forever 0.8.9**
+
+- Regen colour after death: the lowered regen under Resurrection Sickness (or anything else that takes at least half of your Spirit or Intellect) is no longer taken as your normal regen, so your normal regen no longer turns green with the up arrow once the debuff ends. Gear with a few points less Spirit still counts as normal
+- While such a debuff lasts, the regen is shown red with a small down arrow
+- Major and Superior Mana Draught (battlegrounds) share the potion cooldown, as the game shows: in battlegrounds they now use the potion icon (the strongest that fits) instead of a second icon that always went on cooldown together with it
+- More potions in the potion slot, all with the shared potion cooldown read from the game: Forever's Restored Mana Potion (20 % of your max mana, so it fits at every level), Tessa's Tonic, Diet McWeaksauce, Mug of Shimmer Stout, Full Moonshine and Forever's second item IDs of the Minor and Lesser Mana Potion (usable from level 1; one row in the list with the original, counted and switched together). Wildvine Potion is listed but off by default (it may restore nothing)
+- Forever's Power Recycler (20 % of your max health into 20 % of your max mana) in "Other consumables", with the health check of the runes; also Tea with Sugar and, for mages, the Scroll of Minor Evocation
+- Gear: Earthen Sigil (trinket) and, for druids, the Veildust Medicine Bag (off-hand)
+- Celestial Orb, Arcane Orb and Ley Orb are mage items ("Classes: Mage"): no longer listed for other classes
+
 **Full Mana Forever 0.8.8**
 
 - New setting "Show icons before ready" (top of Visibility, 5 s by default, off to 60 in steps of 5): potions, runes, gems, other consumables, gear and your own spells already show in the last seconds of their cooldown, grey and without glow, with the game's own countdown on them like on the action bar ("1:55", "3m", "5"). When the cooldown is over they light up as before; at 0 they only show when ready. The mana rules stay the same, and spell cooldowns are counted from your cast in combat as before

@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.8"
+ns.VERSION = "0.8.9"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -130,7 +130,7 @@ end
 local candStamp = {} -- per group: tick in which BandCandidates was computed
 
 -- flags of a known item that an own entry for the same id keeps (warnings, safety)
-local INHERIT = { "sleep", "pvp", "class", "hpCost" }
+local INHERIT = { "sleep", "pvp", "class", "hpCost", "hpCostPct" } -- not pct: an own amount replaces it
 
 function ns.RebuildLists()
   local own, known = {}, {} -- own: [group key][id] = true
@@ -168,9 +168,23 @@ end
 
 function ns.FullList(i) return fullLists[i] or {} end
 
+-- how many of an item's other IDs (Data.lua "same") are in the bags
+function ns.CopyCount(it)
+  local n = 0
+  for _, g in ipairs(ns.GROUPS) do
+    for _, c in ipairs(g.items) do
+      if c.same == it.id then
+        local k = C_Item.GetItemCount(c.id)
+        if not IsSecret(k) and k then n = n + k end
+      end
+    end
+  end
+  return n
+end
+
 -- db.disabled[id]: true = off, false = on (overrides defaultOff), nil = item default
 function ns.IsItemEnabled(it)
-  local state = db.disabled[it.id]
+  local state = db.disabled[it.same or it.id]
   if state == nil then return not it.defaultOff end
   return not state
 end
@@ -344,9 +358,21 @@ local function ShortCooldown(id)
 end
 
 -- restore used for thresholds: max ("No waste") or average ("More per fight")
+-- pct: a share of the maximum mana (Restored Mana Potion); max mana is readable in combat
 local function Restore(it)
+  if it.pct then
+    local m = UnitPowerMax("player", MANA)
+    if IsSecret(m) or not m or m <= 0 then return 0 end
+    return it.pct * m
+  end
   if db.thresholdMode == "avg" and it.min then return (it.min + it.max) / 2 end
   return it.max
+end
+
+-- health an item costs: a fixed amount (runes) or a share of the maximum (Power Recycler)
+local function HpCost(it, maxHP)
+  if it.hpCostPct then return it.hpCostPct * maxHP end
+  return it.hpCost
 end
 
 -- mana% (0..1) at or below which the whole item fits into the missing mana
@@ -434,8 +460,8 @@ function ns.GetStatus(i)
     thr = Threshold(item, maxMana)
   end
   local maxHP = UnitHealthMax("player")
-  if item.hpCost and not IsSecret(maxHP) and maxHP and maxHP > 0 then
-    hpThr = item.hpCost / maxHP + db.runeMargin
+  if (item.hpCost or item.hpCostPct) and not IsSecret(maxHP) and maxHP and maxHP > 0 then
+    hpThr = HpCost(item, maxHP) / maxHP + db.runeMargin
   end
   return item, n, ready, left, thr, hpThr
 end
@@ -802,6 +828,12 @@ local function CreateBar()
   bar.regenUp:SetVertexColor(0.45, 1, 0.45)
   bar.regenUp:SetPoint("LEFT", bar.regen, "RIGHT", 0, 1)
   bar.regenUp:Hide()
+  bar.regenDown = bar.regenBox:CreateTexture(nil, "OVERLAY")
+  bar.regenDown:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+  bar.regenDown:SetSize(16, 16)
+  bar.regenDown:SetVertexColor(1, 0.35, 0.3)
+  bar.regenDown:SetPoint("LEFT", bar.regen, "RIGHT", 0, -3)
+  bar.regenDown:Hide()
   bar:Hide()
 end
 
@@ -1367,6 +1399,9 @@ local function UpdateButton(i, b, maxMana, maxHP)
     ApplyBand(l, lo, Threshold(c.it, maxMana))
     l:Show()
     if c.it.hpCost then hpCost = math.max(hpCost or 0, c.it.hpCost) end
+    if c.it.hpCostPct and not IsSecret(maxHP) and maxHP and maxHP > 0 then
+      hpCost = math.max(hpCost or 0, HpCost(c.it, maxHP))
+    end
   end
   HideLayers(b, #cands + 1)
   ApplyHpGate(b, hpCost, maxHP)
@@ -1455,20 +1490,24 @@ local function UpdateRegenText(visible)
   local now, inRule = GetTime(), (ns.FsrLeft and ns.FsrLeft() or 0) > 0
   if box:IsShown() and now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
-  local text, boosted
-  text, inRule, boosted = ns.RegenText()
+  local text, boosted, lowered
+  text, inRule, boosted, lowered = ns.RegenText()
   if text then
     bar.regen:SetText(text)
     -- reduced regen during the rule: gold like the strip; above normal (Spirit Tap,
-    -- Evocation, ...): green; normal regen: light blue
+    -- Evocation, ...): green; below normal for a while (Resurrection Sickness): red;
+    -- normal regen: light blue
     if inRule then
       bar.regen:SetTextColor(1, 0.82, 0.2)
     elseif boosted then
       bar.regen:SetTextColor(0.45, 1, 0.45)
+    elseif lowered then
+      bar.regen:SetTextColor(1, 0.35, 0.3)
     else
       bar.regen:SetTextColor(0.6, 0.85, 1)
     end
     bar.regenUp:SetShown(boosted and not inRule and true or false)
+    bar.regenDown:SetShown(lowered and true or false)
     bar.regen:Show()
     box:Show()
   elseif box:IsShown() then

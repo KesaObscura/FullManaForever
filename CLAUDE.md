@@ -62,7 +62,7 @@ and `/fmf log` (kept in releases for bug reports).
   3 s or less are ignored for readiness and shown as a sweep; spell cooldowns read as 5 s or less
   are ignored. Melee and bows do not do this.
 - Potions, food, wand and procs (Eureka!) report no mana cost and never start the rule.
-  Drinking is part of `GetPowerRegen`; "Adventurous thrill" is not.
+  Drinking is part of `GetPowerRegen`; "Thrill of Adventure" (was "Adventurous Thrill") is not.
 - `GetSpellBaseCooldown` and `C_Spell.GetSpellLevelLearned` (Evocation 12051 -> 20) work for
   any spell ID; talents via `C_ClassTalents` + `C_Traits`.
 - Research data comes from the owner's private tooling, not from this addon: never add scan
@@ -97,13 +97,17 @@ and `/fmf log` (kept in releases for bug reports).
 
 1. Done: 0.8.3 profiles tested by the owner; settings order and wording (step 3) shipped.
 3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 and 0.8.6 (11 Oct), 0.8.7 (14 Oct, items and
-   spells list, tested by the owner), 0.8.8 (14 Oct, icons before ready).
-3c. Open (owner: decide after the scanner run): gaps in the icon column. A ready item above its
+   spells list, tested by the owner), 0.8.8 (14 Oct, icons before ready); 0.8.9 ready (regen after death, items from the
+   game's own cooldowns, percent amounts), tested by the owner 14 Oct. CurseForge uploads by
+   the owner: 0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced,
+   13_profiles_hold new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description:
+   /fmf profile copy with the surname); 0.8.7 (gallery 06 and 07 new) and 0.8.8 next.
+3d. Item review (owner, 14 Oct): on the last beta day (21 Oct) or after launch, go through all
+   items: what is junk / unimportant for the addon, what is needed. Until then more rather than
+   fewer items (players can add their own anyway).
+3c. Open (owner, 14 Oct: not in 0.8.9, later): gaps in the icon column. A ready item above its
    mana threshold keeps its (invisible) slot in combat (mana is secret). Options: sort all slots by
-   threshold (no gaps, group order not fixed), pack only out of combat, or keep as is. CurseForge uploads by the owner:
-   0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold
-   new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description: /fmf profile copy
-   with the surname).
+   threshold (no gaps, group order not fixed), pack only out of combat, or keep as is.
 3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
    what the addon does, each with a test that fails on the old code. Left out on purpose:
    secret nil comparisons, longUntil d==0, OwnedItem caching. Also: character keys with the

@@ -4,26 +4,41 @@ local _, ns = ...
 -- stack several items in the slot: the strongest one that fits the missing mana is shown.
 -- Other groups show the first item in this order that you carry (or have equipped and ready).
 -- min/max = mana restored (threshold: deficit >= max, or >= average in "More per fight")
+-- pct    = share of the maximum mana instead of min/max (Forever items)
 -- hpCost = maximum health the item costs (runes); icon also needs enough HP
+-- hpCostPct = health cost as a share of the maximum health
 -- defaultOff = not suggested until the player ticks it in the item list
 -- pvp    = only usable in battlegrounds
 -- class  = only this class can use it (group or item); hidden for everyone else
+-- same   = a second item ID of the same item (same name and effect): one row in the item list,
+--          switched on/off with it, counted with it
 -- Every value below was checked against the Wowhead Forever database (build 1.60.1) and the
 -- game's own item texts (12 Oct 2026).
 ns.GROUPS = {
   {
-    key = "potion", -- shared potion cooldown (2 min)
+    key = "potion", -- shared potion cooldown (2 min; every item below, the draughts too, read
+                    -- from the game's item cooldowns on 14 Oct 2026)
     items = {
       { id = 13444, min = 1350, max = 2250 },  -- Major Mana Potion (1350-2250)
+      { id = 23578, min = 1350, max = 2250 },  -- Diet McWeaksauce (same spell as Major Mana Potion)
       { id = 18253, min = 1440, max = 1760 },  -- Major Rejuvenation Potion (1440-1760 mana + health)
+      { id = 17351, min = 980, max = 1260, pvp = true }, -- Major Mana Draught (980-1260, battlegrounds)
       { id = 13443, min = 900, max = 1500 },  -- Superior Mana Potion (900-1500)
       { id = 18841, min = 900, max = 1500 },  -- Combat Mana Potion (900-1500, same spell as Superior)
+      { id = 9144, min = 0, max = 1500, defaultOff = true }, -- Wildvine Potion (0-1500 mana + health: may give nothing)
       { id = 20002, min = 2100, max = 2100, defaultOff = true, sleep = true }, -- Greater Dreamless Sleep Potion (2100 over 12 s asleep)
       { id = 12190, min = 1200, max = 1200, defaultOff = true, sleep = true }, -- Dreamless Sleep Potion (1200 over 12 s asleep)
       { id = 6149, min = 700, max = 900 },   -- Greater Mana Potion (700-900)
+      { id = 274935, min = 720, max = 880 },  -- Tessa's Tonic (720-880 mana + health, Forever)
+      { id = 282013, pct = 0.20 },            -- Restored Mana Potion (20 % of max mana, Forever)
+      { id = 17352, min = 560, max = 720,  pvp = true }, -- Superior Mana Draught (560-720, battlegrounds)
       { id = 3827, min = 455, max = 585 },   -- Mana Potion (455-585)
       { id = 3385, min = 280, max = 360 },   -- Lesser Mana Potion (280-360)
+      { id = 287969, min = 280, max = 360, same = 3385 }, -- Lesser Mana Potion (Forever copy, level 1)
+      { id = 1072, min = 280, max = 360 },    -- Full Moonshine (same spell as Lesser Mana Potion)
       { id = 2455, min = 140, max = 180 },   -- Minor Mana Potion (140-180)
+      { id = 287968, min = 140, max = 180, same = 2455 }, -- Minor Mana Potion (Forever copy, level 1)
+      { id = 3087, min = 140, max = 180 },    -- Mug of Shimmer Stout (140-180)
       { id = 2456, min = 90, max = 150 },   -- Minor Rejuvenation Potion (90-150 mana + health)
     },
   },
@@ -48,9 +63,10 @@ ns.GROUPS = {
     key = "herb", -- other consumables with mana; items have different cooldowns
     preferReady = true,
     items = {
-      { id = 17351, min = 980, max = 1260, pvp = true }, -- Major Mana Draught (980-1260, battlegrounds, 5 min)
-      { id = 17352, min = 560, max = 720,  pvp = true }, -- Superior Mana Draught (560-720, battlegrounds, 5 min)
+      { id = 15723, min = 1050, max = 1750 }, -- Tea with Sugar (1050-1750 mana + health)
       { id = 11952, min = 394, max = 456 },   -- Night Dragon's Breath (394-456 mana + health)
+      { id = 213564, min = 300, max = 300, class = "MAGE" }, -- Scroll of Minor Evocation (300 over 4 s, 8 min)
+      { id = 275688, pct = 0.20, hpCostPct = 0.20 }, -- Power Recycler (20 % max health into 20 % max mana, 2 min, Forever)
     },
   },
   {
@@ -59,11 +75,13 @@ ns.GROUPS = {
     items = {
       { id = 14152, min = 375, max = 625, class = "MAGE" }, -- Robe of the Archmage (mage chest, 375-625, 5 min)
       { id = 23027, min = 500, max = 500 },   -- Warmth of Forgiveness (trinket, 500, 3 min)
-      { id = 7515, min = 400, max = 1200 },   -- Celestial Orb (off-hand, 400-1200)
+      { id = 7515, min = 400, max = 1200, class = "MAGE" }, -- Celestial Orb (off-hand, 400-1200, "Classes: Mage")
       { id = 9397, min = 300, max = 340 },    -- Energy Cloak (back, 300-340, 10 min; use effect new in Forever)
       { id = 18637, min = 228, max = 380 },   -- Major Recombobulator (trinket, 228-380 mana + health, 5 min)
-      { id = 7507, min = 80, max = 240 },     -- Arcane Orb (off-hand, 80-240)
-      { id = 7508, min = 80, max = 240 },     -- Ley Orb (off-hand, 80-240)
+      { id = 7507, min = 80, max = 240, class = "MAGE" }, -- Arcane Orb (off-hand, 80-240, "Classes: Mage")
+      { id = 7508, min = 80, max = 240, class = "MAGE" }, -- Ley Orb (off-hand, 80-240, "Classes: Mage")
+      { id = 20525, min = 400, max = 400 },   -- Earthen Sigil (trinket, 400 over 10 s, 3 min)
+      { id = 15866, min = 250, max = 250, class = "DRUID" }, -- Veildust Medicine Bag (off-hand, 250 over 15 s)
       { id = 4381, min = 96, max = 160 },   -- Minor Recombobulator (trinket, 96-160 mana + health, 5 min)
     },
   },

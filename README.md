@@ -49,8 +49,8 @@ when the icon lights up.
   color, thickness, length, icon size and spacing are adjustable.
 - **Five-second rule and mana regen** on the bar: a gold strip and the seconds after a spell
   that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns
-  green when it is above your normal rate. The mana numbers, the seconds and the regen also show
-  without the bar, and each can be dragged anywhere ("Move texts freely").
+  green when it is above your normal rate, red while Resurrection Sickness holds it down. The
+  mana numbers, the seconds and the regen also show without the bar, and each can be dragged anywhere ("Move texts freely").
 - **Mana text** like the game's status text: number, percentage or both, with its own switch
   and text size.
 - **Show**: solo / in a party / in a raid, optionally only in combat.

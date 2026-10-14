@@ -16,7 +16,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Made for wanding.** Each wand shot blocks potions and spells for a moment. The icon stays lit and shows that short wait as a sweep, like the action bar: the potion fits, stop shooting and drink.
 - **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
 - **Five-second rule and mana regen.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it). Next to the mana bar (under the numbers when the icons are in a column) you see the regen running right now, per second — also in combat, including Spirit Tap and drinking.
-- **Regen your way.** The regen turns green, with a small up arrow, when it is above your normal rate (drinking, Spirit Tap, ... out of combat, and in combat after your own Evocation or Ley Line reading — Forever hides the value from addons in combat). The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
+- **Regen your way.** The regen turns green, with a small up arrow, when it is above your normal rate, and red with a down arrow while Resurrection Sickness holds it down (drinking, Spirit Tap, ... out of combat, and in combat after your own Evocation or Ley Line reading — Forever hides the value from addons in combat). The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
 - **Items and spells.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category. Your class's mana spells are listed too, each with its own threshold, and if you do not have one yet, the list says why: the level, a talent or the trainer.
@@ -39,11 +39,11 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 
 ## Supported items (checked against the Forever database)
 
-- **Mana potions** (shared cooldown): Major, Major Rejuvenation, Superior, Combat, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Dreamless Sleep and Greater Dreamless Sleep (off by default — they put you to sleep for 12 s).
+- **Mana potions** (shared cooldown, read from the game): Major, Major Rejuvenation, Superior, Combat, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Forever's Restored Mana Potion (20 % of your max mana) and Tessa's Tonic, Diet McWeaksauce, Mug of Shimmer Stout, Full Moonshine, the battleground draughts (Major/Superior Mana Draught), Dreamless Sleep and Greater Dreamless Sleep (off by default — they put you to sleep for 12 s), Wildvine Potion (off by default — it may restore nothing).
 - **Runes:** Demonic Rune, Dark Rune.
 - **Mana gems (mage):** Ruby, Citrine, Jade, Agate.
-- **Other:** Night Dragon's Breath, Major/Superior Mana Draught (battlegrounds only).
-- **Gear:** Warmth of Forgiveness, Celestial Orb, Energy Cloak, Major/Minor Recombobulator, Arcane Orb, Ley Orb, Robe of the Archmage (mage).
+- **Other:** Night Dragon's Breath, Tea with Sugar, Scroll of Minor Evocation (mage), Forever's Power Recycler (20 % of your max health into 20 % of your max mana, with the health check of the runes).
+- **Gear:** Warmth of Forgiveness, Energy Cloak, Earthen Sigil, Major/Minor Recombobulator; for druids the Veildust Medicine Bag; for mages Robe of the Archmage, Celestial Orb, Arcane Orb and Ley Orb.
 
 ## Commands
 

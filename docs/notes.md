@@ -142,7 +142,7 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Refreshing Spring Water (145 mana / 18 s) showed 23.9/s green (15.5 + 8.4), and 8.4/s gold when
   sitting down to drink right after a spell (casting itself stands you up and ends the drink):
   the drink adds to the regen and keeps running during the five-second rule. The Forever buff
-  "Adventurous thrill" 1261483 is NOT part of it (36.30 with and without it). It comes from a
+  "Thrill of Adventure" 1261483 (renamed from "Adventurous Thrill", build 70374) is NOT part of it (36.30 with and without it). It comes from a
   passive talent of the new "Adventures" tree: after a kill that gives XP or honor, 1 % of max
   health and mana over 10 s at rank 1/5 (2 % at rank 2), not in dungeons, raids or battlegrounds.
   Not coloured (green would then show a normal number); maybe later a "+x" out of combat.
@@ -195,6 +195,23 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Mana Potion), Mageblood Elixir 20007 (regen elixir), mana oils, EZ-Thro Mana Bomb 260818 (new,
   text not loaded yet), Crisp Spring Water 252031 (new water). The first item pass missed slow
   texts; a second pass is needed before adding numbers.
+
+- Resurrection Sickness on Forever (owner's /dump, 14 Oct): aura 15007, 600 s, readable out of
+  combat with `C_UnitAuras.GetPlayerAuraBySpellID(15007)`. `UnitStat("player", 5)` under it:
+  38, 38, 26, -36 (effective 38 = base 48 + 26 from buffs - 36): the cut is 75 % of the base.
+- Item check 14 Oct 2026 (build 70374, game API): Major and Superior Mana Draught get the same
+  120 s cooldown as the potions when a potion is used (moved to the potion group in 0.8.9);
+  Celestial, Arcane and Ley Orb say "Classes: Mage". A second run with a potion drunk: the
+  shared potion cooldown also covers Tessa's Tonic, Diet McWeaksauce, Wildvine Potion, Mug of
+  Shimmer Stout, Full Moonshine, Restored Mana Potion (20 % of max mana), the Forever copies
+  287968/287969 and Windstone (Skywall only, not added); all added in 0.8.9, with Power
+  Recycler (20 % health into 20 % mana), Tea with Sugar 15723, Earthen Sigil 20525, Scroll of
+  Minor Evocation 213564 (mage) and Veildust Medicine Bag 15866 (druid off-hand).
+- Checked 14 Oct 2026 (build 70374): the potion cooldown is one shared 120 s cooldown for 13
+  items (all mana, rejuvenation and Dreamless Sleep potions, the draughts, Combat Mana Potion),
+  as in `Data.lua`. All our spell IDs and ranks still match (Evocation 20, Mana Tide 25/48/58,
+  Innervate 40, Life Tap 6-56). The Adventures talent "Thrill of Adventure" 1225472 gives 5 % of
+  max health and mana over 10 s at max rank; a proc, not a button, so no icon.
 
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 

@@ -19,8 +19,34 @@ local BOOST_SPELLS = {        -- [spell] = seconds of raised regen (own casts on
 }
 local baseline
 local boostUntil = 0
+local SICKNESS = 15007        -- Resurrection Sickness: -75 % attributes for up to 10 min
 
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
+
+-- is the regen lowered for a while (Resurrection Sickness: -75 % Spirit and Intellect)?
+-- Such a value must not become the normal regen, or normal regen turns green once the
+-- debuff ends (0.8.9). Only a big cut counts: gear and small debuffs with a few points
+-- less Spirit stay part of the normal regen. The sickness takes 75 % of the BASE stat
+-- (in game: Spirit 38 = base 48 + 26 from buffs - 36), so the cut is compared with the base.
+local LOWERED = 0.5           -- at least half of the base stat taken away
+local function Lowered()
+  if UnitStat then
+    for _, stat in ipairs({ 4, 5 }) do          -- 4 Intellect, 5 Spirit
+      local ok, _, eff, pos, neg = pcall(UnitStat, "player", stat)
+      if ok and not IsSecret(eff) and not IsSecret(pos) and not IsSecret(neg)
+        and type(eff) == "number" and type(pos) == "number" and type(neg) == "number"
+        and neg < 0 and -neg >= (eff - pos - neg) * LOWERED then
+        return true
+      end
+    end
+  end
+  local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+  if get then
+    local ok, aura = pcall(get, SICKNESS)
+    if ok and aura ~= nil and not IsSecret(aura) then return true end
+  end
+  return false
+end
 
 -- does this spell cost mana right now? (cost includes reductions such as Eureka)
 local function CostsMana(id)
@@ -65,7 +91,7 @@ end)
 -- During the rule that is the casting rate: 0 without talents, more with talents,
 -- Innervate or gear (the game includes all of it). In combat the value is secret: it can
 -- only be formatted, never compared or multiplied, which is why there is no mp5 here.
--- Returns text, inRule, boosted; nil when there is nothing to show.
+-- Returns text, inRule, boosted, lowered; nil when there is nothing to show.
 function ns.RegenText()
   if not GetPowerRegen then return nil end
   local ok, base, casting = pcall(GetPowerRegen)
@@ -79,10 +105,12 @@ function ns.RegenText()
   if not okF then return nil end
   local boosted = GetTime() < boostUntil
   if not inRule and not IsSecret(base) and type(base) == "number" and base > 0 then
-    if not baseline or base < baseline then baseline = base end
-    boosted = boosted or base > baseline * BOOST_RATIO + 0.05
+    if (not baseline or base < baseline) and not Lowered() then baseline = base end
+    boosted = boosted or (baseline ~= nil and base > baseline * BOOST_RATIO + 0.05)
   end
-  return text, inRule, boosted
+  -- below normal for a while (Resurrection Sickness): red with a down arrow (0.8.9)
+  local lowered = not inRule and not boosted and Lowered()
+  return text, inRule, boosted, lowered
 end
 
 -- for tests and the bar strip

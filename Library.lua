@@ -21,6 +21,13 @@ local function OwnedText(it, group)
     if eq then return "|cff66ff66" .. L.libEquipped .. "|r" end
     return "|cff888888" .. L.libNotEquipped .. "|r"
   end
+  -- the other ID of the same item (Forever's level-1 copy) counts too, and is usable
+  local copies = ns.CopyCount(it)
+  if copies > 0 then
+    local own = C_Item.GetItemCount(it.id)
+    if issecretvalue and issecretvalue(own) then own = 0 end
+    return ("|cff66ff66x%d|r"):format(copies + (own or 0))
+  end
   -- too high for you: say why the addon never suggests it
   local need = ns.LevelTooLow(it)
   if need then return "|cffff5555" .. L.libLevel:format(need) .. "|r" end
@@ -237,7 +244,13 @@ local function BuildContent()
       h.label:SetPoint("TOPLEFT", 0, y)
       h.label:Show(); h.line:Show()
       y = y - 24
-      for _, entry in ipairs(spells or ns.FullList(gi)) do
+      local list = spells
+      if not list then
+        list = {}
+        -- a second ID of the same item is one row with it (Data.lua "same")
+        for _, e in ipairs(ns.FullList(gi)) do if not e.same then list[#list + 1] = e end end
+      end
+      for _, entry in ipairs(list) do
         n = n + 1
         local r = rows[n] or NewRow()
         rows[n] = r
@@ -251,7 +264,11 @@ local function BuildContent()
           r.icon:SetTexture(ns.Spells.Texture(SpellID(sp)))
         else
           r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
-          r.amount:SetText(L.libRestore:format(it.max))
+          if it.pct then
+            r.amount:SetText(L.libRestorePct:format(math.floor(it.pct * 100 + 0.5)))
+          else
+            r.amount:SetText(L.libRestore:format(it.max))
+          end
         end
         r.minus:SetShown(sp and not sp.fit or false)
         r.plus:SetShown(sp and not sp.fit or false)
