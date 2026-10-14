@@ -481,8 +481,8 @@ Build = function()
   local col = c.frame
   c.Row(Header(col, L.optDisplay), PAD, 24)
   -- one switch for placing: unlocked = movable and showing everything that is switched on
-  -- two equal halves: unlock and "Move texts freely" side by side, the two reset buttons
-  -- below them, together as wide as the column
+  -- unlock, "Move texts freely" under it, then the two reset buttons as two equal halves,
+  -- together as wide as the column
   local HALF = math.floor((W - 2 * PAD - 8) / 2)
   local X2 = PAD + HALF + 8
   local unlockCb = Check(col, L.optUnlock, function() return not db.locked end,
@@ -492,12 +492,9 @@ Build = function()
   local freeCb = Check(col, L.optTextFree, function() return db.textFree end,
     function(v) db.textFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipTextFree,
     function() return not db.locked end)
-  -- a long "Unlock frame" label (some languages) would run into it: then it goes one row down
-  if PAD + 28 + math.ceil(unlockCb.label:GetStringWidth() or 0) + 8 <= X2 then
-    freeCb:SetPoint("TOPLEFT", col, "TOPLEFT", X2, c.y + 26)
-  else
-    c.Row(freeCb)
-  end
+  -- always one row under unlock, in every language (side by side only where it fitted, the
+  -- layout jumped when the language changed)
+  c.Row(freeCb)
   -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
   local reset = Button(col, L.optReset, HALF)
   reset:SetWidth(HALF)
