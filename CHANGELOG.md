@@ -6,6 +6,7 @@
 - Each spell has its own mana threshold, set with - / + in the list, with sensible defaults: Eureka! 90 %, Inner Focus 75 %, Ley Line reading 70 %, Mana Tide Totem 60 %, Innervate 40 %, Evocation 35 %. Life Tap still lights up when its mana fits. The common setting "Light up at mana <=" is gone; if you had changed it, every spell keeps your value
 - Several spells ready at once each get their own icon (up to 3), highest threshold first, so lit icons never leave a gap
 - The automatic bar length has room for every spell icon. A bar you set shorter than the icon column keeps your length; the mana numbers and the regen then sit beside the bar, on the side away from the icons, instead of over the last icons
+- Esc after a language change closes the item list first again (then the settings, then the game menu); each window puts itself back on the game's Esc list when it opens
 - In the list, notes after a name ("own", "sleep 12 s!", "BG only") are never cut off; a long name ends in "..." instead (the full name is in its tooltip). The window is a little wider
 - Each ready spell has its own mark on the mana bar; a spell on cooldown has none (before, the first spell's mark stayed while it was on cooldown)
 - New items, checked against the game's own texts: Combat Mana Potion, Greater Dreamless Sleep Potion (off by default, like Dreamless Sleep), Energy Cloak (its use effect is new in Forever), Celestial Orb, Arcane Orb and Ley Orb

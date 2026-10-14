@@ -13,6 +13,17 @@ local registry = widgets  -- where the widget helpers register (see WithRegistry
 local openList            -- the dropdown list that is open right now (only one at a time)
 -- windows that open over the settings (item list, profiles): one at a time, the settings dimmed
 local popups = {}         -- [key] = frame
+
+-- Esc closes the windows the game finds by name in UISpecialFrames. After a language change
+-- the windows are built anew; in game the item list then no longer closed on Esc. Each time a
+-- window opens it therefore puts itself (this very frame) back under its name and in the list.
+local function EscListed(frame, name)
+  if not frame then return end
+  if _G[name] ~= frame then _G[name] = frame end
+  if not UISpecialFrames then return end
+  for _, n in ipairs(UISpecialFrames) do if n == name then return end end
+  table.insert(UISpecialFrames, name)
+end
 local popupClosedAt, winHiddenAt -- GetTime() of the last close: Esc closes one window per press
 local UpdateShade, OnSettingsShown
 
@@ -817,6 +828,7 @@ function ns.ToggleOptions(forceShow)
   if not win then Build() end
   if forceShow or not win:IsShown() then
     if stale then Rebuild() end
+    EscListed(win, "FullManaForeverOptions")
     win:Show()
     win:Raise() -- opened again while hidden behind another window: bring it to the front
     ns.RefreshOptions()
@@ -1047,6 +1059,8 @@ local function BuildProfiles()
   ns.RegisterPopup(pwin, "profiles")
 end
 
+ns.EscListed = EscListed
+
 -- the language changed: the profiles window is built anew, in the new language, when it opens
 function ns.DropProfiles()
   if pwin then pwin:Hide(); pwin = nil end
@@ -1055,6 +1069,7 @@ end
 function ns.ToggleProfiles(forceShow)
   if not pwin then BuildProfiles() end
   if forceShow or not pwin:IsShown() then
+    EscListed(pwin, "FullManaForeverProfiles")
     pwin:Show()
     pwin:Raise()
     RefreshProfiles()
@@ -1070,6 +1085,13 @@ end
 if hooksecurefunc and CloseSpecialWindows then
   hooksecurefunc("CloseSpecialWindows", function()
     local now = GetTime()
+    if popupClosedAt ~= now then
+      -- the game closed none of our windows over the settings although one is open: this Esc
+      -- closes it here (the settings stay)
+      for _, p in pairs(popups) do
+        if p:IsShown() then p:Hide() end
+      end
+    end
     if popupClosedAt == now then
       -- this Esc closed a window over the settings: the settings stay (the next Esc closes them)
       if win and winHiddenAt == now and not win:IsShown() then win:Show() end

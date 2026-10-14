@@ -464,6 +464,7 @@ end
 function ns.ToggleLibrary(forceShow)
   if not lib then Build() end
   if forceShow or not lib:IsShown() then
+    if ns.EscListed then ns.EscListed(lib, "FullManaForeverItems") end
     lib:Show()
     lib:Raise() -- opened again while hidden behind another window: bring it to the front
     RefreshRows()
