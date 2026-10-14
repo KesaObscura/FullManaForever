@@ -78,7 +78,7 @@ end
 -- which of the spells does this character have (out of combat; the book may change in combat)
 function S.Rebuild()
   if InCombatLockdown() then dirty = true return end
-  local had = next(known) ~= nil
+  local had = S.ActiveCount()
   wipe(known); wipe(byID); wipe(amount); Forget()
   local want = {}
   for _, sp in ipairs(ns.SPELLS) do
@@ -101,8 +101,8 @@ function S.Rebuild()
   -- Inner Focus still waits for the next spell when the book changes (talent, new rank)
   if waiting and not known[waiting] then waiting = nil end
   dirty = false
-  -- the auto bar length counts the spell group only while a spell is known
-  if (next(known) ~= nil) ~= had and ns.Layout then ns.Layout(true) end
+  -- the auto bar length has room for each spell that can get an icon
+  if S.ActiveCount() ~= had and ns.Layout then ns.Layout(true) end
 end
 
 function S.AnyKnown()

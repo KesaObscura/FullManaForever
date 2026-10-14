@@ -1662,3 +1662,21 @@ test("a spell on cooldown has no mark on the bar; every ready spell has its own"
   ok(not ticks[1].front.shown and not ticks[2].front.shown, "mark shown while every spell is on cooldown")
   noSpellApis()
 end)
+
+test("a bar set shorter than the icon column: the mana text goes below the column, not over the icons", function()
+  local ns = M.load({ vertical = true, iconSize = 48, iconGap = 6, barLength = 100 }, { class = "MAGE" })
+  spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  M.tick()
+  local b = bar(ns)
+  local p = b.manaBox.points[1]
+  local slots = 0
+  for _, g in ipairs(ns.GROUPS) do
+    if ns.db.enabled[g.key] and ns.ForMyClass(g) then slots = slots + (g.spells and 2 or 1) end
+  end
+  local column = 48 * slots + 6 * (slots - 1)
+  eq(p[5], -4 - (column - 100), "mana text not below the icon column")
+  ns.db.barLength = 0; ns.Layout(true) -- auto: the bar has room for every icon
+  eq(b.manaBox.points[1][5], -4, "mana text moved away from an auto-length bar")
+  noSpellApis()
+end)

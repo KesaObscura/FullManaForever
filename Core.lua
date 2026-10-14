@@ -853,18 +853,25 @@ end
 -- auto bar length: room for every group that is switched on and this class can show, and for
 -- every own spell that can get an icon (at least 3 icons). It does not follow lit icons, so the
 -- bar stays still.
-function ns.AutoBarLength()
-  local size, gap = db.iconSize, db.iconGap or 6
+-- icons that can appear: one per group switched on, one per own spell that can get an icon
+local function IconSlots()
   local slots = 0
   for _, g in ipairs(ns.GROUPS) do
     -- only groups that are switched on; lit icons never change it (the bar stays still)
     if db.enabled[g.key] and ns.ForMyClass(g) then
-      -- own spells: one icon per spell that can appear (each ready spell has its own)
       slots = slots + (g.spells and ns.Spells.ActiveCount() or 1)
     end
   end
-  slots = math.max(slots, 3)
-  return size * slots + gap * (slots - 1)
+  return slots
+end
+
+local function Span(slots)
+  local size, gap = db.iconSize, db.iconGap or 6
+  return slots > 0 and size * slots + gap * (slots - 1) or 0
+end
+
+function ns.AutoBarLength()
+  return Span(math.max(IconSlots(), 3))
 end
 
 local layoutKey
@@ -926,12 +933,15 @@ function ns.PositionBar()
     -- the rule's seconds sit above the bar: the frame label (unlocked) goes above them
     local fsrRoom = db.fsr and (math.ceil(14 * (db.fsrScale or 1)) + 4) or 0
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8 + fsrRoom)
-    bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+    -- a bar set shorter than the column of icons that can appear: the texts go below the
+    -- column, not next to the last icons (fixed place, so they never jump when icons light up)
+    local below = -4 - math.max(0, Span(IconSlots()) - (bar:GetHeight() or 0))
+    bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, below)
     bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
     -- the regen sits under the mana numbers, or under the bar when they were dragged away
     bar.regenBox:ClearAllPoints()
     if manaFree then
-      bar.regenBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+      bar.regenBox:SetPoint("TOP", bar, "BOTTOM", 0, below)
     else
       bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
     end

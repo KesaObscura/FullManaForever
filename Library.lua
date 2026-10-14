@@ -105,6 +105,11 @@ local function NewRow()
   r.name:SetPoint("LEFT", r.icon, "RIGHT", 8, 0)
   r.name:SetWidth(NAME_W)
   if r.name.SetWordWrap then r.name:SetWordWrap(false) end
+  -- notes after the name ("own", "sleep 12 s!", "BG only") are never cut: in long (localized)
+  -- names the name itself ends in "..."; the full name is in the item's tooltip
+  r.tag = ui.Label(row, "", "GameFontHighlight")
+  r.tag:SetPoint("LEFT", r.name, "RIGHT", 4, 0)
+  if r.tag.SetWordWrap then r.tag:SetWordWrap(false) end
 
   r.amount = ui.Label(row, "", "GameFontHighlightSmall")
   r.amount:SetPoint("LEFT", row, "LEFT", AMOUNT_X, 0)
@@ -161,7 +166,9 @@ local function NewRow()
   r.Refresh = function()
     if r.sp then
       local sp = r.sp
+      r.name:SetWidth(NAME_W)
       r.name:SetText(ns.Spells.Name(SpellID(sp)) or "?")
+      r.tag:SetText("")
       r.owned:SetText(SpellStatusText(sp))
       if sp.fit then
         r.amount:SetText(L.libSpellFit)
@@ -172,11 +179,15 @@ local function NewRow()
         r.plus:SetEnabled(v < SPELL_HI - 0.001)
       end
     elseif r.it then
-      local n = ui.ItemName(r.it.id)
-      if r.it.custom then n = n .. " |cff4fa3ff(" .. L.libOwn .. ")|r" end
-      if r.it.sleep then n = n .. " |cffff8844" .. L.libSleep .. "|r" end
-      if r.it.pvp then n = n .. " |cffaaaaaa" .. L.libPvp .. "|r" end
-      r.name:SetText(n)
+      local tags = {}
+      if r.it.custom then tags[#tags + 1] = "|cff4fa3ff(" .. L.libOwn .. ")|r" end
+      if r.it.sleep then tags[#tags + 1] = "|cffff8844" .. L.libSleep .. "|r" end
+      if r.it.pvp then tags[#tags + 1] = "|cffaaaaaa" .. L.libPvp .. "|r" end
+      r.tag:SetText(table.concat(tags, " "))
+      local room = NAME_W - (#tags > 0 and (r.tag:GetStringWidth() or 0) + 4 or 0)
+      r.name:SetWidth(NAME_W)
+      r.name:SetText(ui.ItemName(r.it.id))
+      r.name:SetWidth(math.max(40, math.min(r.name:GetStringWidth() or room, room)))
       r.owned:SetText(OwnedText(r.it, r.group))
     end
     r.cb.Refresh()

@@ -472,3 +472,22 @@ test("options: switching the potion sound on plays it once; whole seconds greyed
   ok(not kind:IsEnabled(), "sound choice usable with the sound off")
   ok(not whole:IsEnabled(), "whole seconds usable with the rule off")
 end)
+
+test("item list: notes after a long (localized) name are never cut; the name gives way", function()
+  local ns = M.load(nil, { locale = "deDE" })
+  local real = C_Item.GetItemNameByID
+  C_Item.GetItemNameByID = function(id)
+    if id == 12190 then return "Großer Trank des traumlosen Schlafs mit sehr langem Namen" end
+    return real(id)
+  end
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "rows")
+  local row
+  for _, r in ipairs(rows) do if r.it and r.it.id == 12190 then row = r end end
+  C_Item.GetItemNameByID = real
+  ok(row, "Dreamless Sleep not listed")
+  ok(row.tag.text:find(ns.L.libSleep, 1, true), "sleep note missing: " .. tostring(row.tag.text))
+  local nameW = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "NAME_W")
+    or 290
+  ok(row.name.w + 4 + row.tag:GetStringWidth() <= nameW + 1, "name and note wider than the name column")
+end)
