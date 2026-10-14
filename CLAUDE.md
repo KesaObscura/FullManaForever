@@ -105,8 +105,9 @@ and `/fmf log` (kept in releases for bug reports).
    surname (owner's /dump: UnitName("player") returns first name and surname; GetRealmName is the
    beta server's name).
    Tested in game by the owner (all fixes) except the surname keys.
-4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions); 16-20 Oct
-   only fixes. 21 Oct (beta end): the most stable and complete version is out.
+4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions). Owner
+   (14 Oct): features until the beta ends, no fixes-only phase; each feature is still tested in
+   game before its release. 21 Oct (beta end): the most stable and complete version is out.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
    fix bugs; one reply in the Blizzard forum thread "WoW Forever Addons" (UI and Macro), one
    Reddit post (check the sub's rules), short notes to Icy Veins / Warcraft Tavern / mein-mmo
