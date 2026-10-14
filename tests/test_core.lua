@@ -1231,10 +1231,10 @@ end)
 
 test("regen lowered by Resurrection Sickness is not learned as normal (0.8.9)", function()
   local ns = M.load({ fsr = false }, { bags = POT })
-  local base, neg, sick = 3.9, -30, false   -- stats at -75 %, aura not seen
+  local base, neg, sick = 3.9, -36, false   -- in game: Spirit 38 = 48 + 26 - 36; aura not seen
   _G.GetPowerRegen = function() return base, 0 end
   _G.C_Spell = { GetSpellPowerCost = function() return {} end }
-  _G.UnitStat = function(_, i) return 40 + neg, 40 + neg, 0, neg end
+  _G.UnitStat = function(_, i) return 48 + 26 + neg, 48 + 26 + neg, 26, neg end
   _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if sick and id == 15007 then return { spellId = 15007 } end end }
   local real = GetTime
   _G.GetTime = function() return 101 end

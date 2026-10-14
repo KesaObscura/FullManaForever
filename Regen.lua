@@ -26,14 +26,16 @@ local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or f
 -- is the regen lowered for a while (Resurrection Sickness: -75 % Spirit and Intellect)?
 -- Such a value must not become the normal regen, or normal regen turns green once the
 -- debuff ends (0.8.9). Only a big cut counts: gear and small debuffs with a few points
--- less Spirit stay part of the normal regen. Out of combat only (stats, auras readable).
-local LOWERED = 0.5           -- at least half of the stat taken away
+-- less Spirit stay part of the normal regen. The sickness takes 75 % of the BASE stat
+-- (in game: Spirit 38 = base 48 + 26 from buffs - 36), so the cut is compared with the base.
+local LOWERED = 0.5           -- at least half of the base stat taken away
 local function Lowered()
   if UnitStat then
     for _, stat in ipairs({ 4, 5 }) do          -- 4 Intellect, 5 Spirit
-      local ok, _, eff, _, neg = pcall(UnitStat, "player", stat)
-      if ok and not IsSecret(eff) and not IsSecret(neg) and type(eff) == "number"
-        and type(neg) == "number" and neg < 0 and -neg >= (eff - neg) * LOWERED then
+      local ok, _, eff, pos, neg = pcall(UnitStat, "player", stat)
+      if ok and not IsSecret(eff) and not IsSecret(pos) and not IsSecret(neg)
+        and type(eff) == "number" and type(pos) == "number" and type(neg) == "number"
+        and neg < 0 and -neg >= (eff - pos - neg) * LOWERED then
         return true
       end
     end

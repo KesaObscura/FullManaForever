@@ -196,6 +196,9 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   text not loaded yet), Crisp Spring Water 252031 (new water). The first item pass missed slow
   texts; a second pass is needed before adding numbers.
 
+- Resurrection Sickness on Forever (owner's /dump, 14 Oct): aura 15007, 600 s, readable out of
+  combat with `C_UnitAuras.GetPlayerAuraBySpellID(15007)`. `UnitStat("player", 5)` under it:
+  38, 38, 26, -36 (effective 38 = base 48 + 26 from buffs - 36): the cut is 75 % of the base.
 - Checked 14 Oct 2026 (build 70374): the potion cooldown is one shared 120 s cooldown for 13
   items (all mana, rejuvenation and Dreamless Sleep potions, the draughts, Combat Mana Potion),
   as in `Data.lua`. All our spell IDs and ranks still match (Evocation 20, Mana Tide 25/48/58,
