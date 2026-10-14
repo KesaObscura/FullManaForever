@@ -1751,6 +1751,8 @@ test("settings: 'Show before ready' sits above 'Show only in combat', 0 to 60 s 
   end
   ok(st and combat, "settings not found")
   ok(st.label.points[1][5] > combat.points[1][5], "not above 'Show only in combat'")
+  ok(st.value.points[1][5] < 0 and st.minus.points[1][5] < 0, "value and -/+ not on the line under the label")
+  ok(combat.points[1][5] <= st.label.points[1][5] - 48, "'Show only in combat' not under the value line")
   eq(st.value.text, ns.L.cdShowSec:format(5), "default not 5 s")
   st.minus.scripts.OnClick(st.minus)
   eq(ns.db.cdShow, 0); eq(st.value.text, ns.L.cdShowOff)
