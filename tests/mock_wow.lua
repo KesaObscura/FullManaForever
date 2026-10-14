@@ -180,7 +180,8 @@ function M.reset(opts)
 
   _G.CreateFrame = function(kind, name, parent)
     local f = new(kind, parent)
-    if name then _G[name] = f end
+    -- M.keepOldNames: like the game, a new frame does not take over a name already in use
+    if name and not (M.keepOldNames and _G[name]) then _G[name] = f end
     return f
   end
   _G.UIParent = new("Frame")

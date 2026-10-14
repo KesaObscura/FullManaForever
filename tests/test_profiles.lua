@@ -350,6 +350,7 @@ end)
 
 test("Esc after a language change: the item list closes first, then the settings", function()
   local ns = M.load(nil)
+  M.keepOldNames = true -- as in game: rebuilt windows do not take over their names by themselves
   ns.ToggleOptions(true)
   ns.ToggleLibrary(true); ns.ToggleLibrary() -- the list was open once before the change
   ns.ToggleProfiles(true); ns.ToggleProfiles()
@@ -357,14 +358,23 @@ test("Esc after a language change: the item list closes first, then the settings
     if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
   end
   ns.ToggleLibrary(true)
-  local function Esc()
+  local found
+  local function Esc() -- the game: hide every listed frame that is shown, then the hook
+    found = false
     for _, name in ipairs(UISpecialFrames) do
       local f = _G[name]
-      if f and f:IsShown() then f:Hide() end
+      if f and f:IsShown() then f:Hide(); found = true end
     end
     M.hooks.CloseSpecialWindows()
   end
+  local win, lib = M.upvalue(ns.ToggleOptions, "win"), M.upvalue(ns.ToggleLibrary, "lib")
   Esc()
-  ok(not FullManaForeverItems:IsShown(), "item list still open after Esc")
-  ok(FullManaForeverOptions:IsShown(), "first Esc closed the settings")
+  M.keepOldNames = nil
+  ok(found, "the game found none of our windows: it would open its menu")
+  ok(not lib:IsShown(), "item list still open after Esc")
+  ok(win:IsShown(), "first Esc closed the settings")
+  M.state.time = 101
+  Esc()
+  ok(found, "second Esc: the game did not find the settings (its menu would open at once)")
+  ok(not win:IsShown(), "second Esc did not close the settings")
 end)

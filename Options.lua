@@ -14,9 +14,10 @@ local openList            -- the dropdown list that is open right now (only one 
 -- windows that open over the settings (item list, profiles): one at a time, the settings dimmed
 local popups = {}         -- [key] = frame
 
--- Esc closes the windows the game finds by name in UISpecialFrames. After a language change
--- the windows are built anew; in game the item list then no longer closed on Esc. Each time a
--- window opens it therefore puts itself (this very frame) back under its name and in the list.
+-- Esc closes the windows the game finds by name in UISpecialFrames. In game a frame created
+-- with a name an older frame already has does not take over that name, so after a language
+-- change (all windows built anew) Esc looked at the old, hidden frames. Each window sets its
+-- name to itself when it is built and again when it opens, and is put on the list.
 local function EscListed(frame, name)
   if not frame then return end
   if _G[name] ~= frame then _G[name] = frame end
@@ -375,11 +376,9 @@ Build = function()
   win:SetScript("OnDragStart", win.StartMoving)
   win:SetScript("OnDragStop", win.StopMovingOrSizing)
   win:Hide()
-  if UISpecialFrames then
-    local listed = false
-    for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverOptions" then listed = true end end
-    if not listed then table.insert(UISpecialFrames, "FullManaForeverOptions") end
-  end
+  -- in game a new frame does not take over a name an older one already has (the language
+  -- change builds the windows anew): the name is set here, else Esc looks at the old frame
+  EscListed(win, "FullManaForeverOptions")
 
   local bg = win:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
@@ -920,11 +919,9 @@ local function BuildProfiles()
   pwin:SetScript("OnDragStart", pwin.StartMoving)
   pwin:SetScript("OnDragStop", pwin.StopMovingOrSizing)
   pwin:Hide()
-  if UISpecialFrames then
-    local listed = false
-    for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverProfiles" then listed = true end end
-    if not listed then table.insert(UISpecialFrames, "FullManaForeverProfiles") end
-  end
+  -- in game a new frame does not take over a name an older one already has (the language
+  -- change builds the windows anew): the name is set here, else Esc looks at the old frame
+  EscListed(pwin, "FullManaForeverProfiles")
   local bg = pwin:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
   bg:SetColorTexture(0.05, 0.06, 0.09, 1)

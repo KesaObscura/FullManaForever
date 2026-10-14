@@ -296,11 +296,9 @@ local function Build(point)
   lib:SetScript("OnDragStart", lib.StartMoving)
   lib:SetScript("OnDragStop", lib.StopMovingOrSizing)
   lib:Hide()
-  if UISpecialFrames then
-    local listed = false
-    for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverItems" then listed = true end end
-    if not listed then table.insert(UISpecialFrames, "FullManaForeverItems") end
-  end
+  -- in game a new frame does not take over a name an older one already has (the language
+  -- change builds the windows anew): the name is set here, else Esc looks at the old frame
+  ns.EscListed(lib, "FullManaForeverItems")
   ns.RegisterPopup(lib, "items") -- over the settings when they are open
 
   local bg = lib:CreateTexture(nil, "BACKGROUND")
