@@ -39,11 +39,11 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 
 ## Supported items (checked against the Forever database)
 
-- **Mana potions** (shared cooldown): Major, Major Rejuvenation, Superior, Combat, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Dreamless Sleep and Greater Dreamless Sleep (off by default — they put you to sleep for 12 s).
+- **Mana potions** (shared cooldown, read from the game): Major, Major Rejuvenation, Superior, Combat, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Forever's Restored Mana Potion (20 % of your max mana) and Tessa's Tonic, Diet McWeaksauce, Mug of Shimmer Stout, Full Moonshine, the battleground draughts (Major/Superior Mana Draught), Dreamless Sleep and Greater Dreamless Sleep (off by default — they put you to sleep for 12 s), Wildvine Potion (off by default — it may restore nothing).
 - **Runes:** Demonic Rune, Dark Rune.
 - **Mana gems (mage):** Ruby, Citrine, Jade, Agate.
-- **Other:** Night Dragon's Breath, Major/Superior Mana Draught (battlegrounds only).
-- **Gear:** Warmth of Forgiveness, Celestial Orb, Energy Cloak, Major/Minor Recombobulator, Arcane Orb, Ley Orb, Robe of the Archmage (mage).
+- **Other:** Night Dragon's Breath, Tea with Sugar, Scroll of Minor Evocation (mage), Forever's Power Recycler (20 % of your max health into 20 % of your max mana, with the health check of the runes).
+- **Gear:** Warmth of Forgiveness, Energy Cloak, Earthen Sigil, Major/Minor Recombobulator; for druids the Veildust Medicine Bag; for mages Robe of the Archmage, Celestial Orb, Arcane Orb and Ley Orb.
 
 ## Commands
 

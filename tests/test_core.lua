@@ -166,7 +166,10 @@ test("perf: few item API calls per tick", function()
   M.state.maxMana = 5000; M.state.manaPct = 0.5
   local _, calls = perTick(ns, 10)
   local per = (calls.GetItemCount or 0) / 10
-  ok(per <= 16, "GetItemCount per tick: " .. per)
+  -- at most one count per listed item and tick (the lists grow with the game's items)
+  local items = 0
+  for i, g in ipairs(ns.GROUPS) do if not g.equipped then items = items + #ns.FullList(i) end end
+  ok(per <= items, ("GetItemCount per tick: %s for %d items"):format(per, items))
   ok((calls.IsInRaid or 0) / 10 <= 1, "IsInRaid per tick: " .. (calls.IsInRaid or 0) / 10)
   ok((calls.SetMinMaxValues or 0) <= 1, "SetMinMaxValues every tick")
   ok((calls.CreateColorCurve or 0) == 0, "curves rebuilt every tick")
@@ -1828,4 +1831,42 @@ test("the three orbs are for mages only (their tooltip says Classes: Mage)", fun
   for _, id in ipairs({ 7507, 7508, 7515 }) do ok(not listed(ns, "gear", id), "orb " .. id .. " for a priest") end
   ns = M.load(nil, { bags = POT, class = "MAGE" })
   for _, id in ipairs({ 7507, 7508, 7515 }) do ok(listed(ns, "gear", id), "orb " .. id .. " missing for a mage") end
+end)
+
+test("Restored Mana Potion: 20 % of max mana, lights up once 20 % is missing", function()
+  local ns = M.load(nil, { bags = { [282013] = 1 } })
+  for _, maxMana in ipairs({ 1000, 6000 }) do
+    M.state.maxMana = maxMana
+    M.state.manaPct = 0.85; M.tick()
+    ok(not slotVisible(ns, 1), "lit with 15 % missing at " .. maxMana)
+    M.state.manaPct = 0.79; M.tick()
+    ok(slotVisible(ns, 1), "not lit with 21 % missing at " .. maxMana)
+  end
+end)
+
+test("Power Recycler: 20 % mana for 20 % health, needs the health to spare", function()
+  local ns = M.load({ runeMargin = 0.1 }, { bags = { [275688] = 1 } })
+  local herb = groupIndex(ns, "herb")
+  M.state.manaPct = 0.7; M.state.healthPct = 1; M.tick()
+  ok(slotVisible(ns, herb), "not lit with 30 % mana missing and full health")
+  M.state.healthPct = 0.25; M.tick()
+  ok(not slotVisible(ns, herb), "lit although 20 % health would leave too little")
+  M.state.manaPct = 0.85; M.state.healthPct = 1; M.tick()
+  ok(not slotVisible(ns, herb), "lit with only 15 % mana missing")
+end)
+
+test("potions found by the game's shared cooldown are in the potion group", function()
+  local ns = M.load(nil, { bags = POT })
+  for _, id in ipairs({ 23578, 9144, 274935, 282013, 287969, 1072, 287968, 3087 }) do
+    ok(listed(ns, "potion", id), "item " .. id .. " not in the potion group")
+  end
+  ok(listed(ns, "potion", 9144).defaultOff, "Wildvine Potion (may give nothing) suggested by default")
+end)
+
+test("class items: Scroll of Minor Evocation for mages, Veildust Medicine Bag for druids", function()
+  local ns = M.load(nil, { bags = POT, class = "PRIEST" })
+  ok(not listed(ns, "herb", 213564) and not listed(ns, "gear", 15866), "class items for a priest")
+  ok(listed(ns, "herb", 15723) and listed(ns, "gear", 20525), "Tea with Sugar / Earthen Sigil missing")
+  ns = M.load(nil, { bags = POT, class = "DRUID" })
+  ok(listed(ns, "gear", 15866), "Veildust Medicine Bag missing for a druid")
 end)

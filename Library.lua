@@ -251,7 +251,11 @@ local function BuildContent()
           r.icon:SetTexture(ns.Spells.Texture(SpellID(sp)))
         else
           r.icon:SetTexture(C_Item.GetItemIconByID(it.id))
-          r.amount:SetText(L.libRestore:format(it.max))
+          if it.pct then
+            r.amount:SetText(L.libRestorePct:format(math.floor(it.pct * 100 + 0.5)))
+          else
+            r.amount:SetText(L.libRestore:format(it.max))
+          end
         end
         r.minus:SetShown(sp and not sp.fit or false)
         r.plus:SetShown(sp and not sp.fit or false)

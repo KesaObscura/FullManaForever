@@ -130,7 +130,7 @@ end
 local candStamp = {} -- per group: tick in which BandCandidates was computed
 
 -- flags of a known item that an own entry for the same id keeps (warnings, safety)
-local INHERIT = { "sleep", "pvp", "class", "hpCost" }
+local INHERIT = { "sleep", "pvp", "class", "hpCost", "hpCostPct" } -- not pct: an own amount replaces it
 
 function ns.RebuildLists()
   local own, known = {}, {} -- own: [group key][id] = true
@@ -344,9 +344,21 @@ local function ShortCooldown(id)
 end
 
 -- restore used for thresholds: max ("No waste") or average ("More per fight")
+-- pct: a share of the maximum mana (Restored Mana Potion); max mana is readable in combat
 local function Restore(it)
+  if it.pct then
+    local m = UnitPowerMax("player", MANA)
+    if IsSecret(m) or not m or m <= 0 then return 0 end
+    return it.pct * m
+  end
   if db.thresholdMode == "avg" and it.min then return (it.min + it.max) / 2 end
   return it.max
+end
+
+-- health an item costs: a fixed amount (runes) or a share of the maximum (Power Recycler)
+local function HpCost(it, maxHP)
+  if it.hpCostPct then return it.hpCostPct * maxHP end
+  return it.hpCost
 end
 
 -- mana% (0..1) at or below which the whole item fits into the missing mana
@@ -434,8 +446,8 @@ function ns.GetStatus(i)
     thr = Threshold(item, maxMana)
   end
   local maxHP = UnitHealthMax("player")
-  if item.hpCost and not IsSecret(maxHP) and maxHP and maxHP > 0 then
-    hpThr = item.hpCost / maxHP + db.runeMargin
+  if (item.hpCost or item.hpCostPct) and not IsSecret(maxHP) and maxHP and maxHP > 0 then
+    hpThr = HpCost(item, maxHP) / maxHP + db.runeMargin
   end
   return item, n, ready, left, thr, hpThr
 end
@@ -1373,6 +1385,9 @@ local function UpdateButton(i, b, maxMana, maxHP)
     ApplyBand(l, lo, Threshold(c.it, maxMana))
     l:Show()
     if c.it.hpCost then hpCost = math.max(hpCost or 0, c.it.hpCost) end
+    if c.it.hpCostPct and not IsSecret(maxHP) and maxHP and maxHP > 0 then
+      hpCost = math.max(hpCost or 0, HpCost(c.it, maxHP))
+    end
   end
   HideLayers(b, #cands + 1)
   ApplyHpGate(b, hpCost, maxHP)

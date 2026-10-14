@@ -201,12 +201,12 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   38, 38, 26, -36 (effective 38 = base 48 + 26 from buffs - 36): the cut is 75 % of the base.
 - Item check 14 Oct 2026 (build 70374, game API): Major and Superior Mana Draught get the same
   120 s cooldown as the potions when a potion is used (moved to the potion group in 0.8.9);
-  Celestial, Arcane and Ley Orb say "Classes: Mage". Open candidates, not added yet: Tessa's
-  Tonic 274935 (720-880 mana + health, potion; shared cooldown not yet seen), Diet McWeaksauce
-  23578 (same spell as Major Mana Potion), Tea with Sugar 15723 (1050-1750), Earthen Sigil 20525
-  (trinket, 400 over 10 s), Scroll of Minor Evocation 213564 (mage, 300 over 4 s, 8 min),
-  Power Recycler 275688 (20 % max health into 20 % max mana: needs percent amounts),
-  Restored Mana Potion 282013 (amount not read yet).
+  Celestial, Arcane and Ley Orb say "Classes: Mage". A second run with a potion drunk: the
+  shared potion cooldown also covers Tessa's Tonic, Diet McWeaksauce, Wildvine Potion, Mug of
+  Shimmer Stout, Full Moonshine, Restored Mana Potion (20 % of max mana), the Forever copies
+  287968/287969 and Windstone (Skywall only, not added); all added in 0.8.9, with Power
+  Recycler (20 % health into 20 % mana), Tea with Sugar 15723, Earthen Sigil 20525, Scroll of
+  Minor Evocation 213564 (mage) and Veildust Medicine Bag 15866 (druid off-hand).
 - Checked 14 Oct 2026 (build 70374): the potion cooldown is one shared 120 s cooldown for 13
   items (all mana, rejuvenation and Dreamless Sleep potions, the draughts, Combat Mana Potion),
   as in `Data.lua`. All our spell IDs and ranks still match (Evocation 20, Mana Tide 25/48/58,
