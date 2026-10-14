@@ -1551,7 +1551,7 @@ local function spellIcon(ns, k) -- k-th spell icon (1 = the group's own button)
   return slotVisible(ns, i), b[i]
 end
 
-test("every ready spell past its threshold gets its own icon", function()
+test("every ready spell past its threshold gets its own icon; the auto bar has room for each", function()
   local ns = M.load(nil, { class = "MAGE" })
   spellApis({ 12051, 1259823 })
   ns.Spells.Rebuild()
@@ -1565,12 +1565,12 @@ test("every ready spell past its threshold gets its own icon", function()
   -- highest threshold first: lit icons come first, an unlit one never leaves a gap before them
   eq(b1.layers[1].icon.texture, "tex1259823"); eq(b2.layers[1].icon.texture, "tex12051")
   ok(b2.outer.points[1][4] > b1.outer.points[1][4], "second spell icon not next to the first")
-  -- the auto bar counts the spell group once, not per icon
+  -- the auto bar has room for every spell icon (a column must not run past the bar)
   local before = ns.AutoBarLength()
   ns.Spells.SetEnabled(ns.SPELLS[1], false) -- Evocation off
   M.tick()
   ok(not spellIcon(ns, 2), "switched-off spell still has an icon")
-  eq(ns.AutoBarLength(), before, "bar length changed with one of two spells off")
+  eq(ns.AutoBarLength(), before - ns.db.iconSize - (ns.db.iconGap or 6), "bar keeps room for a switched-off spell")
   noSpellApis()
 end)
 

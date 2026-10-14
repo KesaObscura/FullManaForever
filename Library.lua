@@ -9,11 +9,11 @@ local reg = {}          -- window widgets that need Refresh()
 local rowReg = {}       -- row checkboxes (one per pooled row)
 local rows = {}         -- pooled rows: frames are created once and reused
 local headers = {}      -- pooled category headers
-local W, H, PAD, ROW = 560, 600, 16, 30
+local W, H, PAD, ROW = 620, 600, 16, 30
 local CW = W - 2 * PAD - 22 -- list width before the scroll area knows its real size
 local EDGE = 8              -- free space between the texts and the right edge of the list
-local NAME_W = 230          -- item name column (long names end in "...")
-local AMOUNT_X, AMOUNT_W = 295, 84 -- the "up to N" column
+local NAME_W = 290          -- item name column (long names end in "...")
+local AMOUNT_X, AMOUNT_W = 355, 84 -- the "up to N" column
 
 local function OwnedText(it, group)
   if group.equipped then

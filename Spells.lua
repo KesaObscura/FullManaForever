@@ -134,6 +134,15 @@ end
 
 function S.ID(sp) return known[sp] end
 
+-- how many spell icons can appear at most (known and switched on), for the auto bar length
+function S.ActiveCount()
+  local n = 0
+  for sp in pairs(known) do
+    if S.Enabled(sp) then n = n + 1 end
+  end
+  return math.min(n, ns.SPELL_ICONS)
+end
+
 -- the spells of this class for the item list, in icon order; racials only for their race
 -- (they are known from the start)
 function S.ListForMe()

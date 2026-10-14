@@ -73,7 +73,8 @@ and `/fmf log` (kept in releases for bug reports).
 ## Owner decisions in force
 
 - Real mana value, not the predicted one (icons light up when the cast lands).
-- Auto bar length counts only groups switched on (and usable by the class), minimum 3.
+- Auto bar length counts only groups switched on (and usable by the class), each own spell that
+  can get an icon (0.8.7, owner: icons must not run past the bar), minimum 3.
 - The potion icon stays lit while wanding (sweep shows the wait).
 - Regen green when above normal (out of combat vs the lowest normal regen since the last
   level-up or gear change, +10 %; in combat only own Evocation 8 s and Ley Line reading 15 s).

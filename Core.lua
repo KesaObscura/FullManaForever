@@ -850,15 +850,17 @@ end
 -- so no empty gaps appear for groups you have nothing for. The mana check itself is
 -- secret, so a ready item below its threshold still keeps its (invisible) slot.
 -- Settings changes call Layout(true); every tick only the set of shown icons is compared
--- auto bar length: room for every group that is switched on and this class can show (at least
--- 3 icons). It does not follow lit icons, so the bar stays still.
+-- auto bar length: room for every group that is switched on and this class can show, and for
+-- every own spell that can get an icon (at least 3 icons). It does not follow lit icons, so the
+-- bar stays still.
 function ns.AutoBarLength()
   local size, gap = db.iconSize, db.iconGap or 6
   local slots = 0
   for _, g in ipairs(ns.GROUPS) do
     -- only groups that are switched on; lit icons never change it (the bar stays still)
-    if db.enabled[g.key] and ns.ForMyClass(g) and (not g.spells or ns.Spells.AnyActive()) then
-      slots = slots + 1
+    if db.enabled[g.key] and ns.ForMyClass(g) then
+      -- own spells: one icon per spell that can appear (each ready spell has its own)
+      slots = slots + (g.spells and ns.Spells.ActiveCount() or 1)
     end
   end
   slots = math.max(slots, 3)
