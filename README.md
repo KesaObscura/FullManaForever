@@ -66,8 +66,9 @@ when the icon lights up.
   简体中文, 繁體中文. The addon follows your game language.
 
 Supported items and their restore values are in [`Data.lua`](Data.lua); they were checked
-against the Wowhead Forever database (build 1.60.1). Dreamless Sleep Potion is off by
-default because it puts you to sleep for 12 seconds.
+against the Wowhead Forever database (build 1.60.1) and the game's own item data (texts and the
+shared potion cooldown). Dreamless Sleep Potions are off by default because they put you to
+sleep for 12 seconds, Wildvine Potion because it may restore nothing.
 
 ## Looking for a mana tick or mp5 tracker?
 
