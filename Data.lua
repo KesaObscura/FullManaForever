@@ -12,15 +12,18 @@ local _, ns = ...
 -- game's own item texts (12 Oct 2026).
 ns.GROUPS = {
   {
-    key = "potion", -- shared potion cooldown (2 min)
+    key = "potion", -- shared potion cooldown (2 min; the battleground draughts share it too,
+                    -- read from the game's item cooldowns on 14 Oct 2026)
     items = {
       { id = 13444, min = 1350, max = 2250 },  -- Major Mana Potion (1350-2250)
       { id = 18253, min = 1440, max = 1760 },  -- Major Rejuvenation Potion (1440-1760 mana + health)
+      { id = 17351, min = 980, max = 1260, pvp = true }, -- Major Mana Draught (980-1260, battlegrounds)
       { id = 13443, min = 900, max = 1500 },  -- Superior Mana Potion (900-1500)
       { id = 18841, min = 900, max = 1500 },  -- Combat Mana Potion (900-1500, same spell as Superior)
       { id = 20002, min = 2100, max = 2100, defaultOff = true, sleep = true }, -- Greater Dreamless Sleep Potion (2100 over 12 s asleep)
       { id = 12190, min = 1200, max = 1200, defaultOff = true, sleep = true }, -- Dreamless Sleep Potion (1200 over 12 s asleep)
       { id = 6149, min = 700, max = 900 },   -- Greater Mana Potion (700-900)
+      { id = 17352, min = 560, max = 720,  pvp = true }, -- Superior Mana Draught (560-720, battlegrounds)
       { id = 3827, min = 455, max = 585 },   -- Mana Potion (455-585)
       { id = 3385, min = 280, max = 360 },   -- Lesser Mana Potion (280-360)
       { id = 2455, min = 140, max = 180 },   -- Minor Mana Potion (140-180)
@@ -48,8 +51,6 @@ ns.GROUPS = {
     key = "herb", -- other consumables with mana; items have different cooldowns
     preferReady = true,
     items = {
-      { id = 17351, min = 980, max = 1260, pvp = true }, -- Major Mana Draught (980-1260, battlegrounds, 5 min)
-      { id = 17352, min = 560, max = 720,  pvp = true }, -- Superior Mana Draught (560-720, battlegrounds, 5 min)
       { id = 11952, min = 394, max = 456 },   -- Night Dragon's Breath (394-456 mana + health)
     },
   },
@@ -59,11 +60,11 @@ ns.GROUPS = {
     items = {
       { id = 14152, min = 375, max = 625, class = "MAGE" }, -- Robe of the Archmage (mage chest, 375-625, 5 min)
       { id = 23027, min = 500, max = 500 },   -- Warmth of Forgiveness (trinket, 500, 3 min)
-      { id = 7515, min = 400, max = 1200 },   -- Celestial Orb (off-hand, 400-1200)
+      { id = 7515, min = 400, max = 1200, class = "MAGE" }, -- Celestial Orb (off-hand, 400-1200, "Classes: Mage")
       { id = 9397, min = 300, max = 340 },    -- Energy Cloak (back, 300-340, 10 min; use effect new in Forever)
       { id = 18637, min = 228, max = 380 },   -- Major Recombobulator (trinket, 228-380 mana + health, 5 min)
-      { id = 7507, min = 80, max = 240 },     -- Arcane Orb (off-hand, 80-240)
-      { id = 7508, min = 80, max = 240 },     -- Ley Orb (off-hand, 80-240)
+      { id = 7507, min = 80, max = 240, class = "MAGE" }, -- Arcane Orb (off-hand, 80-240, "Classes: Mage")
+      { id = 7508, min = 80, max = 240, class = "MAGE" }, -- Ley Orb (off-hand, 80-240, "Classes: Mage")
       { id = 4381, min = 96, max = 160 },   -- Minor Recombobulator (trinket, 96-160 mana + health, 5 min)
     },
   },

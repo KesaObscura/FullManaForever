@@ -1805,3 +1805,27 @@ test("settings: 'Show before ready' sits above 'Show only in combat', 0 to 60 s 
   for _ = 1, 20 do st.plus.scripts.OnClick(st.plus) end
   eq(ns.db.cdShow, 60, "not capped at 60 s")
 end)
+
+-- data checked in game on 14 Oct 2026 ------------------------------------------------------
+local function groupIndex(ns, key)
+  for i, g in ipairs(ns.GROUPS) do if g.key == key then return i end end
+end
+local function listed(ns, key, id)
+  for _, it in ipairs(ns.FullList(groupIndex(ns, key))) do if it.id == id then return it end end
+end
+
+test("battleground draughts share the potion cooldown: they are in the potion group", function()
+  local ns = M.load(nil, { bags = POT })
+  for _, id in ipairs({ 17351, 17352 }) do
+    local it = listed(ns, "potion", id)
+    ok(it and it.pvp, "draught " .. id .. " not a battleground potion")
+    ok(not listed(ns, "herb", id), "draught " .. id .. " still with its own cooldown")
+  end
+end)
+
+test("the three orbs are for mages only (their tooltip says Classes: Mage)", function()
+  local ns = M.load(nil, { bags = POT, class = "PRIEST" })
+  for _, id in ipairs({ 7507, 7508, 7515 }) do ok(not listed(ns, "gear", id), "orb " .. id .. " for a priest") end
+  ns = M.load(nil, { bags = POT, class = "MAGE" })
+  for _, id in ipairs({ 7507, 7508, 7515 }) do ok(listed(ns, "gear", id), "orb " .. id .. " missing for a mage") end
+end)

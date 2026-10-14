@@ -4,6 +4,8 @@
 
 - Regen colour after death: the lowered regen under Resurrection Sickness (or anything else that takes at least half of your Spirit or Intellect) is no longer taken as your normal regen, so your normal regen no longer turns green with the up arrow once the debuff ends. Gear with a few points less Spirit still counts as normal
 - While such a debuff lasts, the regen is shown red with a small down arrow
+- Major and Superior Mana Draught (battlegrounds) share the potion cooldown, as the game shows: they are now in the potion slot, so a potion right after a draught is no longer suggested
+- Celestial Orb, Arcane Orb and Ley Orb are mage items ("Classes: Mage"): no longer listed for other classes
 
 **Full Mana Forever 0.8.8**
 
