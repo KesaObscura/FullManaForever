@@ -1239,12 +1239,15 @@ test("regen lowered by Resurrection Sickness is not learned as normal (0.8.9)", 
   local real = GetTime
   _G.GetTime = function() return 101 end
   M.tick()                                   -- under the debuff: nothing learned, not green
-  eq(bar(ns).regen.color[1], 0.6, "lowered regen shown green")
+  eq(bar(ns).regen.color[1], 1, "lowered regen not red"); eq(bar(ns).regen.color[2], 0.35)
+  ok(bar(ns).regenDown.shown, "no down arrow under the debuff")
+  ok(not bar(ns).regenUp.shown, "up arrow under the debuff")
   base, neg, sick = 15.5, 0, false          -- debuff gone: this is normal regen
   _G.GetTime = function() return 102 end
   M.tick()
   eq(bar(ns).regen.color[1], 0.6, "normal regen after the debuff counted as raised")
   ok(not bar(ns).regenUp.shown, "arrow after the debuff")
+  ok(not bar(ns).regenDown.shown, "down arrow after the debuff")
   base = 25                                  -- a real boost still turns green
   _G.GetTime = function() return 103 end
   M.tick()

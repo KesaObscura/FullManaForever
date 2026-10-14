@@ -89,7 +89,7 @@ end)
 -- During the rule that is the casting rate: 0 without talents, more with talents,
 -- Innervate or gear (the game includes all of it). In combat the value is secret: it can
 -- only be formatted, never compared or multiplied, which is why there is no mp5 here.
--- Returns text, inRule, boosted; nil when there is nothing to show.
+-- Returns text, inRule, boosted, lowered; nil when there is nothing to show.
 function ns.RegenText()
   if not GetPowerRegen then return nil end
   local ok, base, casting = pcall(GetPowerRegen)
@@ -106,7 +106,9 @@ function ns.RegenText()
     if (not baseline or base < baseline) and not Lowered() then baseline = base end
     boosted = boosted or (baseline ~= nil and base > baseline * BOOST_RATIO + 0.05)
   end
-  return text, inRule, boosted
+  -- below normal for a while (Resurrection Sickness): red with a down arrow (0.8.9)
+  local lowered = not inRule and not boosted and Lowered()
+  return text, inRule, boosted, lowered
 end
 
 -- for tests and the bar strip

@@ -802,6 +802,12 @@ local function CreateBar()
   bar.regenUp:SetVertexColor(0.45, 1, 0.45)
   bar.regenUp:SetPoint("LEFT", bar.regen, "RIGHT", 0, 1)
   bar.regenUp:Hide()
+  bar.regenDown = bar.regenBox:CreateTexture(nil, "OVERLAY")
+  bar.regenDown:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+  bar.regenDown:SetSize(16, 16)
+  bar.regenDown:SetVertexColor(1, 0.35, 0.3)
+  bar.regenDown:SetPoint("LEFT", bar.regen, "RIGHT", 0, -3)
+  bar.regenDown:Hide()
   bar:Hide()
 end
 
@@ -1455,20 +1461,24 @@ local function UpdateRegenText(visible)
   local now, inRule = GetTime(), (ns.FsrLeft and ns.FsrLeft() or 0) > 0
   if box:IsShown() and now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
-  local text, boosted
-  text, inRule, boosted = ns.RegenText()
+  local text, boosted, lowered
+  text, inRule, boosted, lowered = ns.RegenText()
   if text then
     bar.regen:SetText(text)
     -- reduced regen during the rule: gold like the strip; above normal (Spirit Tap,
-    -- Evocation, ...): green; normal regen: light blue
+    -- Evocation, ...): green; below normal for a while (Resurrection Sickness): red;
+    -- normal regen: light blue
     if inRule then
       bar.regen:SetTextColor(1, 0.82, 0.2)
     elseif boosted then
       bar.regen:SetTextColor(0.45, 1, 0.45)
+    elseif lowered then
+      bar.regen:SetTextColor(1, 0.35, 0.3)
     else
       bar.regen:SetTextColor(0.6, 0.85, 1)
     end
     bar.regenUp:SetShown(boosted and not inRule and true or false)
+    bar.regenDown:SetShown(lowered and true or false)
     bar.regen:Show()
     box:Show()
   elseif box:IsShown() then
