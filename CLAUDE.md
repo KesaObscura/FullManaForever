@@ -102,6 +102,9 @@ and `/fmf log` (kept in releases for bug reports).
    the owner: 0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced,
    13_profiles_hold new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description:
    /fmf profile copy with the surname); 0.8.7 (gallery 06 and 07 new) and 0.8.8 next.
+3d. Item review (owner, 14 Oct): on the last beta day (21 Oct) or after launch, go through all
+   items: what is junk / unimportant for the addon, what is needed. Until then more rather than
+   fewer items (players can add their own anyway).
 3c. Open (owner, 14 Oct: not in 0.8.9, later): gaps in the icon column. A ready item above its
    mana threshold keeps its (invisible) slot in combat (mana is secret). Options: sort all slots by
    threshold (no gaps, group order not fixed), pack only out of combat, or keep as is.
