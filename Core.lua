@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.6"
+ns.VERSION = "0.8.7"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -46,7 +46,8 @@ local DEFAULTS = {
   iconGap    = 6,
   iconSize   = 48,
   runeMargin = 0.30, -- health% that must remain AFTER the rune hit (also Life Tap)
-  spellThreshold = 0.50, -- own mana spells (Evocation, Innervate, ...) light up at or below this mana%
+  spellThr = {},        -- [spell key] = mana% at or below which it lights up (else the spell's default)
+  spellOff = {},        -- [spell key] = true: switched off in the item list
   enabled    = { potion = true, rune = true, gem = true, herb = true, gear = true, spell = true },
   disabled   = {},    -- [itemID] = true: never suggest this item
 }
@@ -386,13 +387,9 @@ local function BandCandidates(i)
 end
 
 -- the mana% at which the group's first icon appears (for status + bar ticks)
+local tickSpells = {} -- reused list of the spells that get a mark on the bar
 local function FirstThreshold(i, maxMana)
   local group = ns.GROUPS[i]
-  if group.spells then
-    -- the spell the icon would show (Life Tap has its own threshold), else the first known
-    local sp = ns.Spells.Candidate() or ns.Spells.FirstKnown()
-    return sp and ns.Spells.Threshold(sp, maxMana)
-  end
   if db.pickMode == "fit" and CanBand(group) then
     local c = BandCandidates(i)
     if #c > 0 then return Threshold(c[#c].it, maxMana) end
@@ -853,19 +850,28 @@ end
 -- so no empty gaps appear for groups you have nothing for. The mana check itself is
 -- secret, so a ready item below its threshold still keeps its (invisible) slot.
 -- Settings changes call Layout(true); every tick only the set of shown icons is compared
--- auto bar length: room for every group that is switched on and this class can show (at least
--- 3 icons). It does not follow lit icons, so the bar stays still.
-function ns.AutoBarLength()
-  local size, gap = db.iconSize, db.iconGap or 6
+-- auto bar length: room for every group that is switched on and this class can show, and for
+-- every own spell that can get an icon (at least 3 icons). It does not follow lit icons, so the
+-- bar stays still.
+-- icons that can appear: one per group switched on, one per own spell that can get an icon
+local function IconSlots()
   local slots = 0
   for _, g in ipairs(ns.GROUPS) do
     -- only groups that are switched on; lit icons never change it (the bar stays still)
-    if db.enabled[g.key] and ns.ForMyClass(g) and (not g.spells or ns.Spells.AnyKnown()) then
-      slots = slots + 1
+    if db.enabled[g.key] and ns.ForMyClass(g) then
+      slots = slots + (g.spells and ns.Spells.ActiveCount() or 1)
     end
   end
-  slots = math.max(slots, 3)
-  return size * slots + gap * (slots - 1)
+  return slots
+end
+
+local function Span(slots)
+  local size, gap = db.iconSize, db.iconGap or 6
+  return slots > 0 and size * slots + gap * (slots - 1) or 0
+end
+
+function ns.AutoBarLength()
+  return Span(math.max(IconSlots(), 3))
 end
 
 local layoutKey
@@ -927,17 +933,36 @@ function ns.PositionBar()
     -- the rule's seconds sit above the bar: the frame label (unlocked) goes above them
     local fsrRoom = db.fsr and (math.ceil(14 * (db.fsrScale or 1)) + 4) or 0
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8 + fsrRoom)
-    bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
-    bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
-    -- the regen sits under the mana numbers, or under the bar when they were dragged away
+    -- under the bar the texts are wider than the bar and reach next to the icons. A bar set
+    -- shorter than the column of icons that can appear would put them over the last icons:
+    -- then they go beside the bar, on the side away from the icons, at its lower end (a fixed
+    -- place, counted from every icon that can appear, so they never jump when icons light up)
     bar.regenBox:ClearAllPoints()
-    if manaFree then
-      bar.regenBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
-    else
-      bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
-    end
     bar.regen:ClearAllPoints()
-    bar.regen:SetPoint("TOP", bar.regenBox, "TOP", 0, 0)
+    local short = Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
+    if short then
+      local right = db.barSide == "right" -- bar right of the icons: texts right of the bar
+      local side, edge, dx = right and "LEFT" or "RIGHT", right and "BOTTOMRIGHT" or "BOTTOMLEFT", right and 4 or -4
+      local up = math.ceil(14 * (db.regenScale or 1)) + 4 -- the regen line fits under the numbers
+      bar.manaBox:SetPoint("BOTTOM" .. side, bar, edge, dx, up)
+      bar.text:SetPoint(side, bar.manaBox, side, 0, 0)
+      if manaFree then
+        bar.regenBox:SetPoint("BOTTOM" .. side, bar, edge, dx, 0)
+      else
+        bar.regenBox:SetPoint("TOP" .. side, bar.text, "BOTTOM" .. side, 0, -2)
+      end
+      bar.regen:SetPoint(side, bar.regenBox, side, 0, 0)
+    else
+      bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+      bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
+      -- the regen sits under the mana numbers, or under the bar when they were dragged away
+      if manaFree then
+        bar.regenBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
+      else
+        bar.regenBox:SetPoint("TOP", bar.text, "BOTTOM", 0, -2)
+      end
+      bar.regen:SetPoint("TOP", bar.regenBox, "TOP", 0, 0)
+    end
     bar.fsr:ClearAllPoints()
     bar.fsr:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
@@ -1082,7 +1107,9 @@ local function CreateAnchor()
   anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 6)
   anchor.label:SetText(L.anchor)
 
-  for i = 1, #ns.GROUPS do buttons[i] = CreateButton() end
+  -- one button per group, then the spell group's extra icons (it is the last group, so they
+  -- follow it in the row)
+  for i = 1, #ns.GROUPS + ns.SPELL_ICONS - 1 do buttons[i] = CreateButton() end
   CreateBar()
   ns.PositionBar()
   ns.Layout(true)
@@ -1226,38 +1253,50 @@ end
 local groupOK = true -- solo/party/raid filter, evaluated once per tick
 local NONE = {}
 
--- own spells: one slot, the first ready spell; the same mana and health gates as items.
+-- own spells: every ready spell gets an icon (the group's button, then its extra buttons
+-- after the last group), each with its own threshold and the same health gate as runes.
 -- Layer IDs of spells are negative so they never match an item ID.
-local function UpdateSpellButton(b, maxMana, maxHP)
+local spellList, spellPreview = {}, {}
+local function UpdateSpellButtons(b, maxMana, maxHP, on)
   local S = ns.Spells
-  if not S.AnyKnown() then b.outer:Hide() return end
-  local l = b.layers[1]
-  if not db.locked then -- positioning preview
-    local _, id = S.FirstKnown()
-    SetLayer(l, -id, nil, S.Texture(id))
-    l:SetAlpha(1); l.hi = nil; l:Show()
-    HideLayers(b, 2)
-    b.hp:SetAlpha(1)
-    b.outer:Show()
-    return
+  local list = NONE
+  if on and S.AnyActive() then
+    if not db.locked then
+      list = S.ActiveList(spellPreview) -- positioning preview: every icon that can appear
+    elseif not (db.onlyCombat and not InCombatLockdown()) and groupOK then
+      list = S.Candidates(spellList, maxMana)
+    end
   end
-  if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
-  if not groupOK then b.outer:Hide() return end
-  local sp, id = S.Candidate()
-  if not sp then b.outer:Hide() return end
-  SetLayer(l, -id, nil, S.Texture(id))
-  SweepAt(l, SpellLock())
-  ApplyBand(l, nil, S.Threshold(sp, maxMana))
-  l:Show()
-  HideLayers(b, 2)
-  ApplyHpGate(b, S.HpCost(sp), maxHP)
-  b.outer:Show()
+  for k = 1, ns.SPELL_ICONS do
+    local bk = k == 1 and b or buttons[#ns.GROUPS + k - 1]
+    local sp = list[k]
+    if not sp then
+      bk.outer:Hide()
+    else
+      local id = S.ID(sp)
+      local l = bk.layers[1]
+      SetLayer(l, -id, nil, S.Texture(id))
+      if db.locked then
+        SweepAt(l, SpellLock())
+        ApplyBand(l, nil, S.Threshold(sp, maxMana))
+        ApplyHpGate(bk, S.HpCost(sp), maxHP)
+      else
+        l:SetAlpha(1); l.hi = nil
+        bk.hp:SetAlpha(1)
+      end
+      l:Show()
+      HideLayers(bk, 2)
+      bk.outer:Show()
+    end
+  end
 end
 
 local function UpdateButton(i, b, maxMana, maxHP)
   local group = ns.GROUPS[i]
+  if group.spells then
+    return UpdateSpellButtons(b, maxMana, maxHP, db.enabled[group.key] and ns.ForMyClass(group))
+  end
   if not db.enabled[group.key] or not ns.ForMyClass(group) then b.outer:Hide() return end
-  if group.spells then return UpdateSpellButton(b, maxMana, maxHP) end
   if not db.locked then ShowPreview(i, b, OwnedItem(i)) return end  -- positioning preview
 
   if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
@@ -1445,7 +1484,18 @@ local function UpdateBar(maxMana)
     local ticks = bar.ticks[i]
     local used = 0
     if db.enabled[group.key] and ns.ForMyClass(group) then
-      if db.pickMode == "fit" and CanBand(group) then
+      if group.spells then
+        -- one mark per spell icon that can light up now (ready, switched on); a spell on
+        -- cooldown has no mark. The unlocked frame marks every spell it previews.
+        local list = db.locked and ns.Spells.Candidates(tickSpells, maxMana) or ns.Spells.ActiveList(tickSpells)
+        for _, sp in ipairs(list) do
+          local thr = ns.Spells.Threshold(sp, maxMana)
+          if used < #ticks and thr > 0 and thr < 1 then
+            used = used + 1
+            PlaceTick(ticks[used], thr, len, thick, true, vertical)
+          end
+        end
+      elseif db.pickMode == "fit" and CanBand(group) then
         -- weakest first: thick mark where the icon lights up, thin marks where a
         -- stronger item becomes the best fit
         local c = BandCandidates(i)
@@ -1518,10 +1568,14 @@ local function Update()
   playerLevel = ReadPlayerLevel()
   PotionSound()
   -- one broken group (odd item, API change) must not blank the others
-  for i, b in ipairs(buttons) do
+  for i = 1, #ns.GROUPS do
+    local b = buttons[i]
     local ok, err = pcall(UpdateButton, i, b, maxMana, maxHP)
     if not ok then
       b.outer:Hide()
+      if ns.GROUPS[i].spells then
+        for k = #ns.GROUPS + 1, #buttons do buttons[k].outer:Hide() end
+      end
       WarnOnce("update" .. i, L.warnUpdate:format(tostring(err)))
     end
   end
@@ -1627,8 +1681,6 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     if ns.Probe5SR then ns.Probe5SR() end
   elseif cmd == "log" then
     if ns.LogCommand then ns.LogCommand(args[2]) end
-  elseif cmd == "scan" then
-    if ns.Scan then ns.Scan(args[2]) end
   elseif cmd == "probe" then
     Probe()
   elseif cmd == "debug" then
@@ -1714,7 +1766,7 @@ end
 ------------------------------------------------------------------------
 -- boot
 ------------------------------------------------------------------------
-local DB_VERSION = 9 -- the last migration below
+local DB_VERSION = 10 -- the last migration below
 
 local freshInstall = false
 local function InitDB()
@@ -1765,6 +1817,21 @@ local function InitDB()
     db.dbVersion = 9
   end
   ns.Profiles.Init(acct)
+  if (acct.dbVersion or 0) < 10 then
+    -- 0.8.7: each spell has its own threshold. A changed common one is kept for every spell,
+    -- the untouched default (50 %) gives way to the spells' own defaults
+    for _, p in pairs(acct.profiles) do
+      local t = p.spellThreshold
+      if type(t) == "number" and math.abs(t - 0.5) > 0.001 then
+        p.spellThr = type(p.spellThr) == "table" and p.spellThr or {}
+        for _, sp in ipairs(ns.SPELLS) do
+          if not sp.fit and p.spellThr[sp.key] == nil then p.spellThr[sp.key] = t end
+        end
+      end
+      p.spellThreshold = nil
+    end
+    acct.dbVersion = 10
+  end
   db = ns.Profiles.ActiveTable()
   CopyDefaults(DEFAULTS, db)
   ns.SetLanguage(acct.language)

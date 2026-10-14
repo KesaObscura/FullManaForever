@@ -363,8 +363,8 @@ test("options: 'Move texts freely' sits under unlock and only works while unlock
   eq(sp[5], rp[5], "reset size not on the row of reset position")
   eq(rp[4] + reset.w + 8, sp[4], "gap between the reset buttons")
   eq(sp[4] + resetSize.w, 440 - rp[4], "reset buttons do not fill the row")
-  eq(freeCb.points[1][5], unlockCb.points[1][5], "free text switch not on the row of unlock")
-  eq(freeCb.points[1][4], sp[4], "free text switch not above reset size")
+  eq(freeCb.points[1][4], unlockCb.points[1][4] + 26, "free text switch not indented under unlock")
+  ok(freeCb.points[1][5] < unlockCb.points[1][5] and rp[5] < freeCb.points[1][5], "order: unlock, free texts, resets")
 end)
 
 
@@ -419,7 +419,7 @@ test("every control in the settings and the item list has a tooltip, also while 
 end)
 
 
-test("options: the rune and spell thresholds are greyed out while their group is off", function()
+test("options: the rune threshold is greyed out while runes are off; spells have none here", function()
   local ns = M.load({ enabled = { rune = false } })
   ns.ToggleOptions(true)
   local margin, spellThr
@@ -427,26 +427,27 @@ test("options: the rune and spell thresholds are greyed out while their group is
     if w.minus and w.label and w.label.text == ns.L.optMargin .. ":" then margin = w end
     if w.minus and w.label and w.label.text == ns.L.optSpellThr then spellThr = w end
   end
-  ok(margin and spellThr, "thresholds not found")
+  ok(margin, "rune threshold not found")
+  eq(spellThr, nil, "common spell threshold still in the settings")
   ok(not margin.plus:IsEnabled(), "rune threshold usable with runes off")
-  ok(spellThr.plus:IsEnabled(), "spell threshold greyed out although spells are on")
-  ns.db.enabled.rune, ns.db.enabled.spell = true, false
+  ns.db.enabled.rune = true
   ns.RefreshOptions()
   ok(margin.plus:IsEnabled(), "rune threshold stays grey after switching on")
-  ok(not spellThr.plus:IsEnabled(), "spell threshold usable with spells off")
 end)
 
 
-test("options: a long unlock label pushes 'Move texts freely' one row down instead of covering it", function()
-  local ns = M.load({ language = "ruRU" })
-  ns.ToggleOptions(true)
-  local unlockCb, freeCb
-  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
-    if w.label and w.label.text == ns.L.optUnlock then unlockCb = w end
-    if w.label and w.label.text == ns.L.optTextFree then freeCb = w end
+test("options: 'Move texts freely' is one row under unlock in every language", function()
+  for _, lang in ipairs({ "enUS", "deDE", "ruRU", "esES", "frFR", "ptBR", "koKR", "zhCN", "zhTW" }) do
+    local ns = M.load({ language = lang })
+    ns.ToggleOptions(true)
+    local unlockCb, freeCb
+    for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+      if w.label and w.label.text == ns.L.optUnlock then unlockCb = w end
+      if w.label and w.label.text == ns.L.optTextFree then freeCb = w end
+    end
+    eq(freeCb.points[1][4], unlockCb.points[1][4] + 26, lang .. ": free text switch not indented under unlock")
+    ok(freeCb.points[1][5] < unlockCb.points[1][5], lang .. ": free text switch not one row down")
   end
-  eq(freeCb.points[1][4], unlockCb.points[1][4], "free text switch not under unlock")
-  ok(freeCb.points[1][5] < unlockCb.points[1][5], "free text switch not one row down")
 end)
 
 test("options: switching the potion sound on plays it once; whole seconds greyed out with the rule off", function()
@@ -472,4 +473,23 @@ test("options: switching the potion sound on plays it once; whole seconds greyed
   eq(#M.sounds, 2, "sound when switched off")
   ok(not kind:IsEnabled(), "sound choice usable with the sound off")
   ok(not whole:IsEnabled(), "whole seconds usable with the rule off")
+end)
+
+test("item list: notes after a long (localized) name are never cut; the name gives way", function()
+  local ns = M.load(nil, { locale = "deDE" })
+  local real = C_Item.GetItemNameByID
+  C_Item.GetItemNameByID = function(id)
+    if id == 12190 then return "Großer Trank des traumlosen Schlafs mit sehr langem Namen" end
+    return real(id)
+  end
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "rows")
+  local row
+  for _, r in ipairs(rows) do if r.it and r.it.id == 12190 then row = r end end
+  C_Item.GetItemNameByID = real
+  ok(row, "Dreamless Sleep not listed")
+  ok(row.tag.text:find(ns.L.libSleep, 1, true), "sleep note missing: " .. tostring(row.tag.text))
+  local nameW = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "NAME_W")
+    or 290
+  ok(row.name.w + 4 + row.tag:GetStringWidth() <= nameW + 1, "name and note wider than the name column")
 end)

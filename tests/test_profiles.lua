@@ -210,14 +210,34 @@ test("windows: opening a window again brings it to the front; a copy keeps the p
   ok(pwin.raised > p1, "profiles window left behind the rebuilt settings window")
 end)
 
-test("Esc closes the settings and the profiles window", function()
+test("Esc closes the profiles window, then the settings, even when the game closes none of them", function()
   local ns = M.load(nil)
   ns.ToggleOptions(true)
   ns.ToggleProfiles(true)
   ok(M.hooks.CloseSpecialWindows, "no Esc hook")
-  M.hooks.CloseSpecialWindows()
-  ok(not _G.FullManaForeverOptions:IsShown(), "settings window stays open on Esc")
+  M.hooks.CloseSpecialWindows() -- the game itself closed nothing
   ok(not _G.FullManaForeverProfiles:IsShown(), "profiles window stays open on Esc")
+  ok(_G.FullManaForeverOptions:IsShown(), "first Esc closed the settings too")
+  M.state.time = 101
+  M.hooks.CloseSpecialWindows()
+  ok(not _G.FullManaForeverOptions:IsShown(), "settings window stays open on the second Esc")
+end)
+
+test("Esc: a window that dropped out of the game's Esc list, or whose name points elsewhere, is put back when it opens", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  ns.ToggleLibrary(true)
+  local lib = _G.FullManaForeverItems
+  ns.ToggleLibrary()
+  _G.FullManaForeverItems = {} -- an old frame under the name
+  for i = #UISpecialFrames, 1, -1 do
+    if UISpecialFrames[i] == "FullManaForeverItems" then table.remove(UISpecialFrames, i) end
+  end
+  ns.ToggleLibrary(true)
+  eq(_G.FullManaForeverItems, lib, "name not put back on the open list")
+  local listed = false
+  for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverItems" then listed = true end end
+  ok(listed, "list not back in the game's Esc list")
 end)
 
 test("popups: over the settings, settings dimmed; Esc closes one window per press", function()
@@ -326,4 +346,35 @@ test("profiles: Forever surnames are part of the key; old keys move over with th
   saved.profiles["Kesa Reed-Forever"] = {}
   saved.chars["Kesa Reed-Forever"] = { profile = "Kesa Reed-Forever" }
   eq(P.Find("kesa"), nil, "ambiguous first name picked one")
+end)
+
+test("Esc after a language change: the item list closes first, then the settings", function()
+  local ns = M.load(nil)
+  M.keepOldNames = true -- as in game: rebuilt windows do not take over their names by themselves
+  ns.ToggleOptions(true)
+  ns.ToggleLibrary(true); ns.ToggleLibrary() -- the list was open once before the change
+  ns.ToggleProfiles(true); ns.ToggleProfiles()
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "auto" then w.Select("deDE") end
+  end
+  ns.ToggleLibrary(true)
+  local found
+  local function Esc() -- the game: hide every listed frame that is shown, then the hook
+    found = false
+    for _, name in ipairs(UISpecialFrames) do
+      local f = _G[name]
+      if f and f:IsShown() then f:Hide(); found = true end
+    end
+    M.hooks.CloseSpecialWindows()
+  end
+  local win, lib = M.upvalue(ns.ToggleOptions, "win"), M.upvalue(ns.ToggleLibrary, "lib")
+  Esc()
+  M.keepOldNames = nil
+  ok(found, "the game found none of our windows: it would open its menu")
+  ok(not lib:IsShown(), "item list still open after Esc")
+  ok(win:IsShown(), "first Esc closed the settings")
+  M.state.time = 101
+  Esc()
+  ok(found, "second Esc: the game did not find the settings (its menu would open at once)")
+  ok(not win:IsShown(), "second Esc did not close the settings")
 end)

@@ -13,6 +13,18 @@ local registry = widgets  -- where the widget helpers register (see WithRegistry
 local openList            -- the dropdown list that is open right now (only one at a time)
 -- windows that open over the settings (item list, profiles): one at a time, the settings dimmed
 local popups = {}         -- [key] = frame
+
+-- Esc closes the windows the game finds by name in UISpecialFrames. In game a frame created
+-- with a name an older frame already has does not take over that name, so after a language
+-- change (all windows built anew) Esc looked at the old, hidden frames. Each window sets its
+-- name to itself when it is built and again when it opens, and is put on the list.
+local function EscListed(frame, name)
+  if not frame then return end
+  if _G[name] ~= frame then _G[name] = frame end
+  if not UISpecialFrames then return end
+  for _, n in ipairs(UISpecialFrames) do if n == name then return end end
+  table.insert(UISpecialFrames, name)
+end
 local popupClosedAt, winHiddenAt -- GetTime() of the last close: Esc closes one window per press
 local UpdateShade, OnSettingsShown
 
@@ -364,11 +376,9 @@ Build = function()
   win:SetScript("OnDragStart", win.StartMoving)
   win:SetScript("OnDragStop", win.StopMovingOrSizing)
   win:Hide()
-  if UISpecialFrames then
-    local listed = false
-    for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverOptions" then listed = true end end
-    if not listed then table.insert(UISpecialFrames, "FullManaForeverOptions") end
-  end
+  -- in game a new frame does not take over a name an older one already has (the language
+  -- change builds the windows anew): the name is set here, else Esc looks at the old frame
+  EscListed(win, "FullManaForeverOptions")
 
   local bg = win:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
@@ -471,8 +481,8 @@ Build = function()
   local col = c.frame
   c.Row(Header(col, L.optDisplay), PAD, 24)
   -- one switch for placing: unlocked = movable and showing everything that is switched on
-  -- two equal halves: unlock and "Move texts freely" side by side, the two reset buttons
-  -- below them, together as wide as the column
+  -- unlock, "Move texts freely" under it, then the two reset buttons as two equal halves,
+  -- together as wide as the column
   local HALF = math.floor((W - 2 * PAD - 8) / 2)
   local X2 = PAD + HALF + 8
   local unlockCb = Check(col, L.optUnlock, function() return not db.locked end,
@@ -482,12 +492,9 @@ Build = function()
   local freeCb = Check(col, L.optTextFree, function() return db.textFree end,
     function(v) db.textFree = v; ns.PositionBar(); ns.ApplyLock() end, L.tipTextFree,
     function() return not db.locked end)
-  -- a long "Unlock frame" label (some languages) would run into it: then it goes one row down
-  if PAD + 28 + math.ceil(unlockCb.label:GetStringWidth() or 0) + 8 <= X2 then
-    freeCb:SetPoint("TOPLEFT", col, "TOPLEFT", X2, c.y + 26)
-  else
-    c.Row(freeCb)
-  end
+  -- always one row under unlock, in every language (side by side only where it fitted, the
+  -- layout jumped when the language changed)
+  c.Row(freeCb, PAD + 26) -- a sub-setting of unlock: indented like "Whole seconds"
   -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
   local reset = Button(col, L.optReset, HALF)
   reset:SetWidth(HALF)
@@ -714,13 +721,6 @@ Build = function()
       ActiveIf(function() return db.enabled.rune end, s)
       return { s.label }
     end,
-    spell = function()
-      local s = Stepper(col, PAD + 30, L.optSpellThr, function() return db.spellThreshold end,
-        function(v) db.spellThreshold = v; ns.InvalidateCurves() end,
-        { step = 0.05, lo = 0.10, hi = 0.90, tip = L.tipSpellThr, fmt = pct })
-      ActiveIf(function() return db.enabled.spell end, s)
-      return { s.label }
-    end,
   }
   local first = true
   for i, group in ipairs(ns.GROUPS) do
@@ -824,6 +824,7 @@ function ns.ToggleOptions(forceShow)
   if not win then Build() end
   if forceShow or not win:IsShown() then
     if stale then Rebuild() end
+    EscListed(win, "FullManaForeverOptions")
     win:Show()
     win:Raise() -- opened again while hidden behind another window: bring it to the front
     ns.RefreshOptions()
@@ -915,11 +916,9 @@ local function BuildProfiles()
   pwin:SetScript("OnDragStart", pwin.StartMoving)
   pwin:SetScript("OnDragStop", pwin.StopMovingOrSizing)
   pwin:Hide()
-  if UISpecialFrames then
-    local listed = false
-    for _, n in ipairs(UISpecialFrames) do if n == "FullManaForeverProfiles" then listed = true end end
-    if not listed then table.insert(UISpecialFrames, "FullManaForeverProfiles") end
-  end
+  -- in game a new frame does not take over a name an older one already has (the language
+  -- change builds the windows anew): the name is set here, else Esc looks at the old frame
+  EscListed(pwin, "FullManaForeverProfiles")
   local bg = pwin:CreateTexture(nil, "BACKGROUND")
   bg:SetAllPoints()
   bg:SetColorTexture(0.05, 0.06, 0.09, 1)
@@ -1054,6 +1053,8 @@ local function BuildProfiles()
   ns.RegisterPopup(pwin, "profiles")
 end
 
+ns.EscListed = EscListed
+
 -- the language changed: the profiles window is built anew, in the new language, when it opens
 function ns.DropProfiles()
   if pwin then pwin:Hide(); pwin = nil end
@@ -1062,6 +1063,7 @@ end
 function ns.ToggleProfiles(forceShow)
   if not pwin then BuildProfiles() end
   if forceShow or not pwin:IsShown() then
+    EscListed(pwin, "FullManaForeverProfiles")
     pwin:Show()
     pwin:Raise()
     RefreshProfiles()
@@ -1077,6 +1079,13 @@ end
 if hooksecurefunc and CloseSpecialWindows then
   hooksecurefunc("CloseSpecialWindows", function()
     local now = GetTime()
+    if popupClosedAt ~= now then
+      -- the game closed none of our windows over the settings although one is open: this Esc
+      -- closes it here (the settings stay)
+      for _, p in pairs(popups) do
+        if p:IsShown() then p:Hide() end
+      end
+    end
     if popupClosedAt == now then
       -- this Esc closed a window over the settings: the settings stay (the next Esc closes them)
       if win and winHiddenAt == now and not win:IsShown() then win:Show() end

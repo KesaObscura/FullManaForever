@@ -41,8 +41,9 @@ when the icon lights up.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
   (30 % by default).
 - **Own mana spells**: Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the
-  racials Eureka! (gnome) and Ley Line reading (Skyborne) light up when ready and your mana
-  is at or below a set share (50 % by default); Life Tap when its mana fits.
+  racials Eureka! (gnome) and Ley Line reading (Skyborne): every ready spell gets its own icon
+  when your mana is at or below its own threshold (sensible defaults per spell, set in the list
+  below); Life Tap when its mana fits.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.
@@ -54,7 +55,9 @@ when the icon lights up.
   and text size.
 - **Show**: solo / in a party / in a raid, optionally only in combat.
 - **Sound when your potion is ready again** (optional, off by default): three sounds of the addon's own.
-- **Item list** (`/fmf items`): every supported item, on/off per item, add your own.
+- **Items and spells** (`/fmf items`): every supported item, on/off per item, add your own;
+  your class's mana spells with their threshold and, if you lack one, why (level, talent,
+  trainer).
 - **Profiles**: one shared set of settings or own settings per character; copy another
   character's settings, reset, delete old ones ("Profiles..." in the settings, `/fmf profile`).
 - 9 languages: English, Deutsch, Español (EU and AL), Français, Русский, 한국어, Português,
@@ -99,7 +102,7 @@ otherwise the game does not load it.
 | Command | Does |
 |---|---|
 | `/fmf` | open the settings (also in Options → AddOns and the addon menu at the minimap) |
-| `/fmf items` | open the item list |
+| `/fmf items` | open the list of items and spells |
 | `/fmf profile` | profile in use and characters with own settings; `/fmf profile shared` / `own` switches, `copy <name>` takes over another character's settings (first name and surname, or the first name alone when it is unique), `undo` takes back the last copy |
 | `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |
 | `/fmf unlock` / `/fmf lock` | move the icons |
@@ -109,8 +112,6 @@ otherwise the game does not load it.
 | `/fmf probe` | print API status for bug reports |
 | `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen, in a group also the group's casts) for a bug report; `/fmf log clear` empties it |
 | `/fmf probe 5sr` | 30 seconds of casts and regen in the chat, for bug reports |
-| `/fmf scan` | write your spells, talents and items with a "Use:" effect into the log, for bug reports |
-| `/fmf scan trainer` | with the addon TrainerSpells installed: every trainer spell of the mana classes into the log |
 | `/fmf log chat` | test whether the addon may send chat and addon messages (whispers yourself; in a group also an invisible addon message to the group) |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |

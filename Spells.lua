@@ -1,5 +1,5 @@
 -- Full Mana Forever - own spells that give or save mana (0.8.0).
--- Facts from /fmf scan in Forever: own casts and their spell IDs are readable in combat;
+-- Facts read in Forever: own casts and their spell IDs are readable in combat;
 -- spell cooldowns are readable out of combat and SECRET in combat; GetSpellBaseCooldown
 -- works for every spell. So the cooldown is read exactly out of combat, and in combat it
 -- is counted from the player's own cast. A spell is never shown as ready too early: if in
@@ -78,7 +78,7 @@ end
 -- which of the spells does this character have (out of combat; the book may change in combat)
 function S.Rebuild()
   if InCombatLockdown() then dirty = true return end
-  local had = next(known) ~= nil
+  local had = S.ActiveCount()
   wipe(known); wipe(byID); wipe(amount); Forget()
   local want = {}
   for _, sp in ipairs(ns.SPELLS) do
@@ -101,12 +101,73 @@ function S.Rebuild()
   -- Inner Focus still waits for the next spell when the book changes (talent, new rank)
   if waiting and not known[waiting] then waiting = nil end
   dirty = false
-  -- the auto bar length counts the spell group only while a spell is known
-  if (next(known) ~= nil) ~= had and ns.Layout then ns.Layout(true) end
+  -- the auto bar length has room for each spell that can get an icon
+  if S.ActiveCount() ~= had and ns.Layout then ns.Layout(true) end
 end
 
 function S.AnyKnown()
   return next(known) ~= nil
+end
+
+-- switched on in the item list (per profile; a spell is on unless switched off)
+function S.Enabled(sp)
+  local off = ns.db and ns.db.spellOff
+  return not (off and off[sp.key])
+end
+
+function S.SetEnabled(sp, on)
+  ns.db.spellOff = ns.db.spellOff or {}
+  ns.db.spellOff[sp.key] = (not on) or nil
+  Forget()
+  if ns.Layout then ns.Layout(true) end -- the auto bar length counts the group only while one is on
+end
+
+-- a known spell that is switched on: these get icons
+local function Active(sp) return known[sp] ~= nil and S.Enabled(sp) end
+
+function S.AnyActive()
+  for sp in pairs(known) do
+    if S.Enabled(sp) then return true end
+  end
+  return false
+end
+
+function S.ID(sp) return known[sp] end
+
+-- how many spell icons can appear at most (known and switched on), for the auto bar length
+function S.ActiveCount()
+  local n = 0
+  for sp in pairs(known) do
+    if S.Enabled(sp) then n = n + 1 end
+  end
+  return math.min(n, ns.SPELL_ICONS)
+end
+
+-- the spells of this class for the item list, in icon order; racials only for their race
+-- (they are known from the start)
+function S.ListForMe()
+  local list = {}
+  for _, sp in ipairs(ns.SPELLS) do
+    if ns.ForMyClass(sp) and (not sp.racial or known[sp]) then list[#list + 1] = sp end
+  end
+  return list
+end
+
+-- why a spell is not on the icons yet: "known" | "level", n[, talent] | "talent" | "trainer"
+-- (the level comes from the game: C_Spell.GetSpellLevelLearned)
+function S.Status(sp)
+  if known[sp] then return "known" end
+  local need
+  if C_Spell and C_Spell.GetSpellLevelLearned then
+    local ok, l = pcall(C_Spell.GetSpellLevelLearned, sp.id)
+    if ok and type(l) == "number" and not IsSecret(l) and l > 0 then need = l end
+  end
+  local okL, lvl = pcall(UnitLevel, "player")
+  if need and not (okL and type(lvl) == "number" and not IsSecret(lvl) and lvl >= need) then
+    return "level", need, sp.talent
+  end
+  if sp.talent then return "talent" end
+  return "trainer"
 end
 
 -- the game's cooldown when it can be read (out of combat), else what we counted.
@@ -170,12 +231,34 @@ local function Usable(sp)
   return S.Ready(sp)
 end
 
--- the first spell to show now (known, ready), and its ID. S.Refresh reads the cooldowns
--- of all of them every tick out of combat.
+-- the first spell to show now (known, switched on, ready), and its ID. S.Refresh reads the
+-- cooldowns of all of them every tick out of combat.
 function S.Candidate()
   for _, sp in ipairs(ns.SPELLS) do
-    if known[sp] and Usable(sp) then return sp, known[sp] end
+    if Active(sp) and Usable(sp) then return sp, known[sp] end
   end
+end
+
+-- every spell to show now, highest threshold first, at most ns.SPELL_ICONS (out is reused).
+-- The mana check is secret (the game hides an icon above its threshold), so a ready spell
+-- keeps its slot while unlit; highest first, the lit icons always come first, without gaps.
+local order = {}
+local function ByThreshold(a, b)
+  if order[a] ~= order[b] then return order[a] > order[b] end
+  return a.idx < b.idx
+end
+function S.Candidates(out, maxMana)
+  wipe(out)
+  for i, sp in ipairs(ns.SPELLS) do
+    if Active(sp) and Usable(sp) then
+      sp.idx = i
+      order[sp] = S.Threshold(sp, maxMana)
+      out[#out + 1] = sp
+    end
+  end
+  table.sort(out, ByThreshold)
+  for k = #out, ns.SPELL_ICONS + 1, -1 do out[k] = nil end
+  return out
 end
 
 -- out of combat, every tick: read every cooldown (also when the slot is hidden, e.g. "only
@@ -198,7 +281,7 @@ end
 function S.Soonest()
   local best, bestID, bestLeft
   for _, sp in ipairs(ns.SPELLS) do
-    if known[sp] then
+    if Active(sp) then
       local _, left = S.Ready(sp)
       if not best or (left and (not bestLeft or left < bestLeft)) then
         best, bestID, bestLeft = sp, known[sp], left
@@ -208,18 +291,34 @@ function S.Soonest()
   return best, bestID, bestLeft
 end
 
--- the first known spell (preview, status, bar tick), and its ID
+-- the first known spell that is switched on (preview, status, bar tick), and its ID
 function S.FirstKnown()
   for _, sp in ipairs(ns.SPELLS) do
-    if known[sp] then return sp, known[sp] end
+    if Active(sp) then return sp, known[sp] end
   end
 end
 
--- mana% at or below which the icon lights up
+-- the known spells that are switched on, in icon order (preview of the unlocked frame)
+function S.ActiveList(out)
+  wipe(out)
+  for _, sp in ipairs(ns.SPELLS) do
+    if #out < ns.SPELL_ICONS and Active(sp) then out[#out + 1] = sp end
+  end
+  return out
+end
+
+-- mana% at or below which the icon lights up: its own setting, else the spell's default;
+-- a fit spell (Life Tap) when its mana fits into the missing mana
 function S.Threshold(sp, maxMana)
   local a = sp.fit and amount[sp]
   if a and maxMana and maxMana > 0 then return math.max(0, 1 - a / maxMana) end
-  return ns.db.spellThreshold or 0.5
+  local own = ns.db.spellThr and ns.db.spellThr[sp.key]
+  return own or sp.thr or 0.5
+end
+
+function S.SetThreshold(sp, v)
+  ns.db.spellThr = ns.db.spellThr or {}
+  ns.db.spellThr[sp.key] = v
 end
 
 -- health the spell costs (Life Tap), for the same health check as the runes

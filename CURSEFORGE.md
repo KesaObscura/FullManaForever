@@ -12,14 +12,14 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Right potion for the deficit.** With several potions in your bags, the icon shows the **strongest potion that will not overflow**: a weak one when you are slightly down, a strong one when you are low.
 - **One simple setting: When to light up.** *No waste* waits until the whole potion fits. *More per fight* uses the average restore, so you drink earlier and fit more potions into a long fight. *Strongest only* keeps it simple.
 - **Runes are safe.** A rune is only shown when you will keep a configurable share of your health after its damage (30 % by default).
-- **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Ley Line reading (Skyborne) get their own icon: it lights up when the spell is ready and your mana is at or below a share you choose (50 % by default). Life Tap lights up like a potion when its mana fits, with the same health check as runes. Forever hides spell cooldowns from addons in combat, so the addon counts them from your cast — never too early.
+- **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Ley Line reading (Skyborne) light up when the spell is ready and your mana is at or below its own threshold (a sensible default per spell, changeable in the list). Two spells ready at once? Each gets its own icon. Life Tap lights up like a potion when its mana fits, with the same health check as runes. Forever hides spell cooldowns from addons in combat, so the addon counts them from your cast — never too early.
 - **Made for wanding.** Each wand shot blocks potions and spells for a moment. The icon stays lit and shows that short wait as a sweep, like the action bar: the potion fits, stop shooting and drink.
 - **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
 - **Five-second rule and mana regen.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it). Next to the mana bar (under the numbers when the icons are in a column) you see the regen running right now, per second — also in combat, including Spirit Tap and drinking.
-- **Regen your way.** The regen turns green when it is above your normal rate (drinking, Spirit Tap, ... out of combat, and in combat after your own Evocation or Ley Line reading — Forever hides the value from addons in combat). The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
+- **Regen your way.** The regen turns green, with a small up arrow, when it is above your normal rate (drinking, Spirit Tap, ... out of combat, and in combat after your own Evocation or Ley Line reading — Forever hides the value from addons in combat). The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
-- **Item list.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category.
+- **Items and spells.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category. Your class's mana spells are listed too, each with its own threshold, and if you do not have one yet, the list says why: the level, a talent or the trainer.
 - **Profiles per character.** All characters share one set of settings, or a character gets its own (a copy of the shared ones to start with). Copy the settings of another character in one click, reset a profile or delete the settings of characters you no longer play; one undo if you clicked the wrong one. Language and your own items stay the same for all.
 - **Sound when your potion is ready again** (optional): a short sound when the mana potion cooldown is over, also in combat; three sounds of the addon's own to choose from.
 - **Five-second rule in whole seconds** (5, 4, 3 ...) or with tenths, as you like.
@@ -38,18 +38,18 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 
 ## Supported items (checked against the Forever database)
 
-- **Mana potions** (shared cooldown): Major, Major Rejuvenation, Superior, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Dreamless Sleep (off by default — it puts you to sleep for 12 s).
+- **Mana potions** (shared cooldown): Major, Major Rejuvenation, Superior, Combat, Greater, Mana, Lesser, Minor, Minor Rejuvenation, Dreamless Sleep and Greater Dreamless Sleep (off by default — they put you to sleep for 12 s).
 - **Runes:** Demonic Rune, Dark Rune.
 - **Mana gems (mage):** Ruby, Citrine, Jade, Agate.
 - **Other:** Night Dragon's Breath, Major/Superior Mana Draught (battlegrounds only).
-- **Gear:** Warmth of Forgiveness, Major/Minor Recombobulator, Robe of the Archmage (mage).
+- **Gear:** Warmth of Forgiveness, Celestial Orb, Energy Cloak, Major/Minor Recombobulator, Arcane Orb, Ley Orb, Robe of the Archmage (mage).
 
 ## Commands
 
 | Command | Does |
 |---|---|
 | `/fmf` | open the settings |
-| `/fmf items` | open the item list |
+| `/fmf items` | open the list of items and spells |
 | `/fmf profile` | profile in use and characters with own settings; `/fmf profile shared` / `own` switches, `copy <name>` takes over another character's settings (first name and surname, or the first name alone when it is unique), `undo` takes back the last copy |
 | `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |
 | `/fmf unlock` / `/fmf lock` | move the icons |
@@ -58,7 +58,6 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
 | `/fmf probe` | print API status for bug reports |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
-| `/fmf scan` | write your spells, talents and use items into the log, for a bug report |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap.
 

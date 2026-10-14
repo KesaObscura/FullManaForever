@@ -63,14 +63,18 @@ and `/fmf log` (kept in releases for bug reports).
   are ignored. Melee and bows do not do this.
 - Potions, food, wand and procs (Eureka!) report no mana cost and never start the rule.
   Drinking is part of `GetPowerRegen`; "Adventurous thrill" is not.
-- `GetSpellBaseCooldown` works for any spell ID; talents via `C_ClassTalents` + `C_Traits`.
-  TrainerSpells is "All Rights Reserved": never copy its data or code into this repo.
+- `GetSpellBaseCooldown` and `C_Spell.GetSpellLevelLearned` (Evocation 12051 -> 20) work for
+  any spell ID; talents via `C_ClassTalents` + `C_Traits`.
+- Research data comes from the owner's private tooling, not from this addon: never add scan
+  commands here or describe them in public texts. Only single facts we need, checked against
+  the game's own API, go into `Data.lua` (no bulk copies of other addons' tables or code).
 - Mana spell IDs, ranks and cooldowns: `Data.lua` and `docs/notes.md`.
 
 ## Owner decisions in force
 
 - Real mana value, not the predicted one (icons light up when the cast lands).
-- Auto bar length counts only groups switched on (and usable by the class), minimum 3.
+- Auto bar length counts only groups switched on (and usable by the class), each own spell that
+  can get an icon (0.8.7, owner: icons must not run past the bar), minimum 3.
 - The potion icon stays lit while wanding (sweep shows the wait).
 - Regen green when above normal (out of combat vs the lowest normal regen since the last
   level-up or gear change, +10 %; in combat only own Evocation 8 s and Ley Line reading 15 s).
@@ -91,20 +95,21 @@ and `/fmf log` (kept in releases for bug reports).
 
 ## Roadmap and reminders (owner asked to be reminded; keep this list current)
 
-1. Owner tests 0.8.3 profiles in game (blocks everything else).
-2. 0.8.3 step 3: settings order and wording (thresholds under their groups, "Drinking" ->
-   "When to light up" in all languages); new settings screenshot for the gallery.
-3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 (11 Oct). CurseForge uploads by the owner:
+1. Done: 0.8.3 profiles tested by the owner; settings order and wording (step 3) shipped.
+3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 and 0.8.6 (11 Oct), 0.8.7 (14 Oct, items and
+   spells list, tested by the owner). CurseForge uploads by the owner:
    0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold
-   new), 0.8.4 on Monday 12 Oct, then one per day.
+   new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description: /fmf profile copy
+   with the surname).
 3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
    what the addon does, each with a test that fails on the old code. Left out on purpose:
    secret nil comparisons, longUntil d==0, OwnedItem caching. Also: character keys with the
    surname (owner's /dump: UnitName("player") returns first name and surname; GetRealmName is the
    beta server's name).
    Tested in game by the owner (all fixes) except the surname keys.
-4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions); 16-20 Oct
-   only fixes. 21 Oct (beta end): the most stable and complete version is out.
+4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions). Owner
+   (14 Oct): features until the beta ends, no fixes-only phase; each feature is still tested in
+   game before its release. 21 Oct (beta end): the most stable and complete version is out.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
    fix bugs; one reply in the Blizzard forum thread "WoW Forever Addons" (UI and Macro), one
    Reddit post (check the sub's rules), short notes to Icy Veins / Warcraft Tavern / mein-mmo

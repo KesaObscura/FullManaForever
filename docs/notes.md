@@ -64,11 +64,11 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   again in the same fight. Spell cooldowns (`C_Spell.GetSpellCooldown`) are SECRET in combat
   and readable out of combat — for 0.8.0, spell readiness cannot be read in combat. The
   potion cast in this log was Restore Mana 437 (no cost).
-- Scans for 0.8.0 (`/fmf scan`, `/fmf scan trainer` with TrainerSpells installed): the spell book
+- Scans for 0.8.0 (owner's private tooling): the spell book
   does not list spells of later levels. `GetSpellBaseCooldown` works for any spell ID, also
   unlearned ones. Talents: the old talent API is gone; `C_ClassTalents.GetActiveConfigID` +
-  `C_Traits` read the talent tree with ranks (priest: 54 talents). TrainerSpells is "All Rights
-  Reserved": never copy its data or code into this repo; it is read only at run time.
+  `C_Traits` read the talent tree with ranks (priest: 54 talents). Other addons' tables are
+  hints only, never copied.
 - Mana spells in Forever (ID, level, base cooldown s): Innervate 29166 (druid 40, 360; +400 %
   regen, 100 % while casting, 20 s), Evocation 12051 (mage 20, 480; +1500 % for 8 s, channeled),
   Mana Tide Totem 16190/17359 (shaman, 300; group, every 3 s for 12 s), Life Tap 1454/11689
@@ -182,6 +182,17 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   name. Profile keys are therefore "First Surname-Realm" (0.8.6; before only the first name).
   The realm name may change at launch, which would give characters new keys (beta characters
   probably do not carry over anyway).
+
+- Mana spells checked in Forever (12 Oct, all mana classes): `GetSpellLevelLearned` gives
+  Evocation 20, Innervate 40, Life Tap 6 (rank 1; 11689 rank 6 at 56), Mana Tide Totem 25 (talent;
+  Classic had 40), Inner Focus 0 (talent: no level). Ley Line reading is "Read Ley Line"
+  (1259705). Dark Pact (18220) does not exist in Forever. Other active mana spells found are buffs
+  to keep up (Water Shield, Mana Spring Totem, Blessing/Seal of Wisdom, Mage Armor), mana drains
+  (Drain Mana, Viper Sting, Mana Burn) or conjured gems: none fits "ready, then lights up".
+- Items found that the addon does not list yet: Combat Mana Potion 18841 (same spell as Superior
+  Mana Potion), Mageblood Elixir 20007 (regen elixir), mana oils, EZ-Thro Mana Bomb 260818 (new,
+  text not loaded yet), Crisp Spring Water 252031 (new water). The first item pass missed slow
+  texts; a second pass is needed before adding numbers.
 
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 

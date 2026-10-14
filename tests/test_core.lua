@@ -146,7 +146,7 @@ test("old saved data: the macro cleanup flag and the old test mode are dropped",
   local ns = M.load({ dbVersion = 6, cleanMacros = true, test = false })
   eq(ns.db.cleanMacros, nil, "macro flag kept")
   eq(ns.db.test, nil, "test key kept")
-  eq(ns.acct.dbVersion, 9)
+  eq(ns.acct.dbVersion, 10)
 end)
 
 -- performance ------------------------------------------------------------------
@@ -484,42 +484,6 @@ test("the unlocked frame (test mode) shows the five-second rule without casting"
   noRegenApis()
 end)
 
-test("/fmf scan writes spells, talents and use items with the game's descriptions", function()
-  local ns = M.load(nil)
-  _G.Enum.SpellBookItemType = { Spell = 1, FutureSpell = 3 }
-  _G.C_SpellBook = {
-    GetNumSpellBookSkillLines = function() return 1 end,
-    GetSpellBookSkillLineInfo = function() return { name = "Holy", itemIndexOffset = 0, numSpellBookItems = 2 } end,
-    GetSpellBookItemInfo = function(i)
-      if i == 1 then return { spellID = 14751, name = "Inner Focus" } end
-      return { spellID = 14522, name = "Meditation", isPassive = true, itemType = 3 }
-    end,
-  }
-  _G.C_Spell = {
-    GetSpellDescription = function(id) return id == 14751 and "Your next spell\ncosts no mana." or "Regen while casting." end,
-    GetSpellPowerCost = function() return { { type = 0, cost = 0 } } end,
-    GetSpellCooldown = function() return { startTime = 0, duration = 0 } end,
-    GetSpellName = function(id) return "Spell" .. id end,
-  }
-  _G.GetInventoryItemID = function(_, slot) if slot == 13 then return 23027 end end
-  _G.C_Item.GetItemSpell = function(id) if id == 23027 then return "Warmth", 29166 end end
-  _G.C_Container.GetContainerNumSlots = function() return 0 end
-  _G.GetSpellBaseCooldown = function(id) return id == 14751 and 180000 or 0, 1500 end
-  SlashCmdList.FULLMANAFOREVER("scan")
-  _G.GetSpellBaseCooldown = nil
-  local all = table.concat(FullManaForeverLog.lines, "\n")
-  ok(all:find("cd=0+0 base=180", 1, true), "base cooldown missing: " .. all)
-  ok(all:find("---- scan", 1, true), "no scan header")
-  ok(all:find("spell [Holy] 14751 Inner Focus cost=0 cd=0+0 base=180 : Your next spell | costs no mana.", 1, true), "spell line: " .. all)
-  ok(all:find("14522 Meditation (passive) (not learned yet)", 1, true), "passive or future spell not marked")
-  ok(all:find("item slot13 23027", 1, true), "use item missing")
-  ok(table.concat(M.printed, "\n"):find("scan done: spells=2", 1, true), "no summary")
-  ok(all:find("known 29166", 1, true), "spells above level 1 not asked for")
-  ok(all:find("talents: old API missing", 1, true), "missing talent API not reported")
-  ok(all:find("scan v", 1, true) and all:find("level=", 1, true), "no header")
-  _G.C_SpellBook, _G.C_Spell, _G.GetInventoryItemID = nil, nil, nil
-end)
-
 test("five-second seconds never cover the mana numbers or the frame label", function()
   local ns = M.load({ vertical = false, fsrScale = 2 }, { bags = POT })
   local b = bar(ns)
@@ -592,7 +556,7 @@ end)
 
 test("a new install has nothing to migrate", function()
   local ns = M.load(nil)
-  eq(ns.acct.dbVersion, 9)
+  eq(ns.acct.dbVersion, 10)
   eq(ns.db.cleanMacros, nil, "macro cleanup on a new install")
   eq(ns.db.manaTextOn, true, "mana numbers off on a new install")
 end)
@@ -650,9 +614,6 @@ test("/fmf log on with a full log says so instead of claiming it runs", function
   local all = table.concat(M.printed, "\n")
   ok(all:find("log full", 1, true), "no full message")
   ok(not all:find("log ON", 1, true), "claims the log runs")
-  SlashCmdList.FULLMANAFOREVER("scan")
-  eq(#FullManaForeverLog.lines, 6000, "scan wrote past the limit")
-  ok(table.concat(M.printed, "\n"):find("scan lines dropped", 1, true), "scan does not say lines were dropped")
 end)
 
 test("a failing sample does not keep the probe running", function()
@@ -703,43 +664,6 @@ test("/fmf log records max health and the potion cooldowns as the game reports t
   ok(all:find("pots 3385 x2 cd=95+120 en=0 ready=false", 1, true), "potion cooldown not logged: " .. all)
   ok(select(2, all:gsub("pots 3385", "")) >= 2, "potions missing in cast or sample line")
   noDiagApis()
-end)
-
-test("/fmf scan trainer lists the trainer spells of TrainerSpells with the game's texts", function()
-  local ns = M.load(nil)
-  SlashCmdList.FULLMANAFOREVER("scan trainer")
-  ok(table.concat(M.printed, "\n"):find("TrainerSpells is not loaded", 1, true), "missing addon not reported")
-  _G.TrainerSpellsBuiltin = { PRIEST = { [10] = { [13908] = { cost = 15, rank = 1, race = { "Dwarf", "Human" } },
-    [2006] = { cost = 285, rank = 1 } } }, WARRIOR = { [1] = { [100] = { cost = 10 } } } }
-  local requested = 0
-  _G.C_Spell = { GetSpellName = function(id) return "Spell" .. id end,
-    GetSpellDescription = function(id) return "Text " .. id end,
-    RequestLoadSpellData = function() requested = requested + 1 end }
-  SlashCmdList.FULLMANAFOREVER("scan trainer")
-  local all = table.concat(FullManaForeverLog.lines, "\n")
-  _G.TrainerSpellsBuiltin, _G.C_Spell = nil, nil
-  eq(requested, 2, "texts requested for the mana classes only")
-  ok(all:find("trainer PRIEST L10 2006 Spell2006 r1", 1, true), "trainer line: " .. all)
-  ok(all:find("13908 Spell13908 r1 race=Dwarf/Human", 1, true), "racial spell not marked")
-  ok(not all:find("WARRIOR", 1, true), "class without mana scanned")
-end)
-
-test("/fmf scan reads talents through the trait API", function()
-  local ns = M.load(nil)
-  _G.C_ClassTalents = { GetActiveConfigID = function() return 7 end }
-  _G.C_Traits = {
-    GetConfigInfo = function() return { treeIDs = { 1 } } end,
-    GetTreeNodes = function() return { 11 } end,
-    GetNodeInfo = function() return { entryIDs = { 21 }, currentRank = 5, maxRanks = 5 } end,
-    GetEntryInfo = function() return { definitionID = 31 } end,
-    GetDefinitionInfo = function() return { spellID = 15270 } end,
-  }
-  _G.C_Spell = { GetSpellName = function() return "Spirit Tap" end,
-    GetSpellDescription = function() return "50% while casting" end }
-  SlashCmdList.FULLMANAFOREVER("scan")
-  local all = table.concat(FullManaForeverLog.lines, "\n")
-  _G.C_ClassTalents, _G.C_Traits, _G.C_Spell = nil, nil, nil
-  ok(all:find("talent tree=1 node=11 15270 Spirit Tap 5/5 : 50% while casting", 1, true), "talent line: " .. all)
 end)
 
 test("/fmf log records group members' casts and the chat test", function()
@@ -806,6 +730,7 @@ local function spellApis(book, opts)
     GetSpellName = function(id) return opts.names and opts.names[id] or ("Spell" .. id) end,
     GetSpellTexture = function(id) return "tex" .. id end,
     GetSpellDescription = function(id) return opts.desc and opts.desc[id] or "" end,
+    GetSpellLevelLearned = function(id) return opts.learned and opts.learned[id] or 0 end,
     GetSpellCooldown = function(id)
       if opts.secretCd then return M.secret({}) end
       local c = cds[id] or { 0, 0 }
@@ -822,15 +747,15 @@ end
 local function noSpellApis() _G.C_SpellBook, _G.C_Spell, _G.GetSpellBaseCooldown = nil, nil, nil end
 local function spellSlot(ns) return slotVisible(ns, SPELL_SLOT) end
 
-test("Evocation lights up when ready and mana is at or below the setting", function()
+test("Evocation lights up when ready and mana is at or below its own threshold (35 %)", function()
   local ns = M.load(nil, { class = "MAGE" })
   spellApis({ 12051 })
   ns.Spells.Rebuild()
-  M.state.manaPct = 0.6; M.tick()
-  ok(not spellSlot(ns), "shown above 50%")
   M.state.manaPct = 0.4; M.tick()
+  ok(not spellSlot(ns), "shown above 35%")
+  M.state.manaPct = 0.3; M.tick()
   local vis, l = spellSlot(ns)
-  ok(vis, "hidden at 40%")
+  ok(vis, "hidden at 30%")
   eq(l.icon.texture, "tex12051")
   noSpellApis()
 end)
@@ -908,7 +833,7 @@ test("unlocked frame previews the own spell; options show its status", function(
   for _, r in ipairs(M.upvalue(ns.RefreshOptions, "groupRows")) do
     if ns.GROUPS[r.i].spells then found = r.st.text end
   end
-  ok(found and found:find(ns.L.stSpellReady:format("Inner Focus", 50), 1, true), "status: " .. tostring(found))
+  ok(found and found:find(ns.L.stSpellReady:format("Inner Focus", 75), 1, true), "status: " .. tostring(found))
   noSpellApis()
 end)
 
@@ -1075,7 +1000,7 @@ test("a cast of a lower rank starts the cooldown too; spells of later levels do 
   noSpellApis()
 end)
 
-test("options: spell status names the spell that comes back first; no colon after <=", function()
+test("options: spell status names the spell that comes back first", function()
   local ns = M.load(nil, { class = "MAGE" })
   local cds = spellApis({ 12051, 1259823 }, { names = { [12051] = "Evocation", [1259823] = "Eureka" } })
   cds[12051], cds[1259823] = { 90, 480 }, { 90, 120 }
@@ -1086,11 +1011,6 @@ test("options: spell status names the spell that comes back first; no colon afte
     if ns.GROUPS[r.i].spells then st = r.st.text end
   end
   ok(st and st:find("Eureka", 1, true), "status: " .. tostring(st))
-  local found
-  for _, w in pairs(M.upvalue(ns.RefreshOptions, "widgets")) do
-    if w.label and w.label.text == ns.L.optSpellThr then found = true end
-  end
-  ok(found, "label of the spell threshold has a colon after <=")
   noSpellApis()
 end)
 
@@ -1121,19 +1041,9 @@ test("perf: little garbage per tick with percent and number text", function()
   ok(kb < 1.5, ("%.2f KB garbage per tick"):format(kb))
 end)
 
-test("/fmf scan trainer does not break without C_Spell", function()
-  local ns = M.load(nil)
-  _G.TrainerSpellsBuiltin = { PRIEST = { [1] = { [1243] = { cost = 10 } } } }
-  _G.C_Spell = nil
-  local okRun = pcall(SlashCmdList.FULLMANAFOREVER, "scan trainer")
-  _G.TrainerSpellsBuiltin = nil
-  ok(okRun, "scan trainer errored")
-  ok(table.concat(FullManaForeverLog.lines, "\n"):find("trainer PRIEST L1 1243", 1, true), "line missing")
-end)
-
 test("ptBR names Life Tap correctly", function()
   local ns = M.load(nil, { locale = "ptBR" })
-  ok(ns.L.tipSpellThr:find("Tributo de Vida", 1, true), "wrong spell name in ptBR")
+  ok(ns.L.tipSpellFit:find("Tributo de Vida", 1, true), "wrong spell name in ptBR")
 end)
 
 test("the spell marker follows the spell the icon shows", function()
@@ -1631,4 +1541,143 @@ test("HOLD follows a language change", function()
   ns.acct.language = "deDE"; ns.SetLanguage("deDE")
   M.tick()
   eq(ht.text, "HALT", "HOLD still in the old language")
+end)
+
+-- 0.8.7: spells in the item list, one icon per ready spell, a threshold per spell
+
+local function spellIcon(ns, k) -- k-th spell icon (1 = the group's own button)
+  local b = buttons(ns)
+  local i = k == 1 and SPELL_SLOT or #ns.GROUPS + k - 1
+  return slotVisible(ns, i), b[i]
+end
+
+test("every ready spell past its threshold gets its own icon; the auto bar has room for each", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.6; M.tick()
+  local v1, b1 = spellIcon(ns, 1)
+  ok(v1, "Eureka! (90 %) not lit at 60 %")
+  ok(not spellIcon(ns, 2), "Evocation (35 %) lit at 60 %")
+  M.state.manaPct = 0.3; M.tick()
+  ok(spellIcon(ns, 1) and spellIcon(ns, 2), "not both lit at 30 %")
+  local _, b2 = spellIcon(ns, 2)
+  -- highest threshold first: lit icons come first, an unlit one never leaves a gap before them
+  eq(b1.layers[1].icon.texture, "tex1259823"); eq(b2.layers[1].icon.texture, "tex12051")
+  ok(b2.outer.points[1][4] > b1.outer.points[1][4], "second spell icon not next to the first")
+  -- the auto bar has room for every spell icon (a column must not run past the bar)
+  local before = ns.AutoBarLength()
+  ns.Spells.SetEnabled(ns.SPELLS[1], false) -- Evocation off
+  M.tick()
+  ok(not spellIcon(ns, 2), "switched-off spell still has an icon")
+  eq(ns.AutoBarLength(), before - ns.db.iconSize - (ns.db.iconGap or 6), "bar keeps room for a switched-off spell")
+  noSpellApis()
+end)
+
+test("each spell has its own threshold; a switched-off group hides every spell icon", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  ns.Spells.SetThreshold(ns.SPELLS[1], 0.7) -- Evocation
+  M.state.manaPct = 0.6; M.tick()
+  ok(spellIcon(ns, 1) and spellIcon(ns, 2), "own threshold ignored")
+  ns.db.enabled.spell = false; M.tick()
+  ok(not buttons(ns)[SPELL_SLOT].outer.shown and not buttons(ns)[#ns.GROUPS + 1].outer.shown,
+    "spell icons left with the group off")
+  noSpellApis()
+end)
+
+test("old common spell threshold: a changed one is kept for every spell, 50 % gives the defaults", function()
+  local saved = { dbVersion = 9, profiles = { Shared = { spellThreshold = 0.3 }, ["Kesa-Forever"] = { spellThreshold = 0.5 } },
+    chars = {} }
+  local ns = M.load(saved)
+  local sh, own = saved.profiles.Shared, saved.profiles["Kesa-Forever"]
+  eq(sh.spellThreshold, nil); eq(own.spellThreshold, nil)
+  eq(sh.spellThr.evocation, 0.3); eq(sh.spellThr.eureka, 0.3)
+  eq(sh.spellThr.lifetap, nil, "Life Tap got a threshold")
+  eq(next(own.spellThr or {}), nil, "untouched 50 % copied")
+  eq(saved.dbVersion, 10)
+end)
+
+test("item list: spells of the class with their state, threshold -/+ and on/off", function()
+  local ns = M.load(nil, { class = "MAGE", level = 10 })
+  spellApis({ 1259823 }, { learned = { [12051] = 20 }, names = { [12051] = "Evocation", [1259823] = "Eureka!" } })
+  ns.Spells.Rebuild()
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "rows")
+  local evo, eur, n = nil, nil, 0
+  for _, r in ipairs(rows) do
+    if r.sp and r.frame.shown then
+      n = n + 1
+      if r.sp.key == "evocation" then evo = r end
+      if r.sp.key == "eureka" then eur = r end
+    end
+  end
+  eq(n, 2, "spells listed (Evocation, Eureka!; no other class or race)")
+  ok(evo.owned.text:find(ns.L.libLevel:format(20), 1, true), "level reason: " .. evo.owned.text)
+  ok(eur.owned.text:find(ns.L.libKnown, 1, true), "known: " .. eur.owned.text)
+  eq(eur.amount.text, ns.L.libSpellThr:format(90))
+  eur.minus.scripts.OnClick(eur.minus)
+  eq(eur.amount.text, ns.L.libSpellThr:format(85), "- did not lower the threshold")
+  ok(math.abs(ns.db.spellThr.eureka - 0.85) < 1e-9, "stored threshold")
+  for _ = 1, 3 do eur.plus.scripts.OnClick(eur.plus) end
+  ok(not eur.plus:IsEnabled(), "+ not greyed out at 95 %")
+  eur.cb:SetChecked(false); eur.cb.scripts.OnClick(eur.cb)
+  eq(ns.db.spellOff.eureka, true, "spell not switched off")
+  ok(not ns.Spells.AnyActive(), "switched-off spell still active")
+  noSpellApis()
+end)
+
+test("item list: why a spell is missing (level, talent, trainer); Life Tap fits instead of a threshold", function()
+  local ns = M.load(nil, { class = "PRIEST", level = 30 })
+  spellApis({}, { learned = {} })
+  ns.Spells.Rebuild()
+  eq(select(1, ns.Spells.Status(ns.SPELLS[5])), "talent", "Inner Focus is a talent")
+  ns = M.load(nil, { class = "MAGE", level = 30 })
+  spellApis({}, { learned = { [12051] = 20 } })
+  ns.Spells.Rebuild()
+  eq(ns.Spells.Status(ns.SPELLS[1]), "trainer", "level reached, not learned")
+  ns = M.load(nil, { class = "WARLOCK" })
+  spellApis({ 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana." } })
+  ns.Spells.Rebuild()
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(M.upvalue(ns.ToggleLibrary, "RefreshRows"), "rows")
+  local tap
+  for _, r in ipairs(rows) do if r.sp and r.sp.key == "lifetap" and r.frame.shown then tap = r end end
+  ok(tap, "Life Tap not listed")
+  eq(tap.amount.text, ns.L.libSpellFit)
+  ok(not tap.minus.shown and not tap.plus.shown, "Life Tap has -/+")
+  noSpellApis()
+end)
+
+test("a spell on cooldown has no mark on the bar; every ready spell has its own", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local cds = spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.95; M.tick()
+  local ticks = bar(ns).ticks[SPELL_SLOT]
+  ok(ticks[1].front.shown and ticks[2].front.shown, "not one mark per ready spell")
+  cds[12051], cds[1259823] = { 90, 480 }, { 95, 120 } -- both on cooldown
+  at(100, function() M.tick() end)
+  ok(not ticks[1].front.shown and not ticks[2].front.shown, "mark shown while every spell is on cooldown")
+  noSpellApis()
+end)
+
+test("a bar set shorter than the icon column: the texts go beside the bar, away from the icons", function()
+  local ns = M.load({ vertical = true, iconSize = 48, iconGap = 6, barLength = 100 }, { class = "MAGE" })
+  spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  M.tick()
+  local b = bar(ns)
+  local p = b.manaBox.points[1]
+  eq(p[1], "BOTTOMRIGHT", "bar left of the icons: texts not left of the bar")
+  eq(p[3], "BOTTOMLEFT")
+  ok(p[4] < 0, "texts not outside the bar")
+  ns.db.barSide = "right"; ns.Layout(true)
+  p = b.manaBox.points[1]
+  eq(p[1], "BOTTOMLEFT", "bar right of the icons: texts not right of the bar"); eq(p[3], "BOTTOMRIGHT")
+  ns.db.barLength = 0; ns.Layout(true) -- auto: the bar has room for every icon, texts under it
+  p = b.manaBox.points[1]
+  eq(p[1], "TOP"); eq(p[3], "BOTTOM"); eq(p[5], -4)
+  noSpellApis()
 end)
