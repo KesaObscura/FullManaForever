@@ -96,7 +96,8 @@ and `/fmf log` (kept in releases for bug reports).
 ## Roadmap and reminders (owner asked to be reminded; keep this list current)
 
 1. Done: 0.8.3 profiles tested by the owner; settings order and wording (step 3) shipped.
-3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 and 0.8.6 (11 Oct). CurseForge uploads by the owner:
+3. Released on GitHub: 0.8.3, 0.8.4 (10 Oct), 0.8.5 and 0.8.6 (11 Oct), 0.8.7 (14 Oct, items and
+   spells list, tested by the owner). CurseForge uploads by the owner:
    0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced, 13_profiles_hold
    new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description: /fmf profile copy
    with the surname).
