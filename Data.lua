@@ -10,6 +10,8 @@ local _, ns = ...
 -- defaultOff = not suggested until the player ticks it in the item list
 -- pvp    = only usable in battlegrounds
 -- class  = only this class can use it (group or item); hidden for everyone else
+-- same   = a second item ID of the same item (same name and effect): one row in the item list,
+--          switched on/off with it, counted with it
 -- Every value below was checked against the Wowhead Forever database (build 1.60.1) and the
 -- game's own item texts (12 Oct 2026).
 ns.GROUPS = {
@@ -32,10 +34,10 @@ ns.GROUPS = {
       { id = 17352, min = 560, max = 720,  pvp = true }, -- Superior Mana Draught (560-720, battlegrounds)
       { id = 3827, min = 455, max = 585 },   -- Mana Potion (455-585)
       { id = 3385, min = 280, max = 360 },   -- Lesser Mana Potion (280-360)
-      { id = 287969, min = 280, max = 360 },  -- Lesser Mana Potion (Forever copy, level 1)
+      { id = 287969, min = 280, max = 360, same = 3385 }, -- Lesser Mana Potion (Forever copy, level 1)
       { id = 1072, min = 280, max = 360 },    -- Full Moonshine (same spell as Lesser Mana Potion)
       { id = 2455, min = 140, max = 180 },   -- Minor Mana Potion (140-180)
-      { id = 287968, min = 140, max = 180 },  -- Minor Mana Potion (Forever copy, level 1)
+      { id = 287968, min = 140, max = 180, same = 2455 }, -- Minor Mana Potion (Forever copy, level 1)
       { id = 3087, min = 140, max = 180 },    -- Mug of Shimmer Stout (140-180)
       { id = 2456, min = 90, max = 150 },   -- Minor Rejuvenation Potion (90-150 mana + health)
     },

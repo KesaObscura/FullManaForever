@@ -493,3 +493,22 @@ test("item list: notes after a long (localized) name are never cut; the name giv
     or 290
   ok(row.name.w + 4 + row.tag:GetStringWidth() <= nameW + 1, "name and note wider than the name column")
 end)
+
+test("item list: Forever's copies of Minor/Lesser Mana Potion are one row with the original", function()
+  local ns = M.load(nil, { bags = { [287968] = 2, [2455] = 1 }, level = 3 })
+  ns.ToggleLibrary(true)
+  local rows = M.upvalue(M.upvalue(ns.RebuildLibrary, "BuildContent"), "rows")
+  local minor, copy = 0, false
+  for _, r in ipairs(rows) do
+    if r.frame.shown and r.it then
+      if r.it.id == 2455 then minor = minor + 1; eq(r.owned.text, "|cff66ff66x3|r", "copies not counted") end
+      if r.it.id == 287968 or r.it.id == 287969 then copy = true end
+    end
+  end
+  eq(minor, 1, "Minor Mana Potion rows")
+  ok(not copy, "copy listed as its own row")
+  ns.SetItemEnabled(2455, false)
+  local copyIt
+  for _, it in ipairs(ns.FullList(1)) do if it.id == 287968 then copyIt = it end end
+  ok(not ns.IsItemEnabled(copyIt), "switching the original off left the copy on")
+end)

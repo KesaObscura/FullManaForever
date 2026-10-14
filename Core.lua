@@ -168,9 +168,23 @@ end
 
 function ns.FullList(i) return fullLists[i] or {} end
 
+-- how many of an item's other IDs (Data.lua "same") are in the bags
+function ns.CopyCount(it)
+  local n = 0
+  for _, g in ipairs(ns.GROUPS) do
+    for _, c in ipairs(g.items) do
+      if c.same == it.id then
+        local k = C_Item.GetItemCount(c.id)
+        if not IsSecret(k) and k then n = n + k end
+      end
+    end
+  end
+  return n
+end
+
 -- db.disabled[id]: true = off, false = on (overrides defaultOff), nil = item default
 function ns.IsItemEnabled(it)
-  local state = db.disabled[it.id]
+  local state = db.disabled[it.same or it.id]
   if state == nil then return not it.defaultOff end
   return not state
 end
