@@ -1649,3 +1649,16 @@ test("item list: why a spell is missing (level, talent, trainer); Life Tap fits 
   ok(not tap.minus.shown and not tap.plus.shown, "Life Tap has -/+")
   noSpellApis()
 end)
+
+test("a spell on cooldown has no mark on the bar; every ready spell has its own", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local cds = spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.95; M.tick()
+  local ticks = bar(ns).ticks[SPELL_SLOT]
+  ok(ticks[1].front.shown and ticks[2].front.shown, "not one mark per ready spell")
+  cds[12051], cds[1259823] = { 90, 480 }, { 95, 120 } -- both on cooldown
+  at(100, function() M.tick() end)
+  ok(not ticks[1].front.shown and not ticks[2].front.shown, "mark shown while every spell is on cooldown")
+  noSpellApis()
+end)

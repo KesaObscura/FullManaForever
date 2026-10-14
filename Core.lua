@@ -387,13 +387,9 @@ local function BandCandidates(i)
 end
 
 -- the mana% at which the group's first icon appears (for status + bar ticks)
+local tickSpells = {} -- reused list of the spells that get a mark on the bar
 local function FirstThreshold(i, maxMana)
   local group = ns.GROUPS[i]
-  if group.spells then
-    -- the spell the icon would show (Life Tap has its own threshold), else the first known
-    local sp = ns.Spells.Candidate() or ns.Spells.FirstKnown()
-    return sp and ns.Spells.Threshold(sp, maxMana)
-  end
   if db.pickMode == "fit" and CanBand(group) then
     local c = BandCandidates(i)
     if #c > 0 then return Threshold(c[#c].it, maxMana) end
@@ -1460,7 +1456,18 @@ local function UpdateBar(maxMana)
     local ticks = bar.ticks[i]
     local used = 0
     if db.enabled[group.key] and ns.ForMyClass(group) then
-      if db.pickMode == "fit" and CanBand(group) then
+      if group.spells then
+        -- one mark per spell icon that can light up now (ready, switched on); a spell on
+        -- cooldown has no mark. The unlocked frame marks every spell it previews.
+        local list = db.locked and ns.Spells.Candidates(tickSpells, maxMana) or ns.Spells.ActiveList(tickSpells)
+        for _, sp in ipairs(list) do
+          local thr = ns.Spells.Threshold(sp, maxMana)
+          if used < #ticks and thr > 0 and thr < 1 then
+            used = used + 1
+            PlaceTick(ticks[used], thr, len, thick, true, vertical)
+          end
+        end
+      elseif db.pickMode == "fit" and CanBand(group) then
         -- weakest first: thick mark where the icon lights up, thin marks where a
         -- stronger item becomes the best fit
         local c = BandCandidates(i)
