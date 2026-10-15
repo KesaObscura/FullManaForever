@@ -13,6 +13,8 @@
 ## Version: 0.8.10
 ## IconTexture: Interface\AddOns\FullManaForever\icon
 ## AddonCompartmentFunc: FullManaForever_OnCompartmentClick
+## AddonCompartmentFuncOnEnter: FullManaForever_OnCompartmentEnter
+## AddonCompartmentFuncOnLeave: FullManaForever_OnCompartmentLeave
 ## SavedVariables: FullManaForeverDB, FullManaForeverLog
 ## Author: KesaObscura
 ## X-License: MIT

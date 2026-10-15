@@ -74,7 +74,7 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 | `/fmf probe` | print API status for bug reports |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
 
-The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap.
+The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap (left-click: settings, right-click: items and spells).
 
 ## FAQ
 

@@ -1830,8 +1830,27 @@ function ns.RemoveCustom(id)
 end
 
 -- addon compartment (minimap addon menu) entry
-function FullManaForever_OnCompartmentClick()
-  if ns.ToggleOptions then ns.ToggleOptions() end
+-- addon menu at the minimap: left-click settings, right-click the item list; a tooltip
+-- like other addons have (name, version, what the clicks do)
+function FullManaForever_OnCompartmentClick(_, button)
+  if button == "RightButton" then
+    if ns.ToggleLibrary then ns.ToggleLibrary() end
+  elseif ns.ToggleOptions then
+    ns.ToggleOptions()
+  end
+end
+
+function FullManaForever_OnCompartmentEnter(_, frame)
+  local L = ns.L
+  GameTooltip:SetOwner(frame or UIParent, "ANCHOR_LEFT")
+  GameTooltip:AddDoubleLine("Full Mana Forever", "v" .. ns.VERSION, 0.4, 0.7, 1, 1, 0.82, 0)
+  GameTooltip:AddDoubleLine(L.cmpLeft, L.cmpSettings, 1, 0.82, 0, 1, 1, 1)
+  GameTooltip:AddDoubleLine(L.cmpRight, L.libTitle, 1, 0.82, 0, 1, 1, 1)
+  GameTooltip:Show()
+end
+
+function FullManaForever_OnCompartmentLeave()
+  GameTooltip:Hide()
 end
 
 ------------------------------------------------------------------------

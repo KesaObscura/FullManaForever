@@ -3,6 +3,7 @@
 **Full Mana Forever 0.8.10**
 
 - Own icon in the game: the addon list and the addon menu at the minimap now show the Full Mana Forever flask instead of a plain mana potion
+- Addon menu at the minimap: a tooltip with the version and what the clicks do; left-click opens the settings, right-click the list of items and spells
 
 **Full Mana Forever 0.8.9**
 
