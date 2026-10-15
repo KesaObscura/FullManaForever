@@ -22,7 +22,11 @@ and `/fmf log` (kept in releases for bug reports).
 - **After every change, hand the owner a test zip** built from the committed state:
   `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!docs' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
   (same contents as `.pkgmeta` packages).
-- Work on the session branch; `main` changes only through a PR the owner merges.
+- Work on the session branch; `main` changes only through a PR the owner merges with **Squash
+  and merge** (owner, 15 Oct: no merge commits with the branch name in `main`); after the merge
+  reset the session branch to `main`.
+- Commit author stays `Claude <noreply@anthropic.com>` (owner, 15 Oct); never rewrite the history
+  of `main`. `CLAUDE.md` stays in the repo (cloud sessions read it from there).
 
 ## Keep in sync on every user-visible change
 
@@ -101,7 +105,9 @@ and `/fmf log` (kept in releases for bug reports).
    game's own cooldowns, percent amounts), tested by the owner 14 Oct. CurseForge uploads by
    the owner: 0.8.3 on 11 Oct (description CURSEFORGE.md, gallery 06_settings replaced,
    13_profiles_hold new), 0.8.4 on Monday 12 Oct, 0.8.5 on 13 Oct, 0.8.6 on 14 Oct (description:
-   /fmf profile copy with the surname); 0.8.7 (gallery 06 and 07 new) and 0.8.8 next.
+   /fmf profile copy with the surname), 0.8.7 on 15 Oct (new description in three blocks with
+   images linked from GitHub: they show on CurseForge; gallery 06 and 07 new); 0.8.8 and 0.8.9
+   next, with new screenshots and a GIF (owner records video).
 3d. Item review (owner, 14 Oct): on the last beta day (21 Oct) or after launch, go through all
    items: what is junk / unimportant for the addon, what is needed. Until then more rather than
    fewer items (players can add their own anyway).
