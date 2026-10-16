@@ -209,3 +209,57 @@ if __name__ == "__main__":
              "Every part has its own switch and text size. Hover any option for a short explanation.",
              [(crop("images/187.webp", (520, 242, 960, 838), 0.8), "Display and look"),
               (crop("images/187.webp", (960, 242, 1400, 838), 0.8), "Visibility, drinking, own spells")], top=145)
+    # ---- 0.8.9 shots (16 Oct 2026): icon size 72, bar 20, text 100 %, whole seconds, stone floor;
+    # the Resurrection Sickness shot was taken in a forest (the addon sits 20 px lower there)
+    R9 = (825, 640, 1135, 772)        # row layout: seconds, icons, bar, regen, mana numbers
+    R9F = (825, 660, 1135, 792)       # the same in the forest shot
+    BAR9 = (825, 725, 1135, 772)      # only the bar, its texts and the mana numbers
+    BAR9F = (825, 745, 1135, 792)
+    COL9 = (1035, 425, 1185, 708)     # icons in a column
+    if only("v9-01"):
+        make("01_hero.png", "Drink at the right moment",
+             "Potions light up when they fit into your missing mana, your own mana spells when they are ready.",
+             [(crop("images/341.webp", R9, 2.6), "")], top=190)
+    if only("v9-02"):
+        make("02_right_potion.png", "The right potion for your missing mana",
+             "Several potions in your bags: the strongest one that will not overflow lights up.",
+             [(crop("images/339.webp", R9, 1.75), "78 % mana:\nsmall potion"),
+              (crop("images/340.webp", R9, 1.75), "64 % mana:\nstronger potion")], top=165, stack=True)
+    if only("v9-03r"):
+        make("03_five_second_rule_row.png", "Five-second rule and live mana regen",
+             "After a spell: gold strip and seconds. The regen running right now, also in combat.",
+             [(crop("images/338.webp", R9, 1.75), "Casting:\n4 s left, regen 0.0/s"),
+              (crop("images/339.webp", R9, 1.75), "Rule over:\nregen 15.5/s")], top=165, stack=True)
+    if only("v9-03c"):
+        make("03_five_second_rule.png", "Icons in a column",
+             "The same in a column: seconds above the bar, mana and regen below it.",
+             [(crop("images/355.webp", COL9, 1.6), "Casting: 4 s, regen 0.0/s"),
+              (crop("images/354.webp", COL9, 1.6), "Rule over: regen 15.5/s")], top=150)
+    if only("v9-10"):
+        make("10_regen_colors.png", "Your regen at a glance",
+             "Blue: normal. Green: above normal (drinking, Spirit Tap, ...). Red: Resurrection Sickness.",
+             [(crop("images/346.webp", BAR9, 1.9), "Normal:\n15.5/s", (153, 217, 255)),
+              (crop("images/345.webp", BAR9, 1.9), "Drinking:\n23.9/s", (115, 255, 115)),
+              (crop("images/361.webp", BAR9F, 1.9), "After death:\n4.0/s", (255, 110, 100))],
+             top=175, stack=True)
+    if only("v9-14"):
+        make("14_see_it_coming.png", "See it coming",
+             "Icons show up grey in the last seconds of their cooldown, counting down like your action bar.",
+             [(crop("images/344.webp", R9, 1.6), "Potion ready in 21 s"),
+              (crop("images/343.webp", R9, 1.6), "Spells too: Eureka! in 11 s")], top=200)
+    if only("v9-09"):
+        make("09_own_spells.png", "Your own mana spells too",
+             "Eureka!, Evocation, Innervate, Mana Tide, Inner Focus, Life Tap: lit when ready and your mana is low.",
+             [(crop("images/350.webp", R9, 2.6), "")], top=190)
+    if only("v9-08"):
+        make("08_unlocked.png", "Easy to place",
+             "Unlock the frame: everything that is switched on shows up, grey where you carry nothing.",
+             [(crop("images/349.webp", (805, 630, 1395, 775), 1.8), "")], top=200)
+    if only("v9-11"):
+        make("11_move_texts.png", "Move texts anywhere",
+             "Move texts freely: drag the mana numbers, the seconds and the regen, each on its own.",
+             [(crop("images/348.webp", (830, 495, 1100, 760), 2.0), "")], top=150)
+    if only("v9-07"):
+        make("07_item_list.png", "Items and spells",
+             "Every supported item and your class's mana spells: switch each on or off, see your level and what you carry.",
+             [(crop("images/356.webp", (818, 88, 1440, 690), 0.9), "")], top=140)

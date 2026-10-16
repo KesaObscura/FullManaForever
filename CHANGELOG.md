@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.8.10**
+
+- Own icon in the game: the addon list and the addon menu at the minimap now show the Full Mana Forever flask instead of a plain mana potion
+- Addon menu at the minimap: a tooltip with the version and what the clicks do; left-click opens the settings, right-click the list of items and spells
+
 **Full Mana Forever 0.8.9**
 
 - Regen colour after death: the lowered regen under Resurrection Sickness (or anything else that takes at least half of your Spirit or Intellect) is no longer taken as your normal regen, so your normal regen no longer turns green with the up arrow once the debuff ends. Gear with a few points less Spirit still counts as normal

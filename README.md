@@ -15,7 +15,11 @@ shows the **five-second rule (5SR)** and your **live mana regen per second, also
 
 | Right potion for the missing mana | Live regen and five-second rule | Own mana spells |
 |---|---|---|
-| ![Several potions: the strongest one that will not overflow lights up](docs/images/right-mana-potion-for-missing-mana.png) | ![Regen colours: normal, above normal, five-second rule](docs/images/live-mana-regen-five-second-rule.png) | ![Evocation, Innervate, Eureka! and other mana spells](docs/images/own-mana-spells-evocation-innervate.png) |
+| ![Several potions: the strongest one that will not overflow lights up](docs/images/right-mana-potion-for-missing-mana.png) | ![Regen colours: blue normal, green while drinking, red under Resurrection Sickness](docs/images/live-mana-regen-five-second-rule.png) | ![Evocation, Innervate, Eureka! and other mana spells](docs/images/own-mana-spells-evocation-innervate.png) |
+
+| See it coming: grey with a countdown, then it lights up | Five-second rule: 5 to 1 at 0.0/s, then the regen runs again |
+|---|---|
+| ![The mana potion shows up grey with a countdown, lights up, and is drunk](docs/images/see-it-coming-mana-potion.gif) | ![A spell starts the five-second rule: gold strip and seconds, regen 0.0/s, then 15.5/s again](docs/images/five-second-rule-live-regen.gif) |
 
 ## How it works with Forever's addon rules
 
@@ -66,8 +70,9 @@ when the icon lights up.
   简体中文, 繁體中文. The addon follows your game language.
 
 Supported items and their restore values are in [`Data.lua`](Data.lua); they were checked
-against the Wowhead Forever database (build 1.60.1). Dreamless Sleep Potion is off by
-default because it puts you to sleep for 12 seconds.
+against the Wowhead Forever database (build 1.60.1) and the game's own item data (texts and the
+shared potion cooldown). Dreamless Sleep Potions are off by default because they put you to
+sleep for 12 seconds, Wildvine Potion because it may restore nothing.
 
 ## Looking for a mana tick or mp5 tracker?
 
@@ -103,7 +108,7 @@ otherwise the game does not load it.
 
 | Command | Does |
 |---|---|
-| `/fmf` | open the settings (also in Options → AddOns and the addon menu at the minimap) |
+| `/fmf` | open the settings (also in Options → AddOns and the addon menu at the minimap: left-click settings, right-click items and spells) |
 | `/fmf items` | open the list of items and spells |
 | `/fmf profile` | profile in use and characters with own settings; `/fmf profile shared` / `own` switches, `copy <name>` takes over another character's settings (first name and surname, or the first name alone when it is unique), `undo` takes back the last copy |
 | `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |

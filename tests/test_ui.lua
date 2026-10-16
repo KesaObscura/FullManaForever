@@ -512,3 +512,23 @@ test("item list: Forever's copies of Minor/Lesser Mana Potion are one row with t
   for _, it in ipairs(ns.FullList(1)) do if it.id == 287968 then copyIt = it end end
   ok(not ns.IsItemEnabled(copyIt), "switching the original off left the copy on")
 end)
+
+test("addon menu at the minimap: tooltip with name, version and both clicks; right-click opens the item list", function()
+  local ns = M.load(nil)
+  GameTooltip.lines = {}
+  FullManaForever_OnCompartmentEnter("FullManaForever", UIParent)
+  local t = table.concat(GameTooltip.lines, "\n")
+  ok(t:find("Full Mana Forever|v" .. ns.VERSION, 1, true), "name and version: " .. t)
+  ok(t:find(ns.L.cmpLeft .. "|" .. ns.L.cmpSettings, 1, true), "left-click line")
+  ok(t:find(ns.L.cmpRight .. "|" .. ns.L.libTitle, 1, true), "right-click line")
+  FullManaForever_OnCompartmentLeave()
+  local toc = io.open("FullManaForever.toc"):read("*a")
+  ok(toc:find("AddonCompartmentFuncOnEnter: FullManaForever_OnCompartmentEnter", 1, true), "TOC OnEnter")
+  ok(toc:find("AddonCompartmentFuncOnLeave: FullManaForever_OnCompartmentLeave", 1, true), "TOC OnLeave")
+  local opened = false
+  local real = ns.ToggleLibrary
+  ns.ToggleLibrary = function() opened = true end
+  FullManaForever_OnCompartmentClick("FullManaForever", "RightButton")
+  ns.ToggleLibrary = real
+  ok(opened, "right-click did not open the item list")
+end)
