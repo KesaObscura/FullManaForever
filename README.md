@@ -15,7 +15,11 @@ shows the **five-second rule (5SR)** and your **live mana regen per second, also
 
 | Right potion for the missing mana | Live regen and five-second rule | Own mana spells |
 |---|---|---|
-| ![Several potions: the strongest one that will not overflow lights up](docs/images/right-mana-potion-for-missing-mana.png) | ![Regen colours: normal, above normal, five-second rule](docs/images/live-mana-regen-five-second-rule.png) | ![Evocation, Innervate, Eureka! and other mana spells](docs/images/own-mana-spells-evocation-innervate.png) |
+| ![Several potions: the strongest one that will not overflow lights up](docs/images/right-mana-potion-for-missing-mana.png) | ![Regen colours: blue normal, green while drinking, red under Resurrection Sickness](docs/images/live-mana-regen-five-second-rule.png) | ![Evocation, Innervate, Eureka! and other mana spells](docs/images/own-mana-spells-evocation-innervate.png) |
+
+| See it coming: grey with a countdown, then it lights up | Five-second rule: 5 to 1 at 0.0/s, then the regen runs again |
+|---|---|
+| ![The mana potion shows up grey with a countdown, lights up, and is drunk](docs/images/see-it-coming-mana-potion.gif) | ![A spell starts the five-second rule: gold strip and seconds, regen 0.0/s, then 15.5/s again](docs/images/five-second-rule-live-regen.gif) |
 
 ## How it works with Forever's addon rules
 
