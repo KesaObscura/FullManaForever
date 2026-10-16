@@ -108,7 +108,9 @@ and `/fmf log` (kept in releases for bug reports).
    /fmf profile copy with the surname), 0.8.7 on 15 Oct (new description in three blocks with
    images linked from GitHub: they show on CurseForge; gallery 06 and 07 new), 0.8.8 on 16 Oct (description
    with "See it coming", gallery unchanged); 0.8.9 next, with new screenshots and a GIF (owner
-   records video). 0.8.10 (16 Oct: own icon, minimap menu tooltip, gallery and GIFs) released on GitHub.
+   records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs); CurseForge:
+   0.8.9 next (package cf-0.8.9 with new gallery), then 0.8.10. PR bodies: check after creating
+   that no session link was appended (removed from PR #1-#15 on 16 Oct).
 3d. Item review (owner, 14 Oct): on the last beta day (21 Oct) or after launch, go through all
    items: what is junk / unimportant for the addon, what is needed. Until then more rather than
    fewer items (players can add their own anyway).
