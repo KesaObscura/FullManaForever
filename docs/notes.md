@@ -99,6 +99,14 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   uploads); every image on CurseForge is current as of 0.8.2.
 - 0.8.7 (14 Oct): 06_settings (entry 06v4) and 07_item_list (entry 07v2, "Items and spells" with
   the own spells) re-made from the owner's English screenshots.
+- 0.8.9 gallery (16 Oct, owner's shots of 0.8.10 at icon size 72, bar 20, whole seconds; entries
+  v9-* in tools/gallery.py): 01, 02, 03 row and column, 07, 08, 09, 10 (with red), 11 re-made,
+  14_see_it_coming new. GIFs in docs/images (see-it-coming-mana-potion.gif,
+  five-second-rule-live-regen.gif, from two short screen recordings, cropped to the addon) are
+  linked in the description. Order on CurseForge from 0.8.9: hero, see it coming, regen at a
+  glance, right potion, rule row, rule column, own spells, items and spells, easy to place, move
+  texts, just the regen, mana text, profiles and hold, settings. Featured: hero, see it coming,
+  regen at a glance, right potion, own spells.
 - The finished gallery images (as on CurseForge) are kept in `docs/gallery/`. The in-game source
   screenshots are NOT in the repo (they show character names and chat): the owner keeps them;
   `tools/gallery.py` expects them as `<workdir>/images/<n>.webp`, numbers from the old session.

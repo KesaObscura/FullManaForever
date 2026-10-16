@@ -24,6 +24,8 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ![Several potions in your bags: the strongest one that will not overflow lights up](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/right-mana-potion-for-missing-mana.png)
 
+![See it coming: the potion shows up grey with a countdown, lights up, you drink](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/see-it-coming-mana-potion.gif)
+
 ### Mana bar, five-second rule and live regen
 
 - **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
@@ -32,7 +34,9 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
 
-![Regen colours: normal, above normal while drinking, five-second rule](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/live-mana-regen-five-second-rule.png)
+![Five-second rule: a spell, the gold strip counts 5 to 1 at 0.0/s, then the regen runs again](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/five-second-rule-live-regen.gif)
+
+![Regen colours: blue normal, green while drinking, red under Resurrection Sickness](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/live-mana-regen-five-second-rule.png)
 
 ### Comfort
 
