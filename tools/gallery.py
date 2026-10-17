@@ -262,4 +262,5 @@ if __name__ == "__main__":
     if only("v9-07"):
         make("07_item_list.png", "Items and spells",
              "Every supported item and your class's mana spells: switch each on or off, see your level and what you carry.",
-             [(crop("images/356.webp", (818, 88, 1440, 690), 0.9), "")], top=140)
+             [(crop("images/356.webp", (818, 88, 1440, 690), 0.78), "Potions: level and how many you carry"),
+              (crop("images/364.webp", (690, 240, 1312, 842), 0.78), "Gear and your own mana spells")], top=150)
