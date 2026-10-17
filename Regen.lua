@@ -15,7 +15,7 @@ local fsrUntil = 0
 local BOOST_RATIO = 1.1       -- 10 % above normal, so small rounding never turns it green
 local BOOST_SPELLS = {        -- [spell] = seconds of raised regen (own casts only)
   [12051] = 8,                -- Evocation (channel)
-  [1259705] = 15,             -- Ley Line reading (15 s without a ley line nearby, else 15 min)
+  [1259705] = 30,             -- Read Leyline (30 s without a leyline nearby, else 15 min; game text 17 Oct)
 }
 local baseline
 local boostUntil = 0

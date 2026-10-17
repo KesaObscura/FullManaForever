@@ -81,7 +81,7 @@ and `/fmf log` (kept in releases for bug reports).
   can get an icon (0.8.7, owner: icons must not run past the bar), minimum 3.
 - The potion icon stays lit while wanding (sweep shows the wait).
 - Regen green when above normal (out of combat vs the lowest normal regen since the last
-  level-up or gear change, +10 %; in combat only own Evocation 8 s and Ley Line reading 15 s).
+  level-up or gear change, +10 %; in combat only own Evocation 8 s and Read Leyline 30 s, owner 17 Oct).
 - Profiles (0.8.3): "Shared" + own per character (copy of Shared, kept when switching back); new
   characters start on Shared; copy/reset/delete confirm, one undo per session; disabled items
   per profile, own items and language account-wide.
@@ -115,8 +115,10 @@ and `/fmf log` (kept in releases for bug reports).
 3d. 0.8.12 (owner, 17 Oct): research after the 17 Oct patch (talents, abilities, spells) and the
    item review: what is junk / unimportant for the addon, what is needed. Everything found but not
    taken is kept in the owner's private research notes and decided again after every scan.
-   First pass done 17 Oct (facts in `docs/notes.md`); item data not complete yet, a second pass
-   is due. Open decisions: Ley Line 30 s, Windstone, the item review.
+   First pass done 17 Oct (facts in `docs/notes.md`); item data not complete even after a
+   second pass: ~7 400 item IDs are still refused by the beta server (also real items such as the
+   trinkets Second Wind 11819 and Burst of Knowledge 11832): look again after launch. Decided
+   17 Oct: Read Leyline 30 s (0.8.12), Windstone is junk. Open: the owner's item review.
 3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
    light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
    Tested in game by the owner 17 Oct. The order is dynamic (thresholds, max mana): the gallery

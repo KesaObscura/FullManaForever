@@ -1937,3 +1937,20 @@ test("a smaller potion turns into the bigger one in the same place", function()
   ok(slotVisible(ns, 1), "potion slot not lit")
   eq(b1.outer.points[1][4], x1, "the potion slot moved")
 end)
+
+test("Read Leyline keeps the regen green for 30 s after the cast (game text, 17 Oct)", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  _G.GetPowerRegen = function() return M.secret(15.5), M.secret(0) end -- in combat: secret
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local real = GetTime
+  _G.GetTime = function() return 100 end
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 1259705)
+  _G.GetTime = function() return 129 end
+  local _, _, boosted = ns.RegenText()
+  ok(boosted, "not green 29 s after the cast")
+  _G.GetTime = function() return 131 end
+  _, _, boosted = ns.RegenText()
+  ok(not boosted, "still green 31 s after the cast")
+  _G.GetTime = real
+  noRegenApis()
+end)

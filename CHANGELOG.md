@@ -1,5 +1,9 @@
 # Changelog
 
+**Full Mana Forever 0.8.12**
+
+- Read Leyline (Skyborne, renamed by the game from "Ley Line reading"): in combat the regen now stays green for 30 seconds after the cast, as the spell's own text says since the 17 October patch (was 15). The items and spells of the addon were checked again after the patch: all unchanged; the new fourth rank of Mana Tide Totem is found by itself
+
 **Full Mana Forever 0.8.11**
 
 - No more gaps in the row or column of icons: the icons now stand in the order they light up, the one with the highest mana threshold first. When your mana drops, new icons appear at the end and the lit ones stay where they are; the potion slot keeps its place when a smaller potion turns into a bigger one. The order follows your thresholds, so changing a spell's threshold, your max mana or your items can move an icon. Runes and Life Tap can still be hidden in their place while your health is too low for them

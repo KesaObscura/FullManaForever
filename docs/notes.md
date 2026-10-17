@@ -141,7 +141,7 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   the cast. The racial "Walk on Air" 1259416 (120) has nothing to do with mana.
 - 0.8.2 (user request on CurseForge, owner: "do all"): regen text green when above normal
   (out of combat vs the lowest normal regen since the last level-up or gear change, +10 %; in
-  combat only own Evocation 8 s and Ley Line reading 15 s, Innervate left out because its
+  combat only own Evocation 8 s and Read Leyline 15 s (30 s since 0.8.12), Innervate left out because its
   target is unknown). All three texts (mana numbers, rule seconds, regen) show without the bar
   and can each be dragged (`textFree`, `textPoints[mana|fsr|regen]` in screen units, reset by
   `/fmf reset`); the owner read the request as "move all texts".
@@ -207,7 +207,7 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   moved down: rank 1 16190 now level 1 (talent), rank 2 17354 at 38, rank 3 17359 at 48 (cheaper),
   new rank 4 1325256 at 58 (found by name in the spell book, nothing to add). Ley Line reading is
   now named "Read Leyline" (same ID 1259705; we look spells up by their live name) and lasts 30 s
-  without a leyline nearby (text; we counted 15 s), 15 min with one. Walk on Air 120 -> 90 s cd.
+  without a leyline nearby (text; we counted 15 s, 30 s since 0.8.12), 15 min with one. Walk on Air 120 -> 90 s cd.
   Eureka! no longer has the subtext "Racial" (we do not read it). Every item of `Data.lua` exists
   with the same use spell. Windstone 255663 (Skywall only) and Green Tea Leaf 1401 share the
   potion cooldown.

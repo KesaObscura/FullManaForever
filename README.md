@@ -7,7 +7,7 @@
 An addon for **World of Warcraft: Forever** (WoW Forever, "Classic+", client 1.60.1) for healers
 and every other mana user. It lights up your **mana potion**, Demonic/Dark Rune, mage mana gem,
 mana item or **own mana spell** (Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap,
-Eureka!, Ley Line reading) **the moment it is ready and fits into your missing mana**, so nothing
+Eureka!, Read Leyline) **the moment it is ready and fits into your missing mana**, so nothing
 is wasted: drink on cooldown, stay near full mana, and never panic-chug at 5 %. A compact mana bar
 shows the **five-second rule (5SR)** and your **live mana regen per second, also in combat**.
 
@@ -45,7 +45,7 @@ when the icon lights up.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
   (30 % by default).
 - **Own mana spells**: Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the
-  racials Eureka! (gnome) and Ley Line reading (Skyborne): every ready spell gets its own icon
+  racials Eureka! (gnome) and Read Leyline (Skyborne): every ready spell gets its own icon
   when your mana is at or below its own threshold (sensible defaults per spell, set in the list
   below); Life Tap when its mana fits.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
