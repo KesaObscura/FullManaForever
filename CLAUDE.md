@@ -128,9 +128,8 @@ and `/fmf log` (kept in releases for bug reports).
    0.8.10 tested in game (icon, menu tooltip, right-click). 0.8.11 started 17 Oct: icon gaps
    (3c), item review (3d), re-shoot "Just the regen". GitHub allows squash merging only.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
-   fix bugs; one reply in the Blizzard forum thread "WoW Forever Addons" (UI and Macro) and one
-   Reddit post only if the owner still wants them (notes to other sites dropped 17 Oct).
-   Reply to CurseForge comments within 1-2 days.
+   fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+   Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md` (druid forms, Life Tap, group
    log, Mana Agate, Evocation, Inner Focus buff, launch-day Interface check). Update it as answers come.
 7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is
