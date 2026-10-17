@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.10"
+ns.VERSION = "0.8.11"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -926,17 +926,36 @@ function ns.AutoBarLength()
   return Span(math.max(IconSlots(), 3))
 end
 
-local layoutKey
+-- icons stand in the order they light up (owner, 17 Oct): the highest threshold first. Mana
+-- is secret in combat, so only the game knows which icons are lit; the thresholds come from
+-- max mana, which is readable. Every icon is lit from its threshold down to 0 %, so the lit
+-- icons always form an unbroken row from the first one: no gaps. The one exception is the
+-- health check of runes and Life Tap (health is secret too): too little health hides such an
+-- icon in its place. Placing them last would be worse (a lit rune behind an unlit icon with a
+-- lower threshold), so they only go last among equal thresholds; then the group order.
+local function ByLight(a, b)
+  local ta, tb = a.sortThr or -1, b.sortThr or -1
+  if ta ~= tb then return ta > tb end
+  if (a.hpGated and true) ~= (b.hpGated and true) then return not a.hpGated end
+  return a.idx < b.idx
+end
+
+local order, lastOrder = {}, {}
 function ns.Layout(force)
   if not anchor then return end
   local size, gap, vertical = db.iconSize, db.iconGap or 6, db.vertical
-  local key, bit = 0, 1
+  wipe(order)
   for _, b in ipairs(buttons) do
-    if b.outer:IsShown() then key = key + bit end
-    bit = bit * 2
+    if b.outer:IsShown() then order[#order + 1] = b end
   end
-  if key == layoutKey and not force then return end
-  layoutKey = key
+  table.sort(order, ByLight)
+  local same = #order == #lastOrder
+  for k = 1, #order do
+    if order[k] ~= lastOrder[k] then same = false end
+    lastOrder[k] = order[k]
+  end
+  for k = #lastOrder, #order + 1, -1 do lastOrder[k] = nil end
+  if same and not force then return end
   local pos, count = 0, 0
   for _, b in ipairs(buttons) do
     b.outer:SetSize(size, size)
@@ -944,16 +963,16 @@ function ns.Layout(force)
       l.glow:SetSize(size * 1.9, size * 1.9)
       l.shine:SetHeight(size * 0.6)
     end
+  end
+  for _, b in ipairs(order) do
     b.outer:ClearAllPoints()
     if vertical then
       b.outer:SetPoint("TOP", anchor, "TOP", 0, -pos)
     else
       b.outer:SetPoint("LEFT", anchor, "LEFT", pos, 0)
     end
-    if b.outer:IsShown() then
-      pos = pos + size + gap
-      count = count + 1
-    end
+    pos = pos + size + gap
+    count = count + 1
   end
   local span = math.max(pos - gap, size, count == 0 and size * 2 or 0)
   if vertical then anchor:SetSize(size, span) else anchor:SetSize(span, size) end
@@ -1161,7 +1180,7 @@ local function CreateAnchor()
 
   -- one button per group, then the spell group's extra icons (it is the last group, so they
   -- follow it in the row)
-  for i = 1, #ns.GROUPS + ns.SPELL_ICONS - 1 do buttons[i] = CreateButton() end
+  for i = 1, #ns.GROUPS + ns.SPELL_ICONS - 1 do buttons[i] = CreateButton(); buttons[i].idx = i end
   CreateBar()
   ns.PositionBar()
   ns.Layout(true)
@@ -1333,6 +1352,7 @@ local function UpdateSpellButtons(b, maxMana, maxHP, on)
     else
       local id = S.ID(sp)
       local l = bk.layers[1]
+      bk.sortThr, bk.hpGated = S.Threshold(sp, maxMana), S.HpCost(sp) ~= nil
       SetLayer(l, -id, nil, S.Texture(id))
       if db.locked then
         local cs, cd = S.Countdown(sp) -- nearly ready (db.cdShow): grey, counting down, no glow
@@ -1358,7 +1378,13 @@ local function UpdateButton(i, b, maxMana, maxHP)
     return UpdateSpellButtons(b, maxMana, maxHP, db.enabled[group.key] and ns.ForMyClass(group))
   end
   if not db.enabled[group.key] or not ns.ForMyClass(group) then b.outer:Hide() return end
-  if not db.locked then ShowPreview(i, b, OwnedItem(i)) return end  -- positioning preview
+  if not db.locked then -- positioning preview, in the order the icons light up
+    local item = OwnedItem(i)
+    b.sortThr = FirstThreshold(i, maxMana)
+    b.hpGated = item and (item.hpCost or item.hpCostPct) and true
+    ShowPreview(i, b, item)
+    return
+  end
 
   if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
   if not groupOK then b.outer:Hide() return end
@@ -1404,6 +1430,8 @@ local function UpdateButton(i, b, maxMana, maxHP)
     end
   end
   HideLayers(b, #cands + 1)
+  -- the weakest item (last) lights up first: its threshold places the slot (ns.Layout)
+  b.sortThr, b.hpGated = Threshold(cands[#cands].it, maxMana), hpCost ~= nil
   ApplyHpGate(b, hpCost, maxHP)
   b.outer:Show()
 end

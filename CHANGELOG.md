@@ -1,5 +1,9 @@
 # Changelog
 
+**Full Mana Forever 0.8.11**
+
+- No more gaps in the row or column of icons: the icons now stand in the order they light up, the one with the highest mana threshold first. When your mana drops, new icons appear at the end and the lit ones stay where they are; the potion slot keeps its place when a smaller potion turns into a bigger one. The order follows your thresholds, so changing a spell's threshold, your max mana or your items can move an icon. Runes and Life Tap can still be hidden in their place while your health is too low for them
+
 **Full Mana Forever 0.8.10**
 
 - Own icon in the game: the addon list and the addon menu at the minimap now show the Full Mana Forever flask instead of a plain mana potion

@@ -49,7 +49,8 @@ when the icon lights up.
   when your mana is at or below its own threshold (sensible defaults per spell, set in the list
   below); Life Tap when its mana fits.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
-  stronger potion becomes the best fit. Icons in a row or a column, bar on any side;
+  stronger potion becomes the best fit. Icons stand in the order they light up (highest
+  threshold first), so lit icons never leave a gap. Icons in a row or a column, bar on any side;
   color, thickness, length, icon size and spacing are adjustable.
 - **Five-second rule and mana regen** on the bar: a gold strip and the seconds after a spell
   that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns

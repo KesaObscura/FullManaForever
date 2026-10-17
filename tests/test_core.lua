@@ -1883,3 +1883,52 @@ test("the TOC icon is the addon's own icon.tga (64x64, 32 bit) and is packaged",
   local meta = io.open(".pkgmeta"):read("*a")
   ok(not meta:find("icon"), ".pkgmeta leaves the icon out")
 end)
+
+-- 0.8.11: icons stand in the order they light up, so a column never has a gap
+
+local function litOrder(ns) -- shown icons sorted by their place in the row: { {b, lit}, ... }
+  local r = {}
+  for i, b in ipairs(buttons(ns)) do
+    if b.outer.shown then r[#r + 1] = { b = b, lit = slotVisible(ns, i), x = b.outer.points[1][4] } end
+  end
+  table.sort(r, function(a, c) return a.x < c.x end)
+  return r
+end
+
+test("icons stand in the order they light up: lit icons never leave a gap, at any mana", function()
+  local ns = M.load(nil, { class = "MAGE", bags = { [3385] = 2, [12662] = 1 } })
+  M.state.maxMana, M.state.maxHP = 2000, 4000
+  spellApis({ 12051, 1259823 })
+  ns.Spells.Rebuild()
+  ns.Spells.SetThreshold(ns.SPELLS[1], 0.1) -- Evocation below the rune (25 %)
+  M.state.manaPct = 0.05; M.tick()
+  local r = litOrder(ns)
+  local tex = {}
+  for k, e in ipairs(r) do tex[k] = e.b.layers[1].icon.texture end
+  eq(table.concat(tex, " "), "tex1259823 icon3385 icon12662 tex12051",
+    "Eureka! 90 %, potion 82 %, rune 25 %, Evocation 10 %")
+  for pct = 100, 0, -1 do
+    M.state.manaPct = pct / 100; M.tick()
+    local seenUnlit = false
+    for _, e in ipairs(litOrder(ns)) do
+      if not e.lit then seenUnlit = true end
+      ok(not (e.lit and seenUnlit), "gap at " .. pct .. " %")
+    end
+  end
+  -- a changed spell threshold moves its icon at once
+  ns.Spells.SetThreshold(ns.SPELLS[1], 0.95); M.tick()
+  eq(litOrder(ns)[1].b.layers[1].icon.texture, "tex12051", "Evocation at 95 % not first")
+  noSpellApis()
+end)
+
+test("a smaller potion turns into the bigger one in the same place", function()
+  local ns = M.load(nil, { bags = { [3385] = 2, [13443] = 2 } })
+  M.state.maxMana = 4000
+  M.state.manaPct = 0.85; M.tick()
+  local r = litOrder(ns)
+  eq(r[1].b.layers[1].icon.texture ~= nil, true)
+  local x1, b1 = r[1].x, r[1].b
+  M.state.manaPct = 0.2; M.tick()
+  ok(slotVisible(ns, 1), "potion slot not lit")
+  eq(b1.outer.points[1][4], x1, "the potion slot moved")
+end)

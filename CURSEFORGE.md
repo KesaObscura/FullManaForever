@@ -28,7 +28,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ### Mana bar, five-second rule and live regen
 
-- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
+- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons stand in the order they light up, so lit icons never leave a gap. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
 - **Five-second rule.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it) — in whole seconds (5, 4, 3 ...) or with tenths, as you like.
 - **Live mana regen per second,** also in combat, including Spirit Tap and drinking. It turns **green** with a small up arrow when it is above your normal rate (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Ley Line reading, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.

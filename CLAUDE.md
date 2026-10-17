@@ -114,9 +114,9 @@ and `/fmf log` (kept in releases for bug reports).
 3d. Item review (owner, 14 Oct): on the last beta day (21 Oct) or after launch, go through all
    items: what is junk / unimportant for the addon, what is needed. Until then more rather than
    fewer items (players can add their own anyway).
-3c. Open (owner, 14 Oct: not in 0.8.9, later): gaps in the icon column. A ready item above its
-   mana threshold keeps its (invisible) slot in combat (mana is secret). Options: sort all slots by
-   threshold (no gaps, group order not fixed), pack only out of combat, or keep as is.
+3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
+   light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
+   Needs the owner's in-game test.
 3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
    what the addon does, each with a test that fails on the old code. Left out on purpose:
    secret nil comparisons, longUntil d==0, OwnedItem caching. Also: character keys with the
