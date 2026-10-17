@@ -28,7 +28,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ### Mana bar, five-second rule and live regen
 
-- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
+- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons stand in the order they light up, so lit icons never leave a gap. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
 - **Five-second rule.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it) — in whole seconds (5, 4, 3 ...) or with tenths, as you like.
 - **Live mana regen per second,** also in combat, including Spirit Tap and drinking. It turns **green** with a small up arrow when it is above your normal rate (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Ley Line reading, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
@@ -91,7 +91,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 ## Tested so far
 
-Works in combat. Tested in Forever at low level: priest 16–20 (also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat), Ley Line reading on a Skyborne mage, the regen colours while drinking, with Spirit Tap and after Ley Line reading, per-character profiles across several characters, `/fmf hold` in and out of combat, the red regen under Resurrection Sickness, and the item list as priest, mage and druid. The supported items, their restore values and the shared potion cooldown were checked against the game's own item data. Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested in the beta yet. Please report anything odd — see *Bug reports* below.
+Works in combat. Tested in Forever at low level: priest 16–20 (also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat), Ley Line reading on a Skyborne mage, the regen colours while drinking, with Spirit Tap and after Ley Line reading, per-character profiles across several characters, `/fmf hold` in and out of combat, the red regen under Resurrection Sickness, the icon order without gaps, and the item list as priest, mage and druid. The supported items, their restore values and the shared potion cooldown were checked against the game's own item data. Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested in the beta yet. Please report anything odd — see *Bug reports* below.
 
 ## Planned
 

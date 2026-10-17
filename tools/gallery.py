@@ -240,7 +240,7 @@ if __name__ == "__main__":
              "Blue: normal. Green: above normal (drinking, Spirit Tap, ...). Red: Resurrection Sickness.",
              [(crop("images/346.webp", BAR9, 1.9), "Normal:\n15.5/s", (153, 217, 255)),
               (crop("images/345.webp", BAR9, 1.9), "Drinking:\n23.9/s", (115, 255, 115)),
-              (crop("images/361.webp", BAR9F, 1.9), "After death:\n4.0/s", (255, 110, 100))],
+              (crop("images/361.webp", BAR9F, 1.9), "Resurrection Sickness\n(spirit healer): 4.0/s", (255, 110, 100))],
              top=175, stack=True)
     if only("v9-14"):
         make("14_see_it_coming.png", "See it coming",
@@ -262,4 +262,39 @@ if __name__ == "__main__":
     if only("v9-07"):
         make("07_item_list.png", "Items and spells",
              "Every supported item and your class's mana spells: switch each on or off, see your level and what you carry.",
-             [(crop("images/356.webp", (818, 88, 1440, 690), 0.9), "")], top=140)
+             [(crop("images/356.webp", (818, 88, 1440, 690), 0.78), "Potions: level and how many you carry"),
+              (crop("images/364.webp", (690, 240, 1312, 842), 0.78), "Gear and your own mana spells")], top=150)
+    # ---- 0.8.11 (17 Oct 2026): just the regen under the game's player frame, icons below;
+    # bar, mana text and rule switched off. The player frame's name is blurred out.
+    if only("v11-12"):
+        def blurred(src, box, scale):
+            im = Image.open(BASE + src).convert("RGB")
+            name = (628, 485, 757, 501)  # name in the player frame
+            im.paste(im.crop(name).filter(ImageFilter.GaussianBlur(6)), name[:2])
+            im = im.crop(box)
+            return im.resize((int(im.width * scale), int(im.height * scale)), Image.LANCZOS)
+        bg = background()
+        d = ImageDraw.Draw(bg)
+        d.text((60, 44), "Just the regen, if you like", font=ImageFont.truetype(BOLD, 40), fill=WHITE)
+        d.text((62, 100), "Switch off the bar, mana text and five-second rule; drag the regen wherever you want it.",
+               font=ImageFont.truetype(REG, 22), fill=SUB)
+        cap = ImageFont.truetype(BOLD, 22)
+        big = blurred("images/375.webp", (555, 455, 1085, 705), 1.3)
+        small = [(blurred("images/376.webp", (560, 462, 760, 550), 1.55), "Casting: 0.0/s", GOLD),
+                 (blurred("images/377.webp", (560, 462, 760, 550), 1.55), "Drinking: 23.9/s", (115, 255, 115))]
+        x, y = (W - big.width - 70 - small[0][0].width) // 2, 185
+        panels = [(big, x, y, "Normal: 15.5/s", (153, 217, 255))]
+        sx = x + big.width + 70
+        sy = y
+        for im, c, col in small:
+            panels.append((im, sx, sy, c, col))
+            sy += im.height + 55
+        for im, px, py, c, col in panels:
+            bg.paste(im, (px, py), rounded(im))
+            d.rounded_rectangle((px - 2, py - 2, px + im.width + 1, py + im.height + 1), 15, outline=BLUE, width=2)
+            tw = d.textlength(c, font=cap)
+            d.text((px + (im.width - tw) / 2, py + im.height + 12), c, font=cap, fill=col)
+        foot = ImageFont.truetype(REG, 16)
+        t = "Full Mana Forever  ·  WoW: Forever"
+        d.text((W - 40 - d.textlength(t, font=foot), H - 36), t, font=foot, fill=(120, 136, 170))
+        bg.save(BASE + "gallery/out/12_just_regen.png", optimize=True)

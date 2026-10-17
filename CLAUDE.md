@@ -108,26 +108,29 @@ and `/fmf log` (kept in releases for bug reports).
    /fmf profile copy with the surname), 0.8.7 on 15 Oct (new description in three blocks with
    images linked from GitHub: they show on CurseForge; gallery 06 and 07 new), 0.8.8 on 16 Oct (description
    with "See it coming", gallery unchanged); 0.8.9 next, with new screenshots and a GIF (owner
-   records video). 0.8.10 (16 Oct: own icon, minimap menu tooltip, gallery and GIFs) released on GitHub.
-3d. Item review (owner, 14 Oct): on the last beta day (21 Oct) or after launch, go through all
-   items: what is junk / unimportant for the addon, what is needed. Until then more rather than
-   fewer items (players can add their own anyway).
-3c. Open (owner, 14 Oct: not in 0.8.9, later): gaps in the icon column. A ready item above its
-   mana threshold keeps its (invisible) slot in combat (mana is secret). Options: sort all slots by
-   threshold (no gaps, group order not fixed), pack only out of combat, or keep as is.
+   records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs); CurseForge:
+   0.8.9 next (package cf-0.8.9 with new gallery), then 0.8.10. PR bodies: check after creating
+   that no session link was appended (removed from PR #1-#15 on 16 Oct).
+3d. 0.8.12 (owner, 17 Oct): full scan after the 17 Oct patch (talents, abilities, spells) and the
+   item review: what is junk / unimportant for the addon, what is needed. Everything found but not
+   taken is kept in the owner's private research notes and decided again after every scan.
+3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
+   light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
+   Tested in game by the owner 17 Oct. The order is dynamic (thresholds, max mana): the gallery
+   stays as it is (owner, 17 Oct); only "Just the regen" (12) is re-shot for 0.8.11.
 3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
    what the addon does, each with a test that fails on the old code. Left out on purpose:
    secret nil comparisons, longUntil d==0, OwnedItem caching. Also: character keys with the
    surname (owner's /dump: UnitName("player") returns first name and surname; GetRealmName is the
    beta server's name).
    Tested in game by the owner (all fixes) except the surname keys.
-4. Before 21 Oct: request a listing on foreverchanges.pro (if they take submissions). Owner
-   (14 Oct): features until the beta ends, no fixes-only phase; each feature is still tested in
-   game before its release. 21 Oct (beta end): the most stable and complete version is out.
+4. Owner (17 Oct): no listing requests on other sites (foreverchanges.pro, Wago, WoWInterface
+   dropped): the addon goes its own way. Features until the beta ends, each tested in game.
+   0.8.10 tested in game (icon, menu tooltip, right-click). 0.8.11 started 17 Oct: icon gaps
+   (3c), re-shoot "Just the regen", then the GitHub release; item review moved to 0.8.12. GitHub allows squash merging only.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
-   fix bugs; one reply in the Blizzard forum thread "WoW Forever Addons" (UI and Macro), one
-   Reddit post (check the sub's rules), short notes to Icy Veins / Warcraft Tavern / mein-mmo
-   (texts by Claude, sent by the owner). Reply to CurseForge comments within 1-2 days.
+   fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+   Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md` (druid forms, Life Tap, group
    log, Mana Agate, Evocation, Inner Focus buff, launch-day Interface check). Update it as answers come.
 7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is

@@ -123,9 +123,10 @@ local function NewRow()
   r.amount:SetWidth(AMOUNT_W)
   if r.amount.SetWordWrap then r.amount:SetWordWrap(false) end
   -- a spell's threshold explains itself; over an item the item's own tooltip stays
+  -- (its right edge is set per row: it must end before the - / + buttons, see RefreshRows)
   local amountTip = CreateFrame("Frame", nil, row)
+  r.amountTip = amountTip
   amountTip:SetPoint("TOPLEFT", r.amount, "TOPLEFT")
-  amountTip:SetPoint("BOTTOMRIGHT", r.amount, "BOTTOMRIGHT")
   amountTip:EnableMouse(true)
   amountTip:SetScript("OnEnter", function(self)
     if not row.sp then return RowOnEnter(row) end
@@ -162,6 +163,10 @@ local function NewRow()
   r.plus:SetScript("OnClick", function() Step(SPELL_STEP) end)
   ui.Tip(r.minus, L.optSpellThr, L.tipSpellThr)
   ui.Tip(r.plus, L.optSpellThr, L.tipSpellThr)
+  -- the buttons sit inside the amount column: above its tooltip area, or part of each
+  -- button would not take a click (owner, 17 Oct)
+  r.minus:SetFrameLevel(amountTip:GetFrameLevel() + 2)
+  r.plus:SetFrameLevel(amountTip:GetFrameLevel() + 2)
 
   r.del = ui.Button(row, "x", 20, 18)
   r.del:SetPoint("RIGHT", row, "RIGHT", -EDGE, 0)
@@ -270,8 +275,16 @@ local function BuildContent()
             r.amount:SetText(L.libRestore:format(it.max))
           end
         end
-        r.minus:SetShown(sp and not sp.fit or false)
-        r.plus:SetShown(sp and not sp.fit or false)
+        local steps = sp and not sp.fit or false
+        r.minus:SetShown(steps)
+        r.plus:SetShown(steps)
+        r.amountTip:ClearAllPoints()
+        r.amountTip:SetPoint("TOPLEFT", r.amount, "TOPLEFT")
+        if steps then
+          r.amountTip:SetPoint("BOTTOMRIGHT", r.minus, "BOTTOMLEFT", -2, 0)
+        else
+          r.amountTip:SetPoint("BOTTOMRIGHT", r.amount, "BOTTOMRIGHT")
+        end
         r.owned:ClearAllPoints()
         r.owned:SetPoint("LEFT", r.frame, "LEFT", AMOUNT_X + AMOUNT_W + 4, 0)
         r.owned:SetPoint("RIGHT", r.frame, "RIGHT", it and it.custom and -(28 + EDGE) or -EDGE, 0)
