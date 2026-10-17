@@ -111,12 +111,13 @@ and `/fmf log` (kept in releases for bug reports).
    records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs); CurseForge:
    0.8.9 next (package cf-0.8.9 with new gallery), then 0.8.10. PR bodies: check after creating
    that no session link was appended (removed from PR #1-#15 on 16 Oct).
-3d. Item review (owner, 14 Oct): on the last beta day (21 Oct) or after launch, go through all
-   items: what is junk / unimportant for the addon, what is needed. Until then more rather than
-   fewer items (players can add their own anyway).
+3d. 0.8.12 (owner, 17 Oct): full scan after the 17 Oct patch (talents, abilities, spells) and the
+   item review: what is junk / unimportant for the addon, what is needed. Everything found but not
+   taken is kept in the owner's private research notes and decided again after every scan.
 3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
    light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
-   Needs the owner's in-game test.
+   Needs the owner's in-game test. The order is dynamic (thresholds, max mana): the gallery
+   stays as it is (owner, 17 Oct); only "Just the regen" (12) is re-shot for 0.8.11.
 3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
    what the addon does, each with a test that fails on the old code. Left out on purpose:
    secret nil comparisons, longUntil d==0, OwnedItem caching. Also: character keys with the
@@ -126,7 +127,7 @@ and `/fmf log` (kept in releases for bug reports).
 4. Owner (17 Oct): no listing requests on other sites (foreverchanges.pro, Wago, WoWInterface
    dropped): the addon goes its own way. Features until the beta ends, each tested in game.
    0.8.10 tested in game (icon, menu tooltip, right-click). 0.8.11 started 17 Oct: icon gaps
-   (3c), item review (3d), re-shoot "Just the regen". GitHub allows squash merging only.
+   (3c), re-shoot "Just the regen", then the GitHub release; item review moved to 0.8.12. GitHub allows squash merging only.
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
    fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
