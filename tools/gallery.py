@@ -240,7 +240,7 @@ if __name__ == "__main__":
              "Blue: normal. Green: above normal (drinking, Spirit Tap, ...). Red: Resurrection Sickness.",
              [(crop("images/346.webp", BAR9, 1.9), "Normal:\n15.5/s", (153, 217, 255)),
               (crop("images/345.webp", BAR9, 1.9), "Drinking:\n23.9/s", (115, 255, 115)),
-              (crop("images/361.webp", BAR9F, 1.9), "After death:\n4.0/s", (255, 110, 100))],
+              (crop("images/361.webp", BAR9F, 1.9), "Resurrection Sickness\n(spirit healer): 4.0/s", (255, 110, 100))],
              top=175, stack=True)
     if only("v9-14"):
         make("14_see_it_coming.png", "See it coming",
