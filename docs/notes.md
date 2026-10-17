@@ -203,7 +203,7 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Mana Potion), Mageblood Elixir 20007 (regen elixir), mana oils, EZ-Thro Mana Bomb 260818 (new,
   text not loaded yet), Crisp Spring Water 252031 (new water). The first item pass missed slow
   texts; a second pass is needed before adding numbers.
-- Patch of 17 Oct (build 70450, full check of every spell and our items): Mana Tide Totem ranks
+- Patch of 17 Oct (build 70450, checked against the game's own API): Mana Tide Totem ranks
   moved down: rank 1 16190 now level 1 (talent), rank 2 17354 at 38, rank 3 17359 at 48 (cheaper),
   new rank 4 1325256 at 58 (found by name in the spell book, nothing to add). Ley Line reading is
   now named "Read Leyline" (same ID 1259705; we look spells up by their live name) and lasts 30 s

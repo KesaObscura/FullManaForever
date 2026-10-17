@@ -112,11 +112,11 @@ and `/fmf log` (kept in releases for bug reports).
    0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); CurseForge:
    0.8.9 next (package cf-0.8.9 with new gallery), then 0.8.10. PR bodies: check after creating
    that no session link was appended (removed from PR #1-#15 on 16 Oct).
-3d. 0.8.12 (owner, 17 Oct): full scan after the 17 Oct patch (talents, abilities, spells) and the
+3d. 0.8.12 (owner, 17 Oct): research after the 17 Oct patch (talents, abilities, spells) and the
    item review: what is junk / unimportant for the addon, what is needed. Everything found but not
    taken is kept in the owner's private research notes and decided again after every scan.
-   Scan done 17 Oct (results in `docs/notes.md`); ~12 000 item IDs did not load (server
-   timeouts): a retry pass is still due. Open decisions: Ley Line 30 s, Windstone, the item review.
+   First pass done 17 Oct (facts in `docs/notes.md`); item data not complete yet, a second pass
+   is due. Open decisions: Ley Line 30 s, Windstone, the item review.
 3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
    light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
    Tested in game by the owner 17 Oct. The order is dynamic (thresholds, max mana): the gallery
