@@ -203,6 +203,17 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Mana Potion), Mageblood Elixir 20007 (regen elixir), mana oils, EZ-Thro Mana Bomb 260818 (new,
   text not loaded yet), Crisp Spring Water 252031 (new water). The first item pass missed slow
   texts; a second pass is needed before adding numbers.
+- Patch of 17 Oct (build 70450, full check of every spell and our items): Mana Tide Totem ranks
+  moved down: rank 1 16190 now level 1 (talent), rank 2 17354 at 38, rank 3 17359 at 48 (cheaper),
+  new rank 4 1325256 at 58 (found by name in the spell book, nothing to add). Ley Line reading is
+  now named "Read Leyline" (same ID 1259705; we look spells up by their live name) and lasts 30 s
+  without a leyline nearby (text; we counted 15 s), 15 min with one. Walk on Air 120 -> 90 s cd.
+  Eureka! no longer has the subtext "Racial" (we do not read it). Every item of `Data.lua` exists
+  with the same use spell. Windstone 255663 (Skywall only) and Green Tea Leaf 1401 share the
+  potion cooldown.
+- Chat test (`/fmf log chat`, 17 Oct, solo, out of combat): a whisper to the own name does not
+  arrive ("No player named ..."): Forever names have a surname; whispers in 0.9.0 need the right
+  target form first.
 
 - Resurrection Sickness on Forever (owner's /dump, 14 Oct): aura 15007, 600 s, readable out of
   combat with `C_UnitAuras.GetPlayerAuraBySpellID(15007)`. `UnitStat("player", 5)` under it:

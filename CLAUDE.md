@@ -108,12 +108,15 @@ and `/fmf log` (kept in releases for bug reports).
    /fmf profile copy with the surname), 0.8.7 on 15 Oct (new description in three blocks with
    images linked from GitHub: they show on CurseForge; gallery 06 and 07 new), 0.8.8 on 16 Oct (description
    with "See it coming", gallery unchanged); 0.8.9 next, with new screenshots and a GIF (owner
-   records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs); CurseForge:
+   records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs);
+   0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); CurseForge:
    0.8.9 next (package cf-0.8.9 with new gallery), then 0.8.10. PR bodies: check after creating
    that no session link was appended (removed from PR #1-#15 on 16 Oct).
 3d. 0.8.12 (owner, 17 Oct): full scan after the 17 Oct patch (talents, abilities, spells) and the
    item review: what is junk / unimportant for the addon, what is needed. Everything found but not
    taken is kept in the owner's private research notes and decided again after every scan.
+   Scan done 17 Oct (results in `docs/notes.md`); ~12 000 item IDs did not load (server
+   timeouts): a retry pass is still due. Open decisions: Ley Line 30 s, Windstone, the item review.
 3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
    light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
    Tested in game by the owner 17 Oct. The order is dynamic (thresholds, max mana): the gallery
@@ -131,8 +134,9 @@ and `/fmf log` (kept in releases for bug reports).
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
    fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
-6. Untested in game: owner's printed list `docs/test-checklist.md` (druid forms, Life Tap, group
-   log, Mana Agate, Evocation, Inner Focus buff, launch-day Interface check). Update it as answers come.
+6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
+   next), launch-day Interface check; other classes (druid forms, Life Tap, Mana Agate, Evocation)
+   when the owner has a character of that level, or from users. Inner Focus tested 17 Oct.
 7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is
    ready again (option, off), no glow on placeholders. Gallery images 03 (rule row/column) and 10
    show tenths of seconds: re-shoot when convenient. Rest of the HUD polish and 0.9.0 (group)
