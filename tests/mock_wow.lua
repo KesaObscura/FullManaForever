@@ -76,7 +76,8 @@ function methods:GetStringHeight() return 12 end
 function methods:GetFontString() self.fs = self.fs or new("FontString", self); return self.fs end
 function methods:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
 function methods:SetFont(f, s, fl) self.font = { f, s, fl } end
-function methods:GetFrameLevel() return 1 end
+function methods:GetFrameLevel() return self.level or 1 end
+function methods:SetFrameLevel(l) self.level = l end
 function methods:GetChecked() return self.checked end
 function methods:SetChecked(v) self.checked = v end
 function methods:SetAlpha(a) self.alpha = a end

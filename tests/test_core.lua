@@ -1669,6 +1669,11 @@ test("item list: spells of the class with their state, threshold -/+ and on/off"
   ok(evo.owned.text:find(ns.L.libLevel:format(20), 1, true), "level reason: " .. evo.owned.text)
   ok(eur.owned.text:find(ns.L.libKnown, 1, true), "known: " .. eur.owned.text)
   eq(eur.amount.text, ns.L.libSpellThr:format(90))
+  -- the threshold's tooltip area ends before - / +, which sit above it (whole button clickable)
+  local tipPts = eur.amountTip.points
+  eq(tipPts[#tipPts][2], eur.minus, "tooltip area of the threshold reaches over the - button")
+  eq(evo.amountTip.points[#evo.amountTip.points][2], evo.minus, "same for a spell not learned yet")
+  ok(eur.minus.level and eur.minus.level > 1, "- not raised above the tooltip area")
   eur.minus.scripts.OnClick(eur.minus)
   eq(eur.amount.text, ns.L.libSpellThr:format(85), "- did not lower the threshold")
   ok(math.abs(ns.db.spellThr.eureka - 0.85) < 1e-9, "stored threshold")

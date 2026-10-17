@@ -116,7 +116,7 @@ and `/fmf log` (kept in releases for bug reports).
    taken is kept in the owner's private research notes and decided again after every scan.
 3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
    light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
-   Needs the owner's in-game test. The order is dynamic (thresholds, max mana): the gallery
+   Tested in game by the owner 17 Oct. The order is dynamic (thresholds, max mana): the gallery
    stays as it is (owner, 17 Oct); only "Just the regen" (12) is re-shot for 0.8.11.
 3b. 0.8.6: the three-agent code review done; its fixes (8 bugs, 3 speed items) without changing
    what the addon does, each with a test that fails on the old code. Left out on purpose:
