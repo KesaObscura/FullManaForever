@@ -495,6 +495,9 @@ Build = function()
   -- always one row under unlock, in every language (side by side only where it fitted, the
   -- layout jumped when the language changed)
   c.Row(freeCb, PAD + 26) -- a sub-setting of unlock: indented like "Whole seconds"
+  -- above unit frames of other addons (HIGH strata)
+  c.Row(Check(col, L.optOnTop, function() return db.onTop end,
+    function(v) db.onTop = v; ns.PositionBar() end, L.tipOnTop))
   -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
   local reset = Button(col, L.optReset, HALF)
   reset:SetWidth(HALF)
@@ -601,6 +604,15 @@ Build = function()
       end,
     })
   c.Row(blen.label, PAD + 30, 32)
+  -- only the markers, the strip and the texts: to lay the bar over another mana bar (0.9.0)
+  local markersCb = Check(col, L.optBarMarkers, function() return db.barStyle == "markers" end,
+    function(v) db.barStyle = v and "markers" or "full"; ns.Layout(true) end, L.tipBarMarkers,
+    function() return db.showBar end)
+  c.Row(markersCb, PAD + 26, 26)
+  -- the bar apart from the icons, dragged on its own while the frame is unlocked (0.9.0)
+  local freeBarCb = Check(col, L.optBarFree, function() return db.barFree end,
+    function(v) ns.FreeBar(v) end, L.tipBarFree, function() return db.showBar end)
+  c.Row(freeBarCb, PAD + 26, 30)
   -- the bar's own look only matters while it is on
   ActiveIf(function() return db.showBar end, bpLabel, bp, colLabel, colDD, thick, blen)
   -- the three texts: each has its own switch and text size and also shows without the bar
@@ -628,8 +640,12 @@ Build = function()
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
   ActiveIf(function() return db.fsr end, SizeStepper("fsrScale"))
+  -- the seconds can go: the strip alone shows the rule (0.9.0)
+  c.Row(Check(col, L.optFsrNum, function() return db.fsrNum ~= false end,
+    function(v) db.fsrNum = v; ns.Layout(true) end, L.tipFsrNum, function() return db.fsr end), PAD + 26, 26)
   c.Row(Check(col, L.optFsrWhole, function() return db.fsrWhole end,
-    function(v) db.fsrWhole = v end, L.tipFsrWhole, function() return db.fsr end), PAD + 26, 26)
+    function(v) db.fsrWhole = v end, L.tipFsrWhole,
+    function() return db.fsr and db.fsrNum ~= false end), PAD + 26, 26)
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))

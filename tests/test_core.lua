@@ -1954,3 +1954,81 @@ test("Read Leyline keeps the regen green for 30 s after the cast (game text, 17 
   _G.GetTime = real
   noRegenApis()
 end)
+
+-- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
+
+test("texts lie above the bar; 'Above other frames' raises the whole display", function()
+  local ns = M.load(nil, { bags = POT })
+  M.tick()
+  local b = bar(ns)
+  for _, box in ipairs({ b.manaBox, b.fsrBox, b.regenBox }) do
+    ok(box:GetFrameLevel() > b.top:GetFrameLevel(), "a text box lies under the bar")
+    eq(box:GetFrameStrata(), "MEDIUM")
+  end
+  ns.db.onTop = true; ns.Layout(true)
+  eq(M.upvalue(ns.Layout, "anchor"):GetFrameStrata(), "HIGH", "icons not above other frames")
+  eq(b:GetFrameStrata(), "HIGH", "bar not above other frames")
+  eq(b.regenBox:GetFrameStrata(), "HIGH", "texts not above other frames")
+end)
+
+test("the rule's seconds can be switched off: the strip alone shows the rule, smoothly", function()
+  local ns = M.load({ fsrNum = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  ok(bar(ns).fsr.shown, "strip hidden")
+  ok(not bar(ns).fsrText.shown, "seconds shown although switched off")
+  -- the strip follows every frame, not only the tick
+  local real = GetTime
+  _G.GetTime = function() return 102.5 end
+  bar(ns).fsr.scripts.OnUpdate(bar(ns).fsr)
+  _G.GetTime = real
+  ok(math.abs(bar(ns).fsr.value - 2.5) < 0.01, "strip not moved between ticks: " .. tostring(bar(ns).fsr.value))
+  noRegenApis()
+end)
+
+test("'Only markers': no fill, background or border; markers, strip and texts stay", function()
+  local ns = M.load({ barStyle = "markers" }, { bags = POT })
+  M.state.manaPct = 0.9; M.tick()
+  local b = bar(ns)
+  ok(b.shown, "bar frame hidden: the markers would go with it")
+  eq(b:GetStatusBarTexture().alpha, 0, "fill still drawn")
+  ok(not b.bg.shown and not b.shadow.shown and not b.gloss.shown, "background still drawn")
+  for _, e in ipairs(b.border) do ok(not e.shown, "border still drawn") end
+  ok(b.ticks[1][1].front.shown, "potion marker gone")
+  ok(b.manaBox.shown, "mana numbers gone")
+  ns.db.barStyle = "full"; ns.Layout(true)
+  eq(b:GetStatusBarTexture().alpha, 1, "fill not back"); ok(b.bg.shown, "background not back")
+end)
+
+test("the bar can be moved apart from the icons; reset puts it back", function()
+  local ns = M.load({ locked = false }, { bags = POT })
+  M.tick()
+  local b = bar(ns)
+  M.left, M.top = 300, 500
+  ns.FreeBar(true)
+  ok(b.mouse, "free bar cannot be dragged while unlocked")
+  ok(b.dragBg.shown, "free bar not highlighted while unlocked")
+  M.left, M.top = 640, 200 -- dragged
+  b.scripts.OnDragStop(b)
+  eq(ns.db.barPoint[1], 640); eq(ns.db.barPoint[2], 200)
+  local p = b.points[1]
+  eq(p[1], "TOPLEFT"); eq(p[2], UIParent); eq(p[4], 640); eq(p[5], 200)
+  ns.db.locked = true; ns.ApplyLock()
+  ok(not b.mouse, "locked free bar still takes the mouse")
+  ns.ResetPosition()
+  eq(ns.db.barPoint, nil, "reset kept the free place")
+  local anchor = M.upvalue(ns.Layout, "anchor")
+  eq(b.points[1][2], anchor, "bar not back next to the icons")
+  M.left, M.top = nil, nil
+end)
+
+test("the mana fill is eased by the game where it can (StatusBar interpolation)", function()
+  local ns = M.load(nil, { bags = POT })
+  _G.Enum.StatusBarInterpolation = { Immediate = 0, ExponentialEaseOut = 1 }
+  M.tick()
+  eq(bar(ns).ease, 1, "fill not eased")
+  _G.Enum.StatusBarInterpolation = nil
+  M.tick()
+  eq(bar(ns).ease, nil, "easing asked for without the game's support")
+end)

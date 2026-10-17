@@ -1,7 +1,14 @@
 # Changelog
 
-**Full Mana Forever 0.8.12**
+**Full Mana Forever 0.9.0**
 
+Works together with unit frame addons (asked for in the comments):
+- **Only markers** (under Mana bar): hides the bar's fill, background and border. The potion markers, the five-second strip and the texts stay, so you can lay them over the mana bar of your unit frame; match length and thickness to that bar
+- **Move the bar separately**: the bar gets its own place, apart from the icons; unlock the frame and drag it. *Reset position* puts it back next to the icons
+- **Above other frames**: icons, bar and texts are drawn above other addons' frames
+- The texts (mana numbers, seconds, regen) always lie above the bar; dragged onto the bar they no longer go under it
+- **Seconds** (under Five-second rule): the countdown number can be switched off, the gold strip alone shows the rule
+- The five-second strip runs down smoothly instead of in steps; the mana fill eases to its new value where the game supports it
 - Read Leyline (Skyborne, renamed by the game from "Ley Line reading"): in combat the regen now stays green for 30 seconds after the cast, as the spell's own text says since the 17 October patch (was 15). The items and spells of the addon were checked again after the patch: all unchanged; the new fourth rank of Mana Tide Totem is found by itself
 
 **Full Mana Forever 0.8.11**

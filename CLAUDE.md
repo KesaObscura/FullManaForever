@@ -89,7 +89,13 @@ and `/fmf log` (kept in releases for bug reports).
   with "HOLD", not on the unlocked frame; command/macro only, no key binding.
 - 0.8.3 also: "Drinking" becomes "When to light up" (all languages). 0.8.4 (after launch): HUD
   polish (colour system, Blizzard-like glow, bar gloss, digit font, bigger defaults).
-- Group features (0.9.0 idea): who has Innervate / Mana Tide ready; whispering only optional.
+- Group features (after launch; were planned as 0.9.0): who has Innervate / Mana Tide ready;
+  whispering only optional.
+- 0.9.0 (owner, 17 Oct): the patch research, the item review and everything a CurseForge comment
+  asked for to work with unit frame addons: texts above the bar, "Above other frames" (HIGH
+  strata), "Seconds" switch, smooth five-second strip, "Only markers" bar style, "Move the bar
+  separately" (`barFree`, `barPoint`), mana fill eased via `Enum.StatusBarInterpolation` when
+  the game has it.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get
@@ -141,5 +147,5 @@ and `/fmf log` (kept in releases for bug reports).
    when the owner has a character of that level, or from users. Inner Focus tested 17 Oct.
 7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is
    ready again (option, off), no glow on placeholders. Gallery images 03 (rule row/column) and 10
-   show tenths of seconds: re-shoot when convenient. Rest of the HUD polish and 0.9.0 (group)
-   after launch; 0.9.0 needs the group log first. Maybe Wago / WoWInterface mirrors later.
+   show tenths of seconds: re-shoot when convenient. Rest of the HUD polish and the group features
+   after launch; they need the group log first. Maybe Wago / WoWInterface mirrors later.

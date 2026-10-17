@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.8.12"
+ns.VERSION = "0.9.0"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -30,6 +30,7 @@ local DEFAULTS = {
   regenText  = true,
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
+  fsrNum     = true,    -- the rule's seconds next to the strip (off: only the strip, 0.9.0)
   fsrWhole   = true,    -- the rule's seconds as 5, 4, 3 ... (false: tenths, 4.3)    -- current mana regen next to the mana bar (also without the bar)
   textFree   = false,   -- mana numbers, rule seconds and regen can be dragged (frame unlocked)
   textPoints = {},      -- [mana|fsr|regen] = { x, y }: dragged text centers, UIParent units
@@ -44,6 +45,11 @@ local DEFAULTS = {
   barThickness = 16,
   barLength  = 0,       -- 0 = auto: room for every group switched on (at least 3)
   barColor   = "blue",
+  barStyle   = "full",  -- "full" / "markers": no fill and no background, only the markers, the
+                        -- five-second strip and the texts (to lay over another mana bar, 0.9.0)
+  barFree    = false,   -- the bar has its own place, apart from the icons (0.9.0)
+  barPoint   = nil,     -- { left, top } of the free bar, UIParent units
+  onTop      = false,   -- frame drawn in the HIGH strata, above unit frames (0.9.0)
   iconGap    = 6,
   iconSize   = 48,
   runeMargin = 0.30, -- health% that must remain AFTER the rune hit (also Life Tap)
@@ -783,7 +789,23 @@ local function CreateBar()
   -- glass highlight over half of the bar (top half, or left half when vertical)
   bar.gloss = top:CreateTexture(nil, "ARTWORK")
   bar.gloss:SetColorTexture(1, 1, 1, 0.10)
-  Border(top, bar, "OVERLAY", 0, 0, 0, 1, 1)
+  bar.border = Border(top, bar, "OVERLAY", 0, 0, 0, 1, 1)
+  -- the free bar (0.9.0) is dragged by itself while the frame is unlocked
+  bar:SetMovable(true)
+  bar:SetClampedToScreen(true)
+  bar:RegisterForDrag("LeftButton")
+  bar:SetScript("OnDragStart", function(self) if db.barFree and not db.locked then self:StartMoving() end end)
+  bar:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local l, t = self:GetLeft(), self:GetTop()
+    if l and t then db.barPoint = { l, t } end
+    ns.PositionBar()
+  end)
+  bar.dragBg = top:CreateTexture(nil, "OVERLAY", nil, 3)
+  bar.dragBg:SetPoint("TOPLEFT", -4, 4)
+  bar.dragBg:SetPoint("BOTTOMRIGHT", 4, -4)
+  bar.dragBg:SetColorTexture(0, 0.4, 1, 0.35)
+  bar.dragBg:Hide()
   bar.ticks = {}
   for i = 1, #ns.GROUPS do
     bar.ticks[i] = {}
@@ -853,6 +875,34 @@ local function PaintBar()
     end
   end)
   if not ok then bar:SetStatusBarColor(c.top[1], c.top[2], c.top[3]) end
+  -- "only markers": the fill, background, shadow, gloss and border vanish; the markers, the
+  -- five-second strip and the texts stay (laid over another addon's mana bar)
+  local full = db.barStyle ~= "markers"
+  if tex then tex:SetAlpha(full and 1 or 0) end
+  bar.bg:SetShown(full)
+  bar.shadow:SetShown(full)
+  bar.gloss:SetShown(full)
+  for _, e in ipairs(bar.border) do e:SetShown(full) end
+end
+
+-- the free bar's saved place; a damaged value counts as "next to the icons"
+local function BarPoint()
+  local p = db.barFree and db.barPoint
+  if type(p) == "table" and type(p[1]) == "number" and type(p[2]) == "number" then return p end
+end
+
+-- strata of the whole display: above unit frames on request. The texts live on their own
+-- frames (they show without the bar): they always lie above the bar, not under it (0.9.0)
+local function ApplyStrata()
+  local strata = db.onTop and "HIGH" or "MEDIUM"
+  anchor:SetFrameStrata(strata)
+  if not bar then return end
+  bar:SetFrameStrata(strata)
+  local level = (bar.top:GetFrameLevel() or 1) + 5
+  for _, field in pairs(TEXT_KEYS) do
+    bar[field]:SetFrameStrata(strata)
+    bar[field]:SetFrameLevel(level)
+  end
 end
 
 -- "412 / 664" (vertical: two lines): the secret current value goes straight into the text
@@ -1002,7 +1052,7 @@ function ns.PositionBar()
       bar:SetPoint("TOPRIGHT", anchor, "TOPLEFT", -6, 0)
     end
     -- the rule's seconds sit above the bar: the frame label (unlocked) goes above them
-    local fsrRoom = db.fsr and (math.ceil(14 * (db.fsrScale or 1)) + 4) or 0
+    local fsrRoom = db.fsr and db.fsrNum ~= false and (math.ceil(14 * (db.fsrScale or 1)) + 4) or 0
     anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 8 + fsrRoom)
     -- under the bar the texts are wider than the bar and reach next to the icons. A bar set
     -- shorter than the column of icons that can appear would put them over the last icons:
@@ -1010,7 +1060,7 @@ function ns.PositionBar()
     -- place, counted from every icon that can appear, so they never jump when icons light up)
     bar.regenBox:ClearAllPoints()
     bar.regen:ClearAllPoints()
-    local short = Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
+    local short = not BarPoint() and Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
     if short then
       local right = db.barSide == "right" -- bar right of the icons: texts right of the bar
       local side, edge, dx = right and "LEFT" or "RIGHT", right and "BOTTOMRIGHT" or "BOTTOMLEFT", right and 4 or -4
@@ -1078,6 +1128,12 @@ function ns.PositionBar()
     bar.gloss:SetPoint("TOPRIGHT")
     bar.gloss:SetHeight(math.max(1, (db.barThickness or 14) * 0.45))
   end
+  -- the free bar has its own place; the texts at the bar follow it
+  local free = BarPoint()
+  if free then
+    bar:ClearAllPoints()
+    bar:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", free[1], free[2])
+  end
   -- a dragged text keeps its own place (its center stays put when the text size changes)
   local texts = { mana = bar.text, fsr = bar.fsrText, regen = bar.regen }
   for key, field in pairs(TEXT_KEYS) do
@@ -1092,6 +1148,18 @@ function ns.PositionBar()
     end
   end
   PaintBar()
+  ApplyStrata()
+end
+
+-- "Move the bar separately" switched on: the bar keeps the place it has now
+function ns.FreeBar(on)
+  db.barFree = on
+  if on and not BarPoint() and bar then
+    local l, t = bar:GetLeft(), bar:GetTop()
+    if l and t then db.barPoint = { l, t } end
+  end
+  ns.PositionBar()
+  ns.ApplyLock()
 end
 
 function ns.ApplyLock()
@@ -1105,6 +1173,9 @@ function ns.ApplyLock()
       bar[field]:EnableMouse(drag)
       bar[field].bg:SetShown(drag)
     end
+    local barDrag = unlocked and db.barFree and true or false
+    bar:EnableMouse(barDrag)
+    bar.dragBg:SetShown(barDrag)
   end
 end
 
@@ -1144,6 +1215,7 @@ end
 function ns.ResetPosition()
   db.point = { unpack(DEFAULTS.point) }
   db.textPoints = {} -- the texts go back to the bar
+  db.barPoint = nil  -- a free bar goes back next to the icons (it stays free: drag it again)
   anchor:ClearAllPoints()
   anchor:SetPoint(db.point[1], UIParent, db.point[3], db.point[4], db.point[5])
   PinTopLeft()
@@ -1479,11 +1551,19 @@ local function FsrShown()
   return real
 end
 
--- the strip runs along the bar, every tick
+-- the strip runs along the bar: every frame while it is shown, so it shrinks smoothly (the
+-- tick runs 10 times a second, which moved it in steps of several pixels; 0.9.0). Its time is
+-- our own count, never a secret value.
+local function SmoothFsr(self)
+  local left = FsrShown()
+  if left > 0 then self:SetValue(left) end
+end
+
 local function UpdateFsrStrip()
   local left = FsrShown()
   if left > 0 then
     bar.fsr:SetValue(left)
+    if not bar.fsr.smooth then bar.fsr.smooth = true; bar.fsr:SetScript("OnUpdate", SmoothFsr) end
     if not bar.fsr:IsShown() then bar.fsr:Show() end
   elseif bar.fsr:IsShown() then
     bar.fsr:Hide()
@@ -1549,7 +1629,7 @@ local function UpdateTexts(maxMana)
   local manaOn = visible and db.manaTextOn
   if manaOn then SetBarText(maxMana) end
   ShowBox(bar.manaBox, manaOn)
-  local left = visible and FsrShown() or 0
+  local left = visible and db.fsrNum ~= false and FsrShown() or 0
   if left > 0 then
     -- whole seconds count down 5, 4, 3, 2, 1 like the action bar; tenths if the player wants them
     local sec = db.fsrWhole and tostring(math.ceil(left - 0.001)) or ("%.1f"):format(left)
@@ -1570,7 +1650,11 @@ local function UpdateBar(maxMana)
     bar:SetMinMaxValues(0, maxMana)
     bar.maxMana = maxMana
   end
-  if not pcall(bar.SetValue, bar, UnitPower("player", MANA)) then
+  -- the game eases the fill to the new value where it can (StatusBar interpolation); the
+  -- value stays secret, the engine does the easing (0.9.0)
+  local ease = Enum and Enum.StatusBarInterpolation and Enum.StatusBarInterpolation.ExponentialEaseOut
+  if not (ease and pcall(bar.SetValue, bar, UnitPower("player", MANA), ease))
+    and not pcall(bar.SetValue, bar, UnitPower("player", MANA)) then
     -- unknown mana: show an empty bar rather than a full one
     bar:SetValue(0)
     WarnOnce("barvalue", L.warnPower)
