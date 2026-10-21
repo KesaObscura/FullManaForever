@@ -4,8 +4,9 @@
 
 Works together with unit frame addons (asked for in the comments):
 - **Only markers** (under Mana bar): hides the bar's fill, background and border. The potion markers, the five-second strip and the texts stay, so you can lay them over the mana bar of your unit frame; match length and thickness to that bar
-- **Move the bar separately**: the bar gets its own place, apart from the icons; unlock the frame and drag it. *Reset position* puts it back next to the icons
+- **Move the bar separately** (under *Move texts freely*): the bar gets its own place, apart from the icons; unlock the frame and drag it. *Reset position* puts it back next to the icons
 - **Above other frames**: icons, bar and texts are drawn above other addons' frames
+- Bar length goes in steps of 10 (was 20), to match a unit frame exactly
 - The texts (mana numbers, seconds, regen) always lie above the bar; dragged onto the bar they no longer go under it
 - **Seconds** (under Five-second rule): the countdown number can be switched off, the gold strip alone shows the rule
 - The five-second strip runs down smoothly instead of in steps; the mana fill eases to its new value where the game supports it
