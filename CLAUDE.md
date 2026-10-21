@@ -124,7 +124,8 @@ and `/fmf log` (kept in releases for bug reports).
    First pass done 17 Oct (facts in `docs/notes.md`); item data not complete even after a
    second pass: ~7 400 item IDs are still refused by the beta server (also real items such as the
    trinkets Second Wind 11819 and Burst of Knowledge 11832): look again after launch. Decided
-   17 Oct: Read Leyline 30 s (0.8.12), Windstone is junk. Open: the owner's item review.
+   17 Oct: Read Leyline 30 s (0.8.12), Windstone is junk. Item review done 21 Oct (0.9.0, see
+   `docs/notes.md`).
 3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
    light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
    Tested in game by the owner 17 Oct. The order is dynamic (thresholds, max mana): the gallery

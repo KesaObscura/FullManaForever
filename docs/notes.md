@@ -226,6 +226,12 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   287968/287969 and Windstone (Skywall only, not added); all added in 0.8.9, with Power
   Recycler (20 % health into 20 % mana), Tea with Sugar 15723, Earthen Sigil 20525, Scroll of
   Minor Evocation 213564 (mage) and Veildust Medicine Bag 15866 (druid off-hand).
+- Item review (owner, 21 Oct, 0.9.0): removed for good Diet McWeaksauce 23578 (test realm item of
+  the 1.11 PTR, never in the live game); removed for now Tessa's Tonic 274935, Restored Mana
+  Potion 282013 and Full Moonshine 1072 (unclear where they come from), Mug of Shimmer Stout 3087
+  and Tea with Sugar 15723 (quest rewards sharing the potion / rune cooldown with better items).
+  Kept: Wildvine Potion 9144, Scroll of Minor Evocation 213564, Power Recycler 275688, Earthen
+  Sigil 20525; the Forever copies 287968/287969 stay one row with the original.
 - Checked 14 Oct 2026 (build 70374): the potion cooldown is one shared 120 s cooldown for 13
   items (all mana, rejuvenation and Dreamless Sleep potions, the draughts, Combat Mana Potion),
   as in `Data.lua`. All our spell IDs and ranks still match (Evocation 20, Mana Tide 25/48/58,

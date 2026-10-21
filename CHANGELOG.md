@@ -9,6 +9,7 @@ Works together with unit frame addons (asked for in the comments):
 - The texts (mana numbers, seconds, regen) always lie above the bar; dragged onto the bar they no longer go under it
 - **Seconds** (under Five-second rule): the countdown number can be switched off, the gold strip alone shows the rule
 - The five-second strip runs down smoothly instead of in steps; the mana fill eases to its new value where the game supports it
+- Item list cleaned up: Diet McWeaksauce (a test realm item that never reached the live game), Tessa's Tonic, Restored Mana Potion, Full Moonshine (unclear where they come from), Mug of Shimmer Stout and Tea with Sugar (quest rewards that share the potion or rune cooldown with better items) are no longer listed. You can still add any item yourself
 - Read Leyline (Skyborne, renamed by the game from "Ley Line reading"): in combat the regen now stays green for 30 seconds after the cast, as the spell's own text says since the 17 October patch (was 15). The items and spells of the addon were checked again after the patch: all unchanged; the new fourth rank of Mana Tide Totem is found by itself
 
 **Full Mana Forever 0.8.11**
