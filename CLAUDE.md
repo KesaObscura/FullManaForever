@@ -100,7 +100,7 @@ and `/fmf log` (kept in releases for bug reports).
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get
   built" is fine); 9 languages, not 10. Not only for healers: every mana user.
-- Launch: beta ends 21 Oct 2026, launch 4 Nov (EU 5 Nov). By 21 Oct the most stable, complete
+- Launch: beta ends 23 Oct 2026 (extended from 21 Oct), launch 4 Nov (EU 5 Nov). By the beta end the most stable, complete
   version; at launch only the Interface number (16001 may change) and bug fixes.
 
 ## Roadmap and reminders (owner asked to be reminded; keep this list current)
@@ -116,7 +116,8 @@ and `/fmf log` (kept in releases for bug reports).
    with "See it coming", gallery unchanged); 0.8.9 next, with new screenshots and a GIF (owner
    records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs);
    0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); CurseForge:
-   0.8.9 next (package cf-0.8.9 with new gallery), then 0.8.10. PR bodies: check after creating
+   0.8.9 is the last upload; 0.8.10 and 0.8.11 were skipped there (owner, 21 Oct): 0.9.0 goes up
+   next with one changelog covering 0.8.10, 0.8.11 and 0.9.0, released together on GitHub. PR bodies: check after creating
    that no session link was appended (removed from PR #1-#15 on 16 Oct).
 3d. 0.8.12 (owner, 17 Oct): research after the 17 Oct patch (talents, abilities, spells) and the
    item review: what is junk / unimportant for the addon, what is needed. Everything found but not
