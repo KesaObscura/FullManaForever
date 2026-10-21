@@ -223,7 +223,7 @@ test("reset size restores icon and bar sizes, keeps position and other settings"
   SlashCmdList.FULLMANAFOREVER("reset size")
   M.tick()
   eq(ns.db.iconSize, 48); eq(ns.db.iconGap, 6); eq(ns.db.barThickness, 16); eq(ns.db.barLength, 0)
-  eq(ns.db.fsrScale, 1, "text size")
+  eq(ns.db.fsrScale, 1.3, "text size")
   eq(ns.db.barColor, "teal", "color")
   eq(ns.db.point[4], 100, "x"); eq(ns.db.point[5], 500, "y")
   eq(buttons(ns)[1].outer.w, 48, "icon width")
@@ -236,10 +236,15 @@ test("options: reset size button resets the sizes", function()
   _G.CreateFrame = function(...) local f = create(...); made[#made + 1] = f; return f end
   ns.ToggleOptions(true)
   _G.CreateFrame = create
-  local btn
-  for _, f in ipairs(made) do if f.text == ns.L.optResetSize then btn = f end end
+  local btn, yes
+  for _, f in ipairs(made) do
+    if f.text == ns.L.optResetSize then btn = f end
+    if f.text == ns.L.yes and not yes then yes = f end
+  end
   ok(btn, "no reset size button")
   btn.scripts.OnClick(btn)
+  eq(ns.db.iconSize, 80, "reset without asking first (0.9.1)")
+  yes.scripts.OnClick(yes)
   eq(ns.db.iconSize, 48)
 end)
 
@@ -2032,4 +2037,91 @@ test("item review 21 Oct: test-realm, unclear and pointless items are gone", fun
   end
   -- kept: Wildvine Potion, Scroll of Minor Evocation, Power Recycler, Earthen Sigil
   ok(listed(ns, "potion", 9144) and listed(ns, "herb", 275688) and listed(ns, "gear", 20525), "a kept item is gone")
+end)
+
+-- 0.9.1: the three UX reviews (HUD, settings, first run)
+
+test("all markers share one colour; the shape tells the rest", function()
+  local ns = M.load(nil, { bags = { [3385] = 2, [13443] = 2, [12662] = 1 }, class = "MAGE" })
+  M.state.maxMana = 4000; M.state.manaPct = 0.9; M.tick()
+  local seen
+  for i = 1, #ns.GROUPS do
+    for _, t in ipairs(bar(ns).ticks[i]) do
+      if t.front.shown then
+        local c = t.front.color
+        seen = seen or c
+        eq(c[1], seen[1]); eq(c[2], seen[2]); eq(c[3], seen[3])
+      end
+    end
+  end
+  ok(seen, "no marker shown")
+end)
+
+test("a 'soon' icon is dimmer than a lit one and flashes once when it is ready", function()
+  local ns = M.load({ cdShow = 10 }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 0, 120 }
+  M.state.time = 112; M.tick()
+  local _, l = slotVisible(ns, 1)
+  eq(l.icon.alpha, 0.6, "soon icon as bright as a lit one")
+  M.state.time = 121; M.tick()
+  _, l = slotVisible(ns, 1)
+  eq(l.icon.alpha, 1, "ready icon still dim")
+  eq(l.flashAG.played, 1, "no flash when the wait was over")
+  M.tick()
+  eq(l.flashAG.played, 1, "flashed again without a new wait")
+  M.state.time = nil
+end)
+
+test("HOLD is white, not the gold of the five-second rule", function()
+  local ns = M.load(nil, { bags = POT })
+  local l = buttons(ns)[1].layers[1]
+  eq(l.holdText.color[1], 1); eq(l.holdText.color[2], 1); eq(l.holdText.color[3], 1)
+end)
+
+test("a fight locks a frame that was left unlocked (it showed every icon lit)", function()
+  local ns = M.load({ locked = false }, { bags = POT })
+  M.tick()
+  M.state.combat = true
+  M.Fire("PLAYER_REGEN_DISABLED")
+  ok(ns.db.locked, "unlocked frame kept in combat")
+  local anchor = M.upvalue(ns.Layout, "anchor")
+  ok(not anchor.lockBtn.shown and not anchor.cfgBtn.shown, "frame buttons still shown")
+  M.state.combat = false
+end)
+
+test("unlocked: Lock and Settings buttons on the frame; the bar drags the frame", function()
+  local ns = M.load({ locked = false }, { bags = POT })
+  M.tick()
+  local anchor = M.upvalue(ns.Layout, "anchor")
+  ok(anchor.lockBtn.shown and anchor.cfgBtn.shown, "no buttons on the unlocked frame")
+  ok(anchor.lockBtn.scripts.OnEnter and anchor.cfgBtn.scripts.OnEnter, "a frame button has no tooltip")
+  -- the bar next to the icons takes the mouse and moves the frame
+  local b = bar(ns)
+  ok(b.mouse, "bar does not take the mouse while unlocked")
+  local moved
+  anchor.scripts.OnDragStart = function() moved = true end
+  b.scripts.OnDragStart(b)
+  ok(moved, "dragging the bar did not move the frame")
+  anchor.lockBtn.scripts.OnClick(anchor.lockBtn)
+  ok(ns.db.locked, "Lock did not lock")
+  ok(not b.mouse, "locked bar still takes the mouse")
+end)
+
+test("potions above your level: the status says the level, not 'none in bags'", function()
+  local ns = M.load(nil, { level = 10, minLevel = { [3827] = 22 }, bags = { [3827] = 2 } })
+  ns.ToggleOptions(true)
+  local text = M.upvalue(ns.RefreshOptions, "StatusText")(1, ns.GROUPS[1])
+  ok(text:find(ns.L.libLevel:format(22), 1, true), "status: " .. text)
+end)
+
+test("the settings window keeps its place for the account and fits the screen", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local win = M.upvalue(ns.ToggleOptions, "win")
+  eq(win.points[1][1], "RIGHT", "first time not at the right edge")
+  M.left, M.top = 120, 700
+  win.scripts.OnDragStop(win)
+  eq(ns.acct.optPoint[1], 120); eq(ns.acct.optPoint[2], 700)
+  M.left, M.top = nil, nil
 end)

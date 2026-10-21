@@ -54,7 +54,8 @@ when the icon lights up.
   color, thickness, length, icon size and spacing are adjustable. For unit frame addons: *Only
   markers* (no fill, background or border: lay the markers and the five-second strip over your
   unit frame's mana bar), *Move the bar separately* (its own place, apart from the icons) and
-  *Above other frames*.
+  *Above other frames*. On a unit frame: *Only markers*, unlock, *Move the bar separately*, drag the
+  bar onto the unit frame's mana bar, match length and thickness, *Above other frames*.
 - **Five-second rule and mana regen** on the bar: a gold strip (and the seconds, can be switched off) after a spell
   that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns
   green when it is above your normal rate, red while Resurrection Sickness holds it down. The

@@ -3,7 +3,7 @@
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
 Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Profiles.lua → Core.lua →
 Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Profiles.lua (0.8.3):
-`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion)
+`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion, optPoint)
 plus `profiles[Shared|Name Surname-Realm]` and `chars[key]` = {profile, class, level, seen, name, realm}; Core's
 `db` is the active profile, `acct` the root; `ns.ApplyProfile` re-reads everything on a switch. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).
@@ -96,6 +96,13 @@ and `/fmf log` (kept in releases for bug reports).
   strata), "Seconds" switch, smooth five-second strip, "Only markers" bar style, "Move the bar
   separately" (`barFree`, `barPoint`), mana fill eased via `Enum.StatusBarInterpolation` when
   the game has it.
+- 0.9.1 (owner, 21 Oct: "all of it" from three UX reviews, HUD / settings / first run): one
+  near-white marker colour (shape tells thick / thin), dimmer "soon" icons with one flash when
+  ready, calmer glow, white HOLD, rule seconds 130 % by default, settings window at the right edge
+  and remembered (`acct.optPoint`), Lock / Settings buttons on the unlocked frame, the bar drags
+  the frame, auto-lock when a fight starts, reset buttons ask first, inactive settings greyed.
+  Not done on purpose: rule seconds next to the regen (moves everyone's layout), "Show only in
+  combat" hiding the regen (owner decision), gallery re-shoots (need screenshots).
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get

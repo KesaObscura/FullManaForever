@@ -187,8 +187,10 @@ local function NewRow()
       else
         local v = ns.Spells.Threshold(sp)
         r.amount:SetText(L.libSpellThr:format(math.floor(v * 100 + 0.5)))
-        r.minus:SetEnabled(v > SPELL_LO + 0.001)
-        r.plus:SetEnabled(v < SPELL_HI - 0.001)
+        -- a switched-off spell has nothing to set (0.9.1)
+        local on = ns.Spells.Enabled(sp)
+        r.minus:SetEnabled(on and v > SPELL_LO + 0.001)
+        r.plus:SetEnabled(on and v < SPELL_HI - 0.001)
       end
     elseif r.it then
       local tags = {}
@@ -202,6 +204,11 @@ local function NewRow()
       r.name:SetWidth(math.max(40, math.min(r.name:GetStringWidth() or room, room)))
       r.owned:SetText(OwnedText(r.it, r.group))
     end
+    -- switched off: grey name and icon, so the list shows at a glance what is in use (0.9.1)
+    local on
+    if r.sp then on = ns.Spells.Enabled(r.sp) else on = r.it and ns.IsItemEnabled(r.it) end
+    r.icon:SetDesaturated(not on)
+    if on then r.name:SetTextColor(1, 1, 1) else r.name:SetTextColor(0.5, 0.5, 0.5) end
     r.cb.Refresh()
   end
   return r

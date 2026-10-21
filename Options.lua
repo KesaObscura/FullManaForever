@@ -366,7 +366,14 @@ end
 Build = function()
   local db = ns.db
   win = CreateFrame("Frame", "FullManaForeverOptions", UIParent)
-  win:SetPoint("CENTER")          -- size is set at the end, from the two columns
+  -- its own place, kept for the account (0.9.1): the centre covered the icons while placing
+  -- them. First time: at the right edge, away from the icons in the middle
+  local op = ns.acct.optPoint
+  if type(op) == "table" and type(op[1]) == "number" and type(op[2]) == "number" then
+    win:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", op[1], op[2])
+  else
+    win:SetPoint("RIGHT", UIParent, "RIGHT", -20, 0)
+  end
   win:SetFrameStrata("DIALOG")
   win:SetToplevel(true)
   win:SetMovable(true)
@@ -374,7 +381,11 @@ Build = function()
   win:SetClampedToScreen(true)
   win:RegisterForDrag("LeftButton")
   win:SetScript("OnDragStart", win.StartMoving)
-  win:SetScript("OnDragStop", win.StopMovingOrSizing)
+  win:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local l, t = self:GetLeft(), self:GetTop()
+    if l and t then ns.acct.optPoint = { l, t } end
+  end)
   win:Hide()
   -- in game a new frame does not take over a name an older one already has (the language
   -- change builds the windows anew): the name is set here, else Esc looks at the old frame
@@ -398,6 +409,35 @@ Build = function()
   local shadeTex = shade:CreateTexture(nil, "OVERLAY")
   shadeTex:SetAllPoints()
   shadeTex:SetColorTexture(0, 0, 0, 0.6)
+  -- a small question over the settings before a reset (0.9.1)
+  local ask = CreateFrame("Frame", nil, win)
+  ask:SetAllPoints()
+  ask:SetFrameLevel((win:GetFrameLevel() or 1) + 60)
+  ask:EnableMouse(true) -- nothing behind it can be clicked meanwhile
+  local askBg = ask:CreateTexture(nil, "BACKGROUND")
+  askBg:SetAllPoints()
+  askBg:SetColorTexture(0, 0, 0, 0.85)
+  local askText = Label(ask, "", "GameFontHighlight")
+  askText:SetPoint("CENTER", 0, 18)
+  askText:SetWidth(360)
+  askText:SetJustifyH("CENTER")
+  local askYes = Button(ask, L.yes, 100)
+  askYes:SetPoint("TOPRIGHT", askText, "BOTTOM", -6, -14)
+  local askNo = Button(ask, L.no, 100)
+  askNo:SetPoint("TOPLEFT", askText, "BOTTOM", 6, -14)
+  askNo:SetScript("OnClick", function() ask:Hide() end)
+  Tip(askNo, L.no, L.tipNo)
+  Tip(askYes, L.yes, L.confirmReset)
+  ask:Hide()
+  function ns.Confirm(text, action)
+    askText:SetText(text)
+    askYes:SetScript("OnClick", function()
+      ask:Hide()
+      action()
+    end)
+    Tip(askYes, L.yes, text)
+    ask:Show()
+  end
   shade:Hide()
   win.shade = shade
   win:SetScript("OnShow", function() OnSettingsShown() end)
@@ -507,12 +547,14 @@ Build = function()
   local reset = Button(col, L.optReset, HALF)
   reset:SetWidth(HALF)
   c.Row(reset, PAD, 34)
-  reset:SetScript("OnClick", function() ns.ResetPosition() end)
+  reset:SetScript("OnClick", function() ns.Confirm(L.confirmReset, ns.ResetPosition) end)
   Tip(reset, L.optReset, L.tipReset)
   local resetSize = Button(col, L.optResetSize, HALF)
   resetSize:SetWidth(HALF)
   resetSize:SetPoint("TOPLEFT", col, "TOPLEFT", X2, c.y + 34)
-  resetSize:SetScript("OnClick", function() ns.ResetSize(); ns.RefreshOptions() end)
+  resetSize:SetScript("OnClick", function()
+    ns.Confirm(L.confirmResetSize, function() ns.ResetSize(); ns.RefreshOptions() end)
+  end)
   Tip(resetSize, L.optResetSize, L.tipResetSize)
   local langLabel = Label(col, L.optLang .. ":")
   local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
@@ -587,7 +629,7 @@ Build = function()
 
 
   local thick = Stepper(col, PAD + 30, L.optBarThick, function() return db.barThickness end,
-    function(v) db.barThickness = v; ns.Layout(true) end, { step = 2, lo = 6, hi = 40, fmt = num, tip = L.tipBarThick })
+    function(v) db.barThickness = v; ns.Layout(true) end, { step = 1, lo = 6, hi = 40, fmt = num, tip = L.tipBarThick })
   c.Row(thick.label, PAD + 30, 28)
   -- length: 0 = auto. Leaving auto starts at the auto length; going below one icon
   -- (a bar shorter than an icon is useless) returns to auto.
@@ -615,7 +657,9 @@ Build = function()
     function() return db.showBar end)
   c.Row(markersCb, PAD + 26, 30)
   -- the bar's own look only matters while it is on
-  ActiveIf(function() return db.showBar end, bpLabel, bp, colLabel, colDD, thick, blen)
+  ActiveIf(function() return db.showBar end, bpLabel, bp, thick, blen)
+  -- "Only markers" draws no fill: its colour has nothing to colour (0.9.1)
+  ActiveIf(function() return db.showBar and db.barStyle ~= "markers" end, colLabel, colDD)
   -- the three texts: each has its own switch and text size and also shows without the bar
   -- (the size on its own row below: long names would run into the value)
   local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
@@ -640,13 +684,14 @@ Build = function()
   ActiveIf(function() return db.manaTextOn end, mtDD, SizeStepper("manaScale"))
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
-  ActiveIf(function() return db.fsr end, SizeStepper("fsrScale"))
-  -- the seconds can go: the strip alone shows the rule (0.9.0)
+  -- the seconds can go: the strip alone shows the rule (0.9.0); their size and whole
+  -- seconds only matter while they show (0.9.1)
   c.Row(Check(col, L.optFsrNum, function() return db.fsrNum ~= false end,
     function(v) db.fsrNum = v; ns.Layout(true) end, L.tipFsrNum, function() return db.fsr end), PAD + 26, 26)
   c.Row(Check(col, L.optFsrWhole, function() return db.fsrWhole end,
     function(v) db.fsrWhole = v end, L.tipFsrWhole,
     function() return db.fsr and db.fsrNum ~= false end), PAD + 26, 26)
+  ActiveIf(function() return db.fsr and db.fsrNum ~= false end, SizeStepper("fsrScale"))
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))
@@ -778,6 +823,10 @@ Build = function()
 
   win:SetWidth(2 * W)
   win:SetHeight(math.max(-left.y, -right.y) + 8)
+  -- small screens or a big UI scale: the whole window stays on the screen (0.9.1)
+  local sh = UIParent:GetHeight() or 0
+  local wh = win:GetHeight() or 0
+  if sh > 0 and wh > sh * 0.95 then win:SetScale(sh * 0.95 / wh) end
 
   local acc = 0
   win:SetScript("OnUpdate", function(_, elapsed)
@@ -822,7 +871,12 @@ local function StatusText(i, group)
     return "|cffffaa33" .. L.stHold .. "|r", true
   end
   local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
-  if not item then return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r", true end
+  if not item then
+    -- in the bags, but above your level: say so instead of "none in bags" (0.9.1)
+    local need = not group.equipped and ns.BlockedLevel and ns.BlockedLevel(i)
+    if need then return "|cff888888" .. L.libLevel:format(need) .. "|r", true end
+    return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r", true
+  end
   if not ready then
     return "|cffffaa33" .. L.stCooldown:format(ItemName(item.id), n, math.ceil(left)) .. "|r"
   end

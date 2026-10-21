@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.0"
+ns.VERSION = "0.9.1"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -37,7 +37,7 @@ local DEFAULTS = {
   manaTextOn = true,    -- mana numbers at the bar (also without the bar)
   manaText   = "number", -- how: "number" / "percent" / "both"
   manaScale  = 1,       -- text size of the mana numbers
-  fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
+  fsrScale   = 1.3,     -- text size of the rule's seconds (the smallest text before 0.9.1)
   regenScale = 1,       -- text size of the regen number
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
   vertical   = false,   -- icons in a column, mana bar standing next to them
@@ -451,6 +451,19 @@ local function FirstThreshold(i, maxMana)
   return item and Threshold(item, maxMana)
 end
 
+-- the lowest level that unlocks an item of this group you carry (nil: none waits for a level)
+function ns.BlockedLevel(i)
+  local need
+  for _, it in ipairs(lists[i]) do
+    local n = C_Item.GetItemCount(it.id)
+    if not IsSecret(n) and n and n > 0 then
+      local lv = ns.LevelTooLow(it)
+      if lv and (not need or lv < need) then need = lv end
+    end
+  end
+  return need
+end
+
 -- status for the options window
 function ns.GetStatus(i)
   local item, n = OwnedItem(i)
@@ -577,14 +590,12 @@ local PLACEHOLDER = {
   herb   = "Interface\\Icons\\INV_Misc_QuestionMark",
   gear   = "Interface\\Icons\\INV_Jewelry_Talisman_07",
 }
-local TICK_COLOR = {
-  potion = { 0.45, 0.75, 1 },
-  rune   = { 0.75, 0.45, 1 },
-  gem    = { 1, 0.35, 0.35 },
-  herb   = { 0.4, 1, 0.5 },
-  gear   = { 1, 0.8, 0.3 },
-  spell  = { 0.3, 1, 1 },
-}
+-- one near-white colour for every marker (0.9.1): six group colours were never explained,
+-- and gold / green / red already mean the five-second rule and the regen; blue and teal
+-- vanished on a blue bar. The shape tells the rest: thick where an icon lights up, thin
+-- where a stronger item becomes the best fit
+local TICK_WHITE = { 0.95, 0.95, 0.88 }
+local TICK_COLOR = setmetatable({}, { __index = function() return TICK_WHITE end })
 ns.BAR_COLORS = {
   { key = "blue",   top = { 0.30, 0.62, 1.00 }, bottom = { 0.06, 0.28, 0.78 } },
   { key = "light",  top = { 0.55, 0.85, 1.00 }, bottom = { 0.15, 0.50, 0.85 } },
@@ -662,6 +673,7 @@ local function CreateLayer(parent)
   holdTop:SetFrameLevel((l:GetFrameLevel() or 1) + 3)
   l.holdText = holdTop:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   OutlineFont(l.holdText, "GameFontNormal", true)
+  l.holdText:SetTextColor(1, 1, 1) -- white: gold already means the five-second rule (0.9.1)
   l.holdText:SetPoint("CENTER")
   l.holdText:Hide()
   -- soft light from the top that fades out downwards: a slightly "glassy" icon. A flat
@@ -687,10 +699,24 @@ local function CreateLayer(parent)
   local ag = l.glow:CreateAnimationGroup()
   ag:SetLooping("BOUNCE")
   local a = ag:CreateAnimation("Alpha")
+  -- a calm pulse (0.9.1): a deep fast one was soon not seen any more
   a:SetFromAlpha(1)
-  a:SetToAlpha(0.25)
-  a:SetDuration(0.5)
+  a:SetToAlpha(0.6)
+  a:SetDuration(0.9)
   ag:Play()
+  -- one short flash when the item's own cooldown is over and it lights up (0.9.1)
+  l.flash = l:CreateTexture(nil, "OVERLAY", nil, 6)
+  l.flash:SetAllPoints(l.icon)
+  l.flash:SetColorTexture(1, 1, 1, 1)
+  l.flash:SetBlendMode("ADD")
+  l.flash:SetAlpha(0)
+  local fg = l.flash:CreateAnimationGroup()
+  local f = fg:CreateAnimation("Alpha")
+  f:SetFromAlpha(0.7)
+  f:SetToAlpha(0)
+  f:SetDuration(0.6)
+  fg:SetScript("OnFinished", function() l.flash:SetAlpha(0) end)
+  l.flashAG = fg
   l:Hide()
   return l
 end
@@ -794,8 +820,13 @@ local function CreateBar()
   bar:SetMovable(true)
   bar:SetClampedToScreen(true)
   bar:RegisterForDrag("LeftButton")
-  bar:SetScript("OnDragStart", function(self) if db.barFree and not db.locked then self:StartMoving() end end)
+  -- a bar next to the icons drags the whole frame, like the icons do (0.9.1)
+  bar:SetScript("OnDragStart", function(self)
+    if db.locked then return end
+    if db.barFree then self:StartMoving() else anchor:GetScript("OnDragStart")(anchor) end
+  end)
   bar:SetScript("OnDragStop", function(self)
+    if not db.barFree then anchor:GetScript("OnDragStop")(anchor) return end
     self:StopMovingOrSizing()
     local l, t = self:GetLeft(), self:GetTop()
     if l and t then db.barPoint = { l, t } end
@@ -1167,20 +1198,54 @@ function ns.ApplyLock()
   anchor:EnableMouse(unlocked)
   anchor.bg:SetShown(unlocked)
   anchor.label:SetShown(unlocked)
+  anchor.lockBtn:SetShown(unlocked)
+  anchor.cfgBtn:SetShown(unlocked)
   if bar then
     local drag = unlocked and db.textFree and true or false
     for _, field in pairs(TEXT_KEYS) do
       bar[field]:EnableMouse(drag)
       bar[field].bg:SetShown(drag)
     end
-    local barDrag = unlocked and db.barFree and true or false
-    bar:EnableMouse(barDrag)
-    bar.dragBg:SetShown(barDrag)
+    bar:EnableMouse(unlocked)
+    bar.dragBg:SetShown(unlocked and db.barFree and true or false)
   end
 end
 
 function ns.OnLanguageChanged()
-  if anchor then anchor.label:SetText(L.anchor) end
+  if not anchor then return end
+  anchor.label:SetText(L.anchor)
+  anchor.lockBtn:SetLabel(L.btnLock)
+  anchor.cfgBtn:SetLabel(L.btnSettings)
+end
+
+-- small buttons on the unlocked frame (0.9.1): lock it, or open the settings, without
+-- searching for the settings window (it may cover the frame)
+local function FrameButton(onClick, title, tip)
+  local b = CreateFrame("Button", nil, anchor)
+  b:SetHeight(20)
+  local bg = b:CreateTexture(nil, "BACKGROUND")
+  bg:SetAllPoints()
+  bg:SetColorTexture(0.04, 0.10, 0.22, 0.9)
+  local hl = b:CreateTexture(nil, "HIGHLIGHT")
+  hl:SetAllPoints()
+  hl:SetColorTexture(0.3, 0.6, 1, 0.25)
+  b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(b.text, "GameFontHighlightSmall", true)
+  b.text:SetPoint("CENTER")
+  function b:SetLabel(text)
+    self.text:SetText(text)
+    self:SetWidth(math.max(60, math.ceil((self.text:GetStringWidth() or 0) + 16)))
+  end
+  b:SetScript("OnClick", onClick)
+  b:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText(title(), 1, 1, 1)
+    GameTooltip:AddLine(tip(), 0.82, 0.82, 0.82, true)
+    GameTooltip:Show()
+  end)
+  b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  b:Hide()
+  return b
 end
 
 -- The frame changes size whenever icons appear or disappear (and when the frame is
@@ -1249,6 +1314,18 @@ local function CreateAnchor()
   anchor.label = anchor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 6)
   anchor.label:SetText(L.anchor)
+  anchor.lockBtn = FrameButton(function()
+    db.locked = true
+    ns.ApplyLock()
+    if ns.RefreshOptions then ns.RefreshOptions() end
+  end, function() return L.btnLock end, function() return L.tipBtnLock end)
+  anchor.lockBtn:SetPoint("BOTTOMRIGHT", anchor.label, "TOP", -2, 4)
+  anchor.cfgBtn = FrameButton(function()
+    if ns.ToggleOptions then ns.ToggleOptions(true) end
+  end, function() return L.btnSettings end, function() return L.tipBtnSettings end)
+  anchor.cfgBtn:SetPoint("BOTTOMLEFT", anchor.label, "TOP", 2, 4)
+  anchor.lockBtn:SetLabel(L.btnLock)
+  anchor.cfgBtn:SetLabel(L.btnSettings)
 
   -- one button per group, then the spell group's extra icons (it is the last group, so they
   -- follow it in the row)
@@ -1313,6 +1390,18 @@ local function SpellLock()
   if lockStart and lockStart + lockDur > GetTime() then return lockStart, lockDur end
 end
 
+-- a frame left unlocked shows every icon lit, without the mana check: a fight locks it, so
+-- the icons never say "drink" when they should not (0.9.1)
+local lockFrame = CreateFrame("Frame")
+lockFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+lockFrame:SetScript("OnEvent", function()
+  if not db or db.locked or not anchor then return end
+  db.locked = true
+  ns.ApplyLock()
+  Print(L.autoLocked)
+  if ns.RefreshOptions then ns.RefreshOptions() end
+end)
+
 local function SetLayer(l, id, n, texture)
   if l.itemID ~= id or not id then
     ClearSweep(l)
@@ -1320,7 +1409,18 @@ local function SetLayer(l, id, n, texture)
     l.itemID = id
   end
   l.icon:SetDesaturated(id == nil)
+  l.icon:SetAlpha(1)
   l.count:SetText(n and n > 1 and n or "")
+end
+
+-- "soon": grey and dimmer than a lit icon, so the one to press stands out (0.9.1); the
+-- countdown numbers stay bright. A plain factor, multiplied by the game with its own alpha.
+-- When the wait is over the icon flashes once.
+local SOON_ALPHA = 0.6
+local function MarkSoon(l, soon)
+  l.icon:SetAlpha(soon and SOON_ALPHA or 1)
+  if l.wasSoon and not soon and l.soonID == l.itemID and l.flashAG then l.flashAG:Play() end
+  l.wasSoon, l.soonID = soon, l.itemID
 end
 
 local function HideLayers(b, from)
@@ -1429,6 +1529,7 @@ local function UpdateSpellButtons(b, maxMana, maxHP, on)
       if db.locked then
         local cs, cd = S.Countdown(sp) -- nearly ready (db.cdShow): grey, counting down, no glow
         l.icon:SetDesaturated(cs ~= nil)
+        MarkSoon(l, cs ~= nil)
         SetGlow(l, cs == nil)
         if cs then CountdownAt(l, cs, cd) else SweepAt(l, SpellLock()) end
         ApplyBand(l, nil, S.Threshold(sp, maxMana))
@@ -1489,6 +1590,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
     SetLayer(l, c.it.id, c.n)
     local cooling = (c.left or 0) > 0 -- shown early: grey, no glow, the game's countdown on it
     if hold or cooling then l.icon:SetDesaturated(true) end
+    MarkSoon(l, cooling)
     ShowHeld(b, l, hold)
     SetGlow(l, not hold and not cooling)
     if cooling then CountdownAt(l, OwnCooldown(c.it.id)) else ApplySweep(l, c.it.id) end
