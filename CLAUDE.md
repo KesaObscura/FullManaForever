@@ -81,7 +81,7 @@ and `/fmf log` (kept in releases for bug reports).
   can get an icon (0.8.7, owner: icons must not run past the bar), minimum 3.
 - The potion icon stays lit while wanding (sweep shows the wait).
 - Regen green when above normal (out of combat vs the lowest normal regen since the last
-  level-up or gear change, +10 %; in combat only own Evocation 8 s and Ley Line reading 15 s).
+  level-up or gear change, +10 %; in combat only own Evocation 8 s and Read Leyline 30 s, owner 17 Oct).
 - Profiles (0.8.3): "Shared" + own per character (copy of Shared, kept when switching back); new
   characters start on Shared; copy/reset/delete confirm, one undo per session; disabled items
   per profile, own items and language account-wide.
@@ -89,12 +89,18 @@ and `/fmf log` (kept in releases for bug reports).
   with "HOLD", not on the unlocked frame; command/macro only, no key binding.
 - 0.8.3 also: "Drinking" becomes "When to light up" (all languages). 0.8.4 (after launch): HUD
   polish (colour system, Blizzard-like glow, bar gloss, digit font, bigger defaults).
-- Group features (0.9.0 idea): who has Innervate / Mana Tide ready; whispering only optional.
+- Group features (after launch; were planned as 0.9.0): who has Innervate / Mana Tide ready;
+  whispering only optional.
+- 0.9.0 (owner, 17 Oct): the patch research, the item review and everything a CurseForge comment
+  asked for to work with unit frame addons: texts above the bar, "Above other frames" (HIGH
+  strata), "Seconds" switch, smooth five-second strip, "Only markers" bar style, "Move the bar
+  separately" (`barFree`, `barPoint`), mana fill eased via `Enum.StatusBarInterpolation` when
+  the game has it.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get
   built" is fine); 9 languages, not 10. Not only for healers: every mana user.
-- Launch: beta ends 21 Oct 2026, launch 4 Nov (EU 5 Nov). By 21 Oct the most stable, complete
+- Launch: beta ends 23 Oct 2026 (extended from 21 Oct), launch 4 Nov (EU 5 Nov). By the beta end the most stable, complete
   version; at launch only the Interface number (16001 may change) and bug fixes.
 
 ## Roadmap and reminders (owner asked to be reminded; keep this list current)
@@ -108,12 +114,19 @@ and `/fmf log` (kept in releases for bug reports).
    /fmf profile copy with the surname), 0.8.7 on 15 Oct (new description in three blocks with
    images linked from GitHub: they show on CurseForge; gallery 06 and 07 new), 0.8.8 on 16 Oct (description
    with "See it coming", gallery unchanged); 0.8.9 next, with new screenshots and a GIF (owner
-   records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs); CurseForge:
-   0.8.9 next (package cf-0.8.9 with new gallery), then 0.8.10. PR bodies: check after creating
+   records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs);
+   0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); CurseForge:
+   0.8.9 is the last upload; 0.8.10 and 0.8.11 were skipped there (owner, 21 Oct): 0.9.0 goes up
+   next with one changelog covering 0.8.10, 0.8.11 and 0.9.0, released together on GitHub. PR bodies: check after creating
    that no session link was appended (removed from PR #1-#15 on 16 Oct).
-3d. 0.8.12 (owner, 17 Oct): full scan after the 17 Oct patch (talents, abilities, spells) and the
+3d. 0.8.12 (owner, 17 Oct): research after the 17 Oct patch (talents, abilities, spells) and the
    item review: what is junk / unimportant for the addon, what is needed. Everything found but not
    taken is kept in the owner's private research notes and decided again after every scan.
+   First pass done 17 Oct (facts in `docs/notes.md`); item data not complete even after a
+   second pass: ~7 400 item IDs are still refused by the beta server (also real items such as the
+   trinkets Second Wind 11819 and Burst of Knowledge 11832): look again after launch. Decided
+   17 Oct: Read Leyline 30 s (0.8.12), Windstone is junk. Item review done 21 Oct (0.9.0, see
+   `docs/notes.md`).
 3c. Done in 0.8.11 (owner, 17 Oct: option C, no setting): icons sorted by the threshold they
    light up at (`ByLight` in `ns.Layout`), health-checked icons last only on equal thresholds.
    Tested in game by the owner 17 Oct. The order is dynamic (thresholds, max mana): the gallery
@@ -131,9 +144,10 @@ and `/fmf log` (kept in releases for bug reports).
 5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
    fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
-6. Untested in game: owner's printed list `docs/test-checklist.md` (druid forms, Life Tap, group
-   log, Mana Agate, Evocation, Inner Focus buff, launch-day Interface check). Update it as answers come.
+6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
+   next), launch-day Interface check; other classes (druid forms, Life Tap, Mana Agate, Evocation)
+   when the owner has a character of that level, or from users. Inner Focus tested 17 Oct.
 7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is
    ready again (option, off), no glow on placeholders. Gallery images 03 (rule row/column) and 10
-   show tenths of seconds: re-shoot when convenient. Rest of the HUD polish and 0.9.0 (group)
-   after launch; 0.9.0 needs the group log first. Maybe Wago / WoWInterface mirrors later.
+   show tenths of seconds: re-shoot when convenient. Rest of the HUD polish and the group features
+   after launch; they need the group log first. Maybe Wago / WoWInterface mirrors later.

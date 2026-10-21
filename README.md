@@ -7,7 +7,7 @@
 An addon for **World of Warcraft: Forever** (WoW Forever, "Classic+", client 1.60.1) for healers
 and every other mana user. It lights up your **mana potion**, Demonic/Dark Rune, mage mana gem,
 mana item or **own mana spell** (Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap,
-Eureka!, Ley Line reading) **the moment it is ready and fits into your missing mana**, so nothing
+Eureka!, Read Leyline) **the moment it is ready and fits into your missing mana**, so nothing
 is wasted: drink on cooldown, stay near full mana, and never panic-chug at 5 %. A compact mana bar
 shows the **five-second rule (5SR)** and your **live mana regen per second, also in combat**.
 
@@ -45,14 +45,17 @@ when the icon lights up.
 - **Runes are safe**: shown only if you keep a set share of health after the rune
   (30 % by default).
 - **Own mana spells**: Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the
-  racials Eureka! (gnome) and Ley Line reading (Skyborne): every ready spell gets its own icon
+  racials Eureka! (gnome) and Read Leyline (Skyborne): every ready spell gets its own icon
   when your mana is at or below its own threshold (sensible defaults per spell, set in the list
   below); Life Tap when its mana fits.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons stand in the order they light up (highest
   threshold first), so lit icons never leave a gap. Icons in a row or a column, bar on any side;
-  color, thickness, length, icon size and spacing are adjustable.
-- **Five-second rule and mana regen** on the bar: a gold strip and the seconds after a spell
+  color, thickness, length, icon size and spacing are adjustable. For unit frame addons: *Only
+  markers* (no fill, background or border: lay the markers and the five-second strip over your
+  unit frame's mana bar), *Move the bar separately* (its own place, apart from the icons) and
+  *Above other frames*.
+- **Five-second rule and mana regen** on the bar: a gold strip (and the seconds, can be switched off) after a spell
   that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns
   green when it is above your normal rate, red while Resurrection Sickness holds it down. The
   mana numbers, the seconds and the regen also show without the bar, and each can be dragged anywhere ("Move texts freely").

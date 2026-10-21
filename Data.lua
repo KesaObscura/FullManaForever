@@ -20,7 +20,6 @@ ns.GROUPS = {
                     -- from the game's item cooldowns on 14 Oct 2026)
     items = {
       { id = 13444, min = 1350, max = 2250 },  -- Major Mana Potion (1350-2250)
-      { id = 23578, min = 1350, max = 2250 },  -- Diet McWeaksauce (same spell as Major Mana Potion)
       { id = 18253, min = 1440, max = 1760 },  -- Major Rejuvenation Potion (1440-1760 mana + health)
       { id = 17351, min = 980, max = 1260, pvp = true }, -- Major Mana Draught (980-1260, battlegrounds)
       { id = 13443, min = 900, max = 1500 },  -- Superior Mana Potion (900-1500)
@@ -29,16 +28,12 @@ ns.GROUPS = {
       { id = 20002, min = 2100, max = 2100, defaultOff = true, sleep = true }, -- Greater Dreamless Sleep Potion (2100 over 12 s asleep)
       { id = 12190, min = 1200, max = 1200, defaultOff = true, sleep = true }, -- Dreamless Sleep Potion (1200 over 12 s asleep)
       { id = 6149, min = 700, max = 900 },   -- Greater Mana Potion (700-900)
-      { id = 274935, min = 720, max = 880 },  -- Tessa's Tonic (720-880 mana + health, Forever)
-      { id = 282013, pct = 0.20 },            -- Restored Mana Potion (20 % of max mana, Forever)
       { id = 17352, min = 560, max = 720,  pvp = true }, -- Superior Mana Draught (560-720, battlegrounds)
       { id = 3827, min = 455, max = 585 },   -- Mana Potion (455-585)
       { id = 3385, min = 280, max = 360 },   -- Lesser Mana Potion (280-360)
       { id = 287969, min = 280, max = 360, same = 3385 }, -- Lesser Mana Potion (Forever copy, level 1)
-      { id = 1072, min = 280, max = 360 },    -- Full Moonshine (same spell as Lesser Mana Potion)
       { id = 2455, min = 140, max = 180 },   -- Minor Mana Potion (140-180)
       { id = 287968, min = 140, max = 180, same = 2455 }, -- Minor Mana Potion (Forever copy, level 1)
-      { id = 3087, min = 140, max = 180 },    -- Mug of Shimmer Stout (140-180)
       { id = 2456, min = 90, max = 150 },   -- Minor Rejuvenation Potion (90-150 mana + health)
     },
   },
@@ -63,7 +58,6 @@ ns.GROUPS = {
     key = "herb", -- other consumables with mana; items have different cooldowns
     preferReady = true,
     items = {
-      { id = 15723, min = 1050, max = 1750 }, -- Tea with Sugar (1050-1750 mana + health)
       { id = 11952, min = 394, max = 456 },   -- Night Dragon's Breath (394-456 mana + health)
       { id = 213564, min = 300, max = 300, class = "MAGE" }, -- Scroll of Minor Evocation (300 over 4 s, 8 min)
       { id = 275688, pct = 0.20, hpCostPct = 0.20 }, -- Power Recycler (20 % max health into 20 % max mana, 2 min, Forever)

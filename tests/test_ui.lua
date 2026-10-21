@@ -117,9 +117,14 @@ test("options: bar length leaves auto at the auto length and returns to auto bel
   eq(ns.db.barLength, 0)
   ok(not s.minus:IsEnabled(), "minus active at auto")
   s.plus.scripts.OnClick(s.plus)
-  -- priest: 4 groups -> 4*44 + 3*6 = 194, rounded up to the 20 step
+  -- priest: 4 groups -> 4*44 + 3*6 = 194, rounded up to the 10 step
   eq(ns.db.barLength, 200, "first step from auto")
+  -- steps of 10 (owner, 21 Oct): 60 -> 50 still holds an icon (44), 50 -> 40 does not
+  s.minus.scripts.OnClick(s.minus)
+  eq(ns.db.barLength, 190, "step of 10")
   ns.db.barLength = 60
+  s.minus.scripts.OnClick(s.minus)
+  eq(ns.db.barLength, 50, "60 - 10")
   s.minus.scripts.OnClick(s.minus)
   eq(ns.db.barLength, 0, "below the icon size")
 end)

@@ -495,6 +495,14 @@ Build = function()
   -- always one row under unlock, in every language (side by side only where it fitted, the
   -- layout jumped when the language changed)
   c.Row(freeCb, PAD + 26) -- a sub-setting of unlock: indented like "Whole seconds"
+  -- the bar apart from the icons, dragged on its own while unlocked; next to "Move texts
+  -- freely" (owner, 21 Oct: both are about placing)
+  c.Row(Check(col, L.optBarFree, function() return db.barFree end,
+    function(v) ns.FreeBar(v) end, L.tipBarFree,
+    function() return not db.locked and db.showBar end), PAD + 26)
+  -- above unit frames of other addons (HIGH strata)
+  c.Row(Check(col, L.optOnTop, function() return db.onTop end,
+    function(v) db.onTop = v; ns.PositionBar() end, L.tipOnTop))
   -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
   local reset = Button(col, L.optReset, HALF)
   reset:SetWidth(HALF)
@@ -583,7 +591,7 @@ Build = function()
   c.Row(thick.label, PAD + 30, 28)
   -- length: 0 = auto. Leaving auto starts at the auto length; going below one icon
   -- (a bar shorter than an icon is useless) returns to auto.
-  local LEN_STEP, LEN_MAX = 20, 800
+  local LEN_STEP, LEN_MAX = 10, 800 -- steps of 10 to match unit frames (owner, 21 Oct)
   local blen = Stepper(col, PAD + 30, L.optBarLen, function() return db.barLength end,
     function(v) db.barLength = v; ns.Layout(true) end, {
       fmt = function(v) return v == 0 and L.lenAuto or tostring(v) end,
@@ -601,6 +609,11 @@ Build = function()
       end,
     })
   c.Row(blen.label, PAD + 30, 32)
+  -- only the markers, the strip and the texts: to lay the bar over another mana bar (0.9.0)
+  local markersCb = Check(col, L.optBarMarkers, function() return db.barStyle == "markers" end,
+    function(v) db.barStyle = v and "markers" or "full"; ns.Layout(true) end, L.tipBarMarkers,
+    function() return db.showBar end)
+  c.Row(markersCb, PAD + 26, 30)
   -- the bar's own look only matters while it is on
   ActiveIf(function() return db.showBar end, bpLabel, bp, colLabel, colDD, thick, blen)
   -- the three texts: each has its own switch and text size and also shows without the bar
@@ -628,8 +641,12 @@ Build = function()
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
   ActiveIf(function() return db.fsr end, SizeStepper("fsrScale"))
+  -- the seconds can go: the strip alone shows the rule (0.9.0)
+  c.Row(Check(col, L.optFsrNum, function() return db.fsrNum ~= false end,
+    function(v) db.fsrNum = v; ns.Layout(true) end, L.tipFsrNum, function() return db.fsr end), PAD + 26, 26)
   c.Row(Check(col, L.optFsrWhole, function() return db.fsrWhole end,
-    function(v) db.fsrWhole = v end, L.tipFsrWhole, function() return db.fsr end), PAD + 26, 26)
+    function(v) db.fsrWhole = v end, L.tipFsrWhole,
+    function() return db.fsr and db.fsrNum ~= false end), PAD + 26, 26)
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))

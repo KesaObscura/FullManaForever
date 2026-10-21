@@ -141,7 +141,7 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   the cast. The racial "Walk on Air" 1259416 (120) has nothing to do with mana.
 - 0.8.2 (user request on CurseForge, owner: "do all"): regen text green when above normal
   (out of combat vs the lowest normal regen since the last level-up or gear change, +10 %; in
-  combat only own Evocation 8 s and Ley Line reading 15 s, Innervate left out because its
+  combat only own Evocation 8 s and Read Leyline 15 s (30 s since 0.8.12), Innervate left out because its
   target is unknown). All three texts (mana numbers, rule seconds, regen) show without the bar
   and can each be dragged (`textFree`, `textPoints[mana|fsr|regen]` in screen units, reset by
   `/fmf reset`); the owner read the request as "move all texts".
@@ -203,6 +203,17 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Mana Potion), Mageblood Elixir 20007 (regen elixir), mana oils, EZ-Thro Mana Bomb 260818 (new,
   text not loaded yet), Crisp Spring Water 252031 (new water). The first item pass missed slow
   texts; a second pass is needed before adding numbers.
+- Patch of 17 Oct (build 70450, checked against the game's own API): Mana Tide Totem ranks
+  moved down: rank 1 16190 now level 1 (talent), rank 2 17354 at 38, rank 3 17359 at 48 (cheaper),
+  new rank 4 1325256 at 58 (found by name in the spell book, nothing to add). Ley Line reading is
+  now named "Read Leyline" (same ID 1259705; we look spells up by their live name) and lasts 30 s
+  without a leyline nearby (text; we counted 15 s, 30 s since 0.8.12), 15 min with one. Walk on Air 120 -> 90 s cd.
+  Eureka! no longer has the subtext "Racial" (we do not read it). Every item of `Data.lua` exists
+  with the same use spell. Windstone 255663 (Skywall only) and Green Tea Leaf 1401 share the
+  potion cooldown.
+- Chat test (`/fmf log chat`, 17 Oct, solo, out of combat): a whisper to the own name does not
+  arrive ("No player named ..."): Forever names have a surname; whispers in 0.9.0 need the right
+  target form first.
 
 - Resurrection Sickness on Forever (owner's /dump, 14 Oct): aura 15007, 600 s, readable out of
   combat with `C_UnitAuras.GetPlayerAuraBySpellID(15007)`. `UnitStat("player", 5)` under it:
@@ -215,6 +226,12 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   287968/287969 and Windstone (Skywall only, not added); all added in 0.8.9, with Power
   Recycler (20 % health into 20 % mana), Tea with Sugar 15723, Earthen Sigil 20525, Scroll of
   Minor Evocation 213564 (mage) and Veildust Medicine Bag 15866 (druid off-hand).
+- Item review (owner, 21 Oct, 0.9.0): removed for good Diet McWeaksauce 23578 (test realm item of
+  the 1.11 PTR, never in the live game); removed for now Tessa's Tonic 274935, Restored Mana
+  Potion 282013 and Full Moonshine 1072 (unclear where they come from), Mug of Shimmer Stout 3087
+  and Tea with Sugar 15723 (quest rewards sharing the potion / rune cooldown with better items).
+  Kept: Wildvine Potion 9144, Scroll of Minor Evocation 213564, Power Recycler 275688, Earthen
+  Sigil 20525; the Forever copies 287968/287969 stay one row with the original.
 - Checked 14 Oct 2026 (build 70374): the potion cooldown is one shared 120 s cooldown for 13
   items (all mana, rejuvenation and Dreamless Sleep potions, the draughts, Combat Mana Potion),
   as in `Data.lua`. All our spell IDs and ranks still match (Evocation 20, Mana Tide 25/48/58,

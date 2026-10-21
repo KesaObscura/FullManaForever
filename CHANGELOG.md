@@ -1,5 +1,18 @@
 # Changelog
 
+**Full Mana Forever 0.9.0**
+
+Works together with unit frame addons (asked for in the comments):
+- **Only markers** (under Mana bar): hides the bar's fill, background and border. The potion markers, the five-second strip and the texts stay, so you can lay them over the mana bar of your unit frame; match length and thickness to that bar
+- **Move the bar separately** (under *Move texts freely*): the bar gets its own place, apart from the icons; unlock the frame and drag it. *Reset position* puts it back next to the icons
+- **Above other frames**: icons, bar and texts are drawn above other addons' frames
+- Bar length goes in steps of 10 (was 20), to match a unit frame exactly
+- The texts (mana numbers, seconds, regen) always lie above the bar; dragged onto the bar they no longer go under it
+- **Seconds** (under Five-second rule): the countdown number can be switched off, the gold strip alone shows the rule
+- The five-second strip runs down smoothly instead of in steps; the mana fill eases to its new value where the game supports it
+- Item list cleaned up: Diet McWeaksauce (a test realm item that never reached the live game), Tessa's Tonic, Restored Mana Potion, Full Moonshine (unclear where they come from), Mug of Shimmer Stout and Tea with Sugar (quest rewards that share the potion or rune cooldown with better items) are no longer listed. You can still add any item yourself
+- Read Leyline (Skyborne, renamed by the game from "Ley Line reading"): in combat the regen now stays green for 30 seconds after the cast, as the spell's own text says since the 17 October patch (was 15). The items and spells of the addon were checked again after the patch: all unchanged; the new fourth rank of Mana Tide Totem is found by itself
+
 **Full Mana Forever 0.8.11**
 
 - No more gaps in the row or column of icons: the icons now stand in the order they light up, the one with the highest mana threshold first. When your mana drops, new icons appear at the end and the lit ones stay where they are; the potion slot keeps its place when a smaller potion turns into a bigger one. The order follows your thresholds, so changing a spell's threshold, your max mana or your items can move an icon. Runes and Life Tap can still be hidden in their place while your health is too low for them

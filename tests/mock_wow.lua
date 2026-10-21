@@ -104,10 +104,12 @@ function methods:SetGradient(o, a, b)
 end
 function methods:EnableMouseWheel(v) self.wheel = v end
 function methods:SetToplevel(v) self.toplevel = v end
-function methods:SetValue(v)
+function methods:SetValue(v, ease)
   if M.failSetValue and type(v) == "table" then error("secret not accepted") end
-  self.value = v
+  self.value, self.ease = v, ease
 end
+function methods:SetFrameStrata(st) self.strata = st end
+function methods:GetFrameStrata() return self.strata or "MEDIUM" end
 function methods:SetMinMaxValues(a, b) M.calls.SetMinMaxValues = (M.calls.SetMinMaxValues or 0) + 1; self.min, self.max = a, b end
 function methods:GetVerticalScroll() return self.vscroll or 0 end
 function methods:SetVerticalScroll(v) self.vscroll = v end

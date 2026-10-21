@@ -1838,17 +1838,6 @@ test("the three orbs are for mages only (their tooltip says Classes: Mage)", fun
   for _, id in ipairs({ 7507, 7508, 7515 }) do ok(listed(ns, "gear", id), "orb " .. id .. " missing for a mage") end
 end)
 
-test("Restored Mana Potion: 20 % of max mana, lights up once 20 % is missing", function()
-  local ns = M.load(nil, { bags = { [282013] = 1 } })
-  for _, maxMana in ipairs({ 1000, 6000 }) do
-    M.state.maxMana = maxMana
-    M.state.manaPct = 0.85; M.tick()
-    ok(not slotVisible(ns, 1), "lit with 15 % missing at " .. maxMana)
-    M.state.manaPct = 0.79; M.tick()
-    ok(slotVisible(ns, 1), "not lit with 21 % missing at " .. maxMana)
-  end
-end)
-
 test("Power Recycler: 20 % mana for 20 % health, needs the health to spare", function()
   local ns = M.load({ runeMargin = 0.1 }, { bags = { [275688] = 1 } })
   local herb = groupIndex(ns, "herb")
@@ -1862,7 +1851,7 @@ end)
 
 test("potions found by the game's shared cooldown are in the potion group", function()
   local ns = M.load(nil, { bags = POT })
-  for _, id in ipairs({ 23578, 9144, 274935, 282013, 287969, 1072, 287968, 3087 }) do
+  for _, id in ipairs({ 9144, 287969, 287968 }) do
     ok(listed(ns, "potion", id), "item " .. id .. " not in the potion group")
   end
   ok(listed(ns, "potion", 9144).defaultOff, "Wildvine Potion (may give nothing) suggested by default")
@@ -1871,7 +1860,7 @@ end)
 test("class items: Scroll of Minor Evocation for mages, Veildust Medicine Bag for druids", function()
   local ns = M.load(nil, { bags = POT, class = "PRIEST" })
   ok(not listed(ns, "herb", 213564) and not listed(ns, "gear", 15866), "class items for a priest")
-  ok(listed(ns, "herb", 15723) and listed(ns, "gear", 20525), "Tea with Sugar / Earthen Sigil missing")
+  ok(listed(ns, "gear", 20525), "Earthen Sigil missing")
   ns = M.load(nil, { bags = POT, class = "DRUID" })
   ok(listed(ns, "gear", 15866), "Veildust Medicine Bag missing for a druid")
 end)
@@ -1936,4 +1925,111 @@ test("a smaller potion turns into the bigger one in the same place", function()
   M.state.manaPct = 0.2; M.tick()
   ok(slotVisible(ns, 1), "potion slot not lit")
   eq(b1.outer.points[1][4], x1, "the potion slot moved")
+end)
+
+test("Read Leyline keeps the regen green for 30 s after the cast (game text, 17 Oct)", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  _G.GetPowerRegen = function() return M.secret(15.5), M.secret(0) end -- in combat: secret
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local real = GetTime
+  _G.GetTime = function() return 100 end
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 1259705)
+  _G.GetTime = function() return 129 end
+  local _, _, boosted = ns.RegenText()
+  ok(boosted, "not green 29 s after the cast")
+  _G.GetTime = function() return 131 end
+  _, _, boosted = ns.RegenText()
+  ok(not boosted, "still green 31 s after the cast")
+  _G.GetTime = real
+  noRegenApis()
+end)
+
+-- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
+
+test("texts lie above the bar; 'Above other frames' raises the whole display", function()
+  local ns = M.load(nil, { bags = POT })
+  M.tick()
+  local b = bar(ns)
+  for _, box in ipairs({ b.manaBox, b.fsrBox, b.regenBox }) do
+    ok(box:GetFrameLevel() > b.top:GetFrameLevel(), "a text box lies under the bar")
+    eq(box:GetFrameStrata(), "MEDIUM")
+  end
+  ns.db.onTop = true; ns.Layout(true)
+  eq(M.upvalue(ns.Layout, "anchor"):GetFrameStrata(), "HIGH", "icons not above other frames")
+  eq(b:GetFrameStrata(), "HIGH", "bar not above other frames")
+  eq(b.regenBox:GetFrameStrata(), "HIGH", "texts not above other frames")
+end)
+
+test("the rule's seconds can be switched off: the strip alone shows the rule, smoothly", function()
+  local ns = M.load({ fsrNum = false }, { bags = POT })
+  regenApis(14.75, 0)
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 598)
+  M.tick()
+  ok(bar(ns).fsr.shown, "strip hidden")
+  ok(not bar(ns).fsrText.shown, "seconds shown although switched off")
+  -- the strip follows every frame, not only the tick
+  local real = GetTime
+  _G.GetTime = function() return 102.5 end
+  bar(ns).fsr.scripts.OnUpdate(bar(ns).fsr)
+  _G.GetTime = real
+  ok(math.abs(bar(ns).fsr.value - 2.5) < 0.01, "strip not moved between ticks: " .. tostring(bar(ns).fsr.value))
+  noRegenApis()
+end)
+
+test("'Only markers': no fill, background or border; markers, strip and texts stay", function()
+  local ns = M.load({ barStyle = "markers" }, { bags = POT })
+  M.state.manaPct = 0.9; M.tick()
+  local b = bar(ns)
+  ok(b.shown, "bar frame hidden: the markers would go with it")
+  eq(b:GetStatusBarTexture().alpha, 0, "fill still drawn")
+  ok(not b.bg.shown and not b.shadow.shown and not b.gloss.shown, "background still drawn")
+  for _, e in ipairs(b.border) do ok(not e.shown, "border still drawn") end
+  ok(b.ticks[1][1].front.shown, "potion marker gone")
+  ok(b.manaBox.shown, "mana numbers gone")
+  ns.db.barStyle = "full"; ns.Layout(true)
+  eq(b:GetStatusBarTexture().alpha, 1, "fill not back"); ok(b.bg.shown, "background not back")
+end)
+
+test("the bar can be moved apart from the icons; reset puts it back", function()
+  local ns = M.load({ locked = false }, { bags = POT })
+  M.tick()
+  local b = bar(ns)
+  M.left, M.top = 300, 500
+  ns.FreeBar(true)
+  ok(b.mouse, "free bar cannot be dragged while unlocked")
+  ok(b.dragBg.shown, "free bar not highlighted while unlocked")
+  M.left, M.top = 640, 200 -- dragged
+  b.scripts.OnDragStop(b)
+  eq(ns.db.barPoint[1], 640); eq(ns.db.barPoint[2], 200)
+  local p = b.points[1]
+  eq(p[1], "TOPLEFT"); eq(p[2], UIParent); eq(p[4], 640); eq(p[5], 200)
+  ns.db.locked = true; ns.ApplyLock()
+  ok(not b.mouse, "locked free bar still takes the mouse")
+  ns.ResetPosition()
+  eq(ns.db.barPoint, nil, "reset kept the free place")
+  local anchor = M.upvalue(ns.Layout, "anchor")
+  eq(b.points[1][2], anchor, "bar not back next to the icons")
+  M.left, M.top = nil, nil
+end)
+
+test("the mana fill is eased by the game where it can (StatusBar interpolation)", function()
+  local ns = M.load(nil, { bags = POT })
+  _G.Enum.StatusBarInterpolation = { Immediate = 0, ExponentialEaseOut = 1 }
+  M.tick()
+  eq(bar(ns).ease, 1, "fill not eased")
+  _G.Enum.StatusBarInterpolation = nil
+  M.tick()
+  eq(bar(ns).ease, nil, "easing asked for without the game's support")
+end)
+
+test("item review 21 Oct: test-realm, unclear and pointless items are gone", function()
+  local ns = M.load(nil, { bags = POT })
+  -- Diet McWeaksauce (test realm only), Tessa's Tonic, Restored Mana Potion, Full Moonshine
+  -- (unclear where they come from), Mug of Shimmer Stout, Tea with Sugar (quest rewards that
+  -- share the potion / rune cooldown with better items)
+  for _, id in ipairs({ 23578, 274935, 282013, 1072, 3087, 15723 }) do
+    for _, g in ipairs(ns.GROUPS) do ok(not listed(ns, g.key, id), "item " .. id .. " still listed") end
+  end
+  -- kept: Wildvine Potion, Scroll of Minor Evocation, Power Recycler, Earthen Sigil
+  ok(listed(ns, "potion", 9144) and listed(ns, "herb", 275688) and listed(ns, "gear", 20525), "a kept item is gone")
 end)
