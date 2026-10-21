@@ -115,7 +115,10 @@ and `/fmf log` (kept in releases for bug reports).
    images linked from GitHub: they show on CurseForge; gallery 06 and 07 new), 0.8.8 on 16 Oct (description
    with "See it coming", gallery unchanged); 0.8.9 next, with new screenshots and a GIF (owner
    records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs);
-   0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); CurseForge:
+   0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); 0.9.0
+   released on GitHub and CurseForge 21 Oct (unit frame options, item review, Read Leyline 30 s;
+   CurseForge changelog covered 0.8.10-0.9.0). Before the beta end (23 Oct): two more releases,
+   the first from the three UX reviews (HUD, settings, first run). CurseForge (history):
    0.8.9 is the last upload; 0.8.10 and 0.8.11 were skipped there (owner, 21 Oct): 0.9.0 goes up
    next with one changelog covering 0.8.10, 0.8.11 and 0.9.0, released together on GitHub. PR bodies: check after creating
    that no session link was appended (removed from PR #1-#15 on 16 Oct).
