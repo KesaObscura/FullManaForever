@@ -343,6 +343,7 @@ local function PlaceGroups(force)
 end
 
 local stale -- the closed window still shows another profile: built anew when it opens
+local builtVertical -- the layout the open window was built for (row or column)
 local function Rebuild()
   stale = false
   local point
@@ -364,7 +365,13 @@ local function Rebuild()
 end
 
 Build = function()
-  local db = ns.db
+  -- every getter and setter reads the profile in use now, so a profile switch only refreshes
+  -- the window instead of building ~400 new frames that are never freed (0.9.2)
+  local db = setmetatable({}, {
+    __index = function(_, k) return ns.db[k] end,
+    __newindex = function(_, k, v) ns.db[k] = v end,
+  })
+  builtVertical = ns.db.vertical and true or false
   win = CreateFrame("Frame", "FullManaForeverOptions", UIParent)
   -- its own place, kept for the account (0.9.1): the centre covered the icons while placing
   -- them. First time: at the right edge, away from the icons in the middle
@@ -441,7 +448,8 @@ Build = function()
   shade:Hide()
   win.shade = shade
   win:SetScript("OnShow", function() OnSettingsShown() end)
-  win:SetScript("OnHide", function() winHiddenAt = GetTime(); UpdateShade() end)
+  -- a reset question never waits for the next opening (0.9.2)
+  win:SetScript("OnHide", function() ask:Hide(); winHiddenAt = GetTime(); UpdateShade() end)
 
   local title = Label(win, "Full Mana Forever  |cff888888v" .. ns.VERSION .. "|r", "GameFontNormalLarge")
   title:SetPoint("TOPLEFT", PAD, -12)
@@ -831,7 +839,12 @@ Build = function()
   local acc = 0
   win:SetScript("OnUpdate", function(_, elapsed)
     acc = acc + elapsed
-    if acc > 0.5 then acc = 0; ns.RefreshOptions() end
+    if acc > 0.5 then
+      acc = 0
+      -- an error here would repeat twice a second: shown once, then the refresh stops (0.9.2)
+      local ok, err = pcall(ns.RefreshOptions)
+      if not ok then acc = -math.huge; ns.Print(tostring(err)) end
+    end
   end)
 end
 
@@ -1129,6 +1142,9 @@ local function BuildProfiles()
     undoBtn:SetEnabled(canUndo)
     undoBtn:SetAlpha(canUndo and 1 or 0.5)
     pwin:SetHeight(-y + 22 + 16)
+    -- many characters with an own profile: the window shrinks to stay on the screen (0.9.2)
+    local sh, ph = UIParent:GetHeight() or 0, pwin:GetHeight() or 0
+    pwin:SetScale((sh > 0 and ph > sh * 0.9) and sh * 0.9 / ph or 1)
   end
   pwin:SetScript("OnShow", function() RefreshProfiles() end)
   pwin:SetScript("OnHide", function() confirm:Hide() end) -- a question never waits for later
@@ -1185,7 +1201,13 @@ function ns.OnProfileChanged()
   -- a closed window is built when it opens next: no new frames per switch, and it never
   -- shows for a moment (that would move an open item list onto it)
   if win then
-    if win:IsShown() then Rebuild() else stale = true end
+    if not win:IsShown() then
+      stale = true
+    elseif (ns.db.vertical and true or false) ~= builtVertical then
+      Rebuild() -- the bar position choices differ between a row and a column
+    else
+      ns.RefreshOptions()
+    end
   end
   -- the rebuilt settings window is new and would cover the profiles window the click came from
   if pwin and pwin:IsShown() then RefreshProfiles(); pwin:Raise() end

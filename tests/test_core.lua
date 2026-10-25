@@ -670,7 +670,9 @@ test("/fmf log records max health and the potion cooldowns as the game reports t
   local all = table.concat(FullManaForeverLog.lines, "\n")
   ok(all:find("maxHP=SECRET", 1, true), "max health not logged")
   ok(all:find("pots 3385 x2 cd=95+120 en=0 ready=false", 1, true), "potion cooldown not logged: " .. all)
-  ok(select(2, all:gsub("pots 3385", "")) >= 2, "potions missing in cast or sample line")
+  -- the long potion line only when it changed (0.9.2): the sample after the cast says "same"
+  eq(select(2, all:gsub("pots 3385", "")), 1, "unchanged potions written twice")
+  ok(all:find("potions=same", 1, true), "sample line without the potion note")
   noDiagApis()
 end)
 
@@ -704,17 +706,21 @@ test("/fmf log records group members' casts and the chat test", function()
   local all = table.concat(FullManaForeverLog.lines, "\n")
   _G.SendChatMessage, _G.C_ChatInfo, _G.UnitName, _G.GetNumGroupMembers = nil, nil, nil, nil
   ok(all:find("group roster members=3 raid=false", 1, true), "roster: " .. all)
-  ok(all:find("group member party2 PRIEST level=60 who=Nparty2", 1, true), "roster member")
-  ok(all:find("group cast party1 DRUID spell=29166 ? WATCH Innervate combat=false who=Nparty1", 1, true), "innervate: " .. all)
+  -- other players' names never go into the log (bug reports are often public; 0.9.2)
+  ok(all:find("group member party2 PRIEST level=60 who=readable", 1, true), "roster member")
+  ok(all:find("group cast party1 DRUID spell=29166 ? WATCH Innervate combat=false who=readable", 1, true), "innervate: " .. all)
+  ok(not all:find("Nparty", 1, true), "a group member's name in the log")
   ok(all:find("group cast party2 PRIEST spell=SECRET", 1, true), "secret group cast")
   ok(not all:find("nameplate3", 1, true), "non-group unit logged")
   local function count(pat) local n = 0; for _ in all:gmatch(pat) do n = n + 1 end return n end
   eq(count("spell=585 "), 1, "a plain spell is logged once per class")
   eq(count("WATCH Wisdom"), 2, "a mana spell is logged every time")
   ok(all:find("group cast unit=SECRET spell=1", 1, true), "secret unit")
-  eq(sent[1], "WHISPER:Me"); eq(sent[2], "addon:FMF:Me"); eq(sent[3], "addon:FMF:PARTY")
-  ok(all:find("chat test combat=false whisper=sent prefix=true addon=sent 0 group=PARTY sent 0", 1, true), "chat test line")
-  ok(all:find("addon msg text=test channel=WHISPER sender=Me", 1, true), "addon message not logged")
+  -- no whisper any more (one's own first name does not arrive in Forever), only the group
+  eq(sent[1], "addon:FMF:PARTY"); eq(sent[2], nil)
+  ok(all:find("chat test combat=false prefix=true group=PARTY sent 0", 1, true), "chat test line")
+  ok(all:find("addon msg text=test channel=WHISPER sender=readable", 1, true), "addon message not logged")
+  ok(not all:find("sender=Me", 1, true), "the sender's name in the log")
 end)
 
 -- own mana spells (0.8.0) ------------------------------------------------------------
@@ -2124,4 +2130,167 @@ test("the settings window keeps its place for the account and fits the screen", 
   win.scripts.OnDragStop(win)
   eq(ns.acct.optPoint[1], 120); eq(ns.acct.optPoint[2], 700)
   M.left, M.top = nil, nil
+end)
+
+-- 0.9.2: three developer reviews (HUD logic, settings and data, performance and robustness)
+
+test("an error outside the groups hides every icon instead of freezing a lit one", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit at 20 %")
+  local real = UnitHealthMax
+  _G.UnitHealthMax = function() error("patched away") end
+  M.state.manaPct = 1; M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion stays lit at full mana after an error")
+  _G.UnitHealthMax = real
+end)
+
+test("a broken spell or sound part does not stop the potions", function()
+  local ns = M.load(nil, { bags = POT })
+  ns.Spells.Refresh = function() error("spell book") end
+  M.state.manaPct = 0.2; M.tick()
+  ok(slotVisible(ns, 1), "potion gone because the spell part failed")
+end)
+
+test("an odd spell book answer at login does not stop the addon", function()
+  M.reset()
+  _G.Enum = _G.Enum or {}
+  local ns = M.load(nil, { bags = POT, class = "MAGE" })
+  _G.C_SpellBook = { GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { name = "Class" } end, -- no offsets
+    GetSpellBookItemInfo = function() return nil end }
+  ns.Spells.Rebuild() -- the answer changed: skipped, no error
+  M.state.manaPct = 0.2; M.tick()
+  ok(slotVisible(ns, 1), "potion icon missing after an odd spell book")
+  _G.C_SpellBook = nil
+end)
+
+test("damaged saved data never stops the addon at login", function()
+  local cases = {
+    { custom = { 5 } },
+    { custom = { { id = 4242, group = "potion" } } },          -- no amount
+    { profiles = { Shared = true } },
+    { profiles = { Shared = {} }, chars = { ["Somebody-Realm"] = "x" } },
+    { profiles = { Shared = { iconSize = "big", barThickness = "x", cdShow = "5", runeMargin = "x",
+      barLength = "abc", spellThr = { evocation = "x" } } } },
+  }
+  for n, saved in ipairs(cases) do
+    local ok1, err = pcall(function()
+      local ns = M.load(saved, { bags = POT, class = "MAGE" })
+      M.state.manaPct = 0.2; M.tick()
+      ns.ToggleOptions(true); ns.RefreshOptions(); ns.ToggleLibrary(true)
+      ok(slotVisible(ns, 1), "case " .. n .. ": potion icon missing")
+    end)
+    ok(ok1, "case " .. n .. ": " .. tostring(err))
+  end
+  local ok2, err2 = pcall(M.load, "x", { bags = POT })
+  ok(ok2, "a saved file that is not a table: " .. tostring(err2))
+end)
+
+test("a wand shot right after a potion cannot hide the potion's own cooldown", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 100, 120 }       -- the potion's own 2 min start
+  M.Fire("BAG_UPDATE_COOLDOWN")                -- read at once, before the next tick
+  M.state.cooldowns[3385] = { 100.5, 1.8 }     -- then only the wand's short lock shows
+  M.state.time = 101; M.tick()
+  ok(not slotVisible(ns, 1), "potion lit while its own cooldown runs")
+  M.state.time = nil
+end)
+
+test("a reload in combat locks a frame that was left unlocked", function()
+  M.reset()
+  M.state.combat = true
+  local ns = M.load({ profiles = { Shared = { locked = false } } }, { bags = POT })
+  M.state.combat = true
+  ns.AutoLock()
+  ok(ns.db.locked, "unlocked frame kept after a reload in combat")
+  M.state.combat = false
+end)
+
+test("druid forms: the regen of mana is shown, never energy or rage", function()
+  local ns = M.load({ fsr = false }, { bags = POT, class = "DRUID" })
+  local ptype, regen = 0, 20
+  _G.UnitPowerType = function() return ptype end
+  _G.GetPowerRegen = function() return regen, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  M.tick()
+  ptype, regen = 3, 10 -- cat form: energy
+  M.tick()
+  ok(not bar(ns).regen.text:find("10.0", 1, true), "energy regen shown as mana: " .. bar(ns).regen.text)
+  ptype, regen = 0, 20 -- back
+  M.tick()
+  eq(bar(ns).regen.color[1], 0.6, "normal mana regen green after the cat form")
+  _G.UnitPowerType, _G.GetPowerRegen, _G.C_Spell = nil, nil, nil
+end)
+
+test("a held potion does not flash 'ready' when its cooldown ends", function()
+  local ns = M.load({ cdShow = 10 }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.state.cooldowns[3385] = { 0, 120 }
+  SlashCmdList.FULLMANAFOREVER("hold")
+  M.state.time = 112; M.tick()
+  M.state.time = 121; M.tick()
+  local l = buttons(ns)[1].layers[1]
+  eq(l.flashAG.played or 0, 0, "held potion flashed")
+  M.state.time = nil
+end)
+
+test("the mana numbers come back after a run of format errors", function()
+  local ns = M.load(nil, { bags = POT })
+  local real = string.format
+  string.format = function(f, ...) if f == "%d / %d" then error("x") end return real(f, ...) end
+  for _ = 1, 25 do M.tick() end
+  string.format = real
+  M.state.time = 200; M.tick()
+  ok(bar(ns).text.text ~= "", "mana numbers gone for the session")
+  M.state.time = nil
+end)
+
+test("the reset question is gone when the settings are closed and opened again", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  ns.Confirm("?", ns.ResetSize)
+  local ask = M.upvalue(ns.Confirm, "ask")
+  _G.FullManaForeverOptions:Hide()
+  ns.ToggleOptions(true)
+  ok(not ask:IsShown(), "question still waiting after the window was closed")
+end)
+
+test("own item: another class's group is never used (it would be out of sight)", function()
+  local ns = M.load(nil, { class = "PRIEST" })
+  ns.AddCustom(4242, 300, "gem")
+  eq(ns.acct.custom[1].group, "potion", "added to the mage gems of a priest")
+end)
+
+test("profile copy shared on Shared keeps the kept own profile", function()
+  local ns = M.load(nil, { bags = POT })
+  ns.Profiles.Use("own"); ns.db.iconSize = 80
+  ns.Profiles.Use("shared")
+  SlashCmdList.FULLMANAFOREVER("profile copy shared")
+  ns.Profiles.Use("own")
+  eq(ns.db.iconSize, 80, "own profile overwritten")
+end)
+
+test("a profile switch refreshes the open settings instead of building new frames", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local made, create = 0, CreateFrame
+  _G.CreateFrame = function(...) made = made + 1; return create(...) end
+  ns.Profiles.Use("own")
+  _G.CreateFrame = create
+  eq(made, 0, "frames built for a profile switch")
+end)
+
+test("the log never counts more addon messages than the group cap", function()
+  local ns = M.load(nil)
+  SlashCmdList.FULLMANAFOREVER("log on")
+  _G.C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end, SendAddonMessage = function() return 0 end }
+  SlashCmdList.FULLMANAFOREVER("log chat")
+  for _ = 1, 400 do M.Fire("CHAT_MSG_ADDON", "FMF", "spam", "WHISPER", "Stranger") end
+  SlashCmdList.FULLMANAFOREVER("log off")
+  local n = 0
+  for _, l in ipairs(FullManaForeverLog.lines) do if l:find("addon msg", 1, true) then n = n + 1 end end
+  ok(n <= 300, "addon messages not capped: " .. n)
+  _G.C_ChatInfo = nil
 end)

@@ -15,7 +15,7 @@ P.SHARED = SHARED
 -- keys of the saved variables that are not part of a profile
 P.ACCOUNT = {
   dbVersion = true, seenVersion = true, language = true, custom = true, debug = true,
-  scale100 = true, profiles = true, chars = true,
+  scale100 = true, profiles = true, chars = true, optPoint = true,
 }
 
 local root  -- FullManaForeverDB
@@ -54,6 +54,9 @@ end
 function P.Migrate(r)
   r.profiles = type(r.profiles) == "table" and r.profiles or {}
   r.chars = type(r.chars) == "table" and r.chars or {}
+  -- a damaged file (edited by hand): entries that are not tables are dropped (0.9.2)
+  for k, v in pairs(r.profiles) do if type(v) ~= "table" then r.profiles[k] = nil end end
+  for k, v in pairs(r.chars) do if type(v) ~= "table" then r.chars[k] = nil end end
   if not r.profiles[SHARED] then
     local shared = {}
     for k, v in pairs(r) do
@@ -72,7 +75,13 @@ function P.Init(r)
   me, full, realm, oldKey = CharKey()
   if me then
     -- 0.8.6: keys get the surname; the character's record and own profile move along
-    if oldKey ~= me and not r.chars[me] and r.chars[oldKey] then
+    -- only when the class matches: before 0.8.6 two characters with the same first name
+    -- shared one key, the other one must not take its profile (0.9.2)
+    local okC0, _, myClass = pcall(UnitClass, "player")
+    local old = r.chars[oldKey]
+    local sameClass = old and (not old.class or not okC0 or type(myClass) ~= "string"
+      or IsSecret(myClass) or old.class == myClass)
+    if oldKey ~= me and not r.chars[me] and old and sameClass then
       r.chars[me], r.chars[oldKey] = r.chars[oldKey], nil
       if r.profiles[oldKey] then r.profiles[me], r.profiles[oldKey] = r.profiles[oldKey], nil end
       if r.chars[me].profile == oldKey then r.chars[me].profile = me end

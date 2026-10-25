@@ -8,9 +8,11 @@ local function loadStrings()
   return ns, strings
 end
 
+-- every format specifier, also with flags (% d, %-5s) and other letters (%i, %x); "%%" is a
+-- plain percent sign and is skipped (0.9.2: the old pattern only saw %s %d %f)
 local function placeholders(str)
   local out = {}
-  for p in str:gmatch("%%[%d%.]*[sdf%%]") do out[#out + 1] = p end
+  for p in str:gsub("%%%%", ""):gmatch("%%[-+ #0]*%d*%.?%d*%a") do out[#out + 1] = p end
   return table.concat(out, " ")
 end
 
@@ -24,6 +26,12 @@ test("every language has exactly the English keys and placeholders", function()
         eq(placeholders(rawget(t, k)), placeholders(v), lang .. "." .. k .. " placeholders")
       end
       for k in pairs(t) do ok(en[k], lang .. " has extra key " .. k) end
+    else
+      -- esMX keeps only its own words (the rest falls back to esES): those must still match
+      for k, v in pairs(t) do
+        ok(en[k], "esMX has extra key " .. k)
+        if en[k] then eq(placeholders(v), placeholders(en[k]), "esMX." .. k .. " placeholders") end
+      end
     end
   end
 end)

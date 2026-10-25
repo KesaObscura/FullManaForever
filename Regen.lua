@@ -92,9 +92,27 @@ end)
 -- Innervate or gear (the game includes all of it). In combat the value is secret: it can
 -- only be formatted, never compared or multiplied, which is why there is no mp5 here.
 -- Returns text, inRule, boosted, lowered; nil when there is nothing to show.
+-- the regen of mana itself: GetPowerRegen gives the current power type, energy in cat form
+-- and rage in bear form, which showed as mana regen and was even learned as "normal" (0.9.2)
+local MANA = 0
+-- With mana as the power type the checked GetPowerRegen stays in use (verified in Forever);
+-- in another form the mana regen comes from GetPowerRegenForPowerType, or is not shown.
+local function ManaRegen()
+  local other = false
+  if UnitPowerType then
+    local okT, ptype = pcall(UnitPowerType, "player")
+    other = okT and not IsSecret(ptype) and ptype ~= nil and ptype ~= MANA
+  end
+  if other then
+    if not GetPowerRegenForPowerType then return false end
+    return pcall(GetPowerRegenForPowerType, MANA)
+  end
+  if not GetPowerRegen then return false end
+  return pcall(GetPowerRegen)
+end
+
 function ns.RegenText()
-  if not GetPowerRegen then return nil end
-  local ok, base, casting = pcall(GetPowerRegen)
+  local ok, base, casting = ManaRegen()
   if not ok then return nil end
   local inRule = ns.FsrLeft() > 0
   local value

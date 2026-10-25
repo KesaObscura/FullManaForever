@@ -464,7 +464,11 @@ local function Build(point)
   local acc = 0
   lib:SetScript("OnUpdate", function(_, elapsed)
     acc = acc + elapsed
-    if acc > 1 then acc = 0; RefreshRows() end
+    if acc > 1 then
+      acc = 0
+      local ok, err = pcall(RefreshRows) -- one message, not one per second (0.9.2)
+      if not ok then acc = -math.huge; ns.Print(tostring(err)) end
+    end
   end)
 end
 

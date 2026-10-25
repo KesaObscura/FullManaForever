@@ -24,6 +24,7 @@ local amount = {}          -- [entry] = mana it gives (fit spells, from the desc
 local texture = {}         -- [spell ID] = icon
 local waiting              -- entry whose cooldown starts with the next spell (Inner Focus)
 local dirty = true
+local lastRebuild = -10 -- GetTime() of the last walk through the spell book
 -- S.Ready results of this tick (asked several times per tick; two tables, nothing allocated)
 local memo, memoLeft, memoAt = {}, {}, nil
 local function Forget() wipe(memo); wipe(memoLeft) end
@@ -50,7 +51,8 @@ local function BookByName(want)
   local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
   for i = 1, book.GetNumSpellBookSkillLines() do
     local line = book.GetSpellBookSkillLineInfo(i)
-    if line then
+    -- a changed answer (a patch) is skipped, not an error that stops the addon (0.9.2)
+    if line and type(line.itemIndexOffset) == "number" and type(line.numSpellBookItems) == "number" then
       for j = line.itemIndexOffset + 1, line.itemIndexOffset + line.numSpellBookItems do
         local it = book.GetSpellBookItemInfo(j, bank)
         if it and it.spellID and it.name and want[it.name] and not it.isPassive
@@ -287,6 +289,11 @@ function S.Refresh()
   Forget() -- a new tick: every spell is asked again
   if InCombatLockdown() then return end
   local now = GetTime()
+  -- a spell book change held back (a burst of events, or one in combat): rebuild now
+  if dirty and ns.db and now - lastRebuild >= 1 then
+    lastRebuild = now
+    S.Rebuild()
+  end
   local retry = now >= nextAmount -- a missing mana text is asked for once a second
   for sp, id in pairs(known) do
     S.Ready(sp)
@@ -332,7 +339,8 @@ end
 function S.Threshold(sp, maxMana)
   local a = sp.fit and amount[sp]
   if a and maxMana and maxMana > 0 then return math.max(0, 1 - a / maxMana) end
-  local own = ns.db.spellThr and ns.db.spellThr[sp.key]
+  local own = type(ns.db.spellThr) == "table" and ns.db.spellThr[sp.key]
+  if type(own) ~= "number" then own = nil end -- a damaged file: the default
   return own or sp.thr or 0.5
 end
 
@@ -419,7 +427,15 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
   if event == "UNIT_SPELLCAST_SUCCEEDED" then
     if unit == "player" then OnCast(spellID) end
   elseif event == "SPELLS_CHANGED" or (event == "PLAYER_REGEN_ENABLED" and dirty) then
-    if ns.db then S.Rebuild() end
+    -- the event comes in bursts (login, forms): at most one walk through the book per second,
+    -- the rest is picked up by the next tick out of combat (0.9.2); never an error here
+    if ns.db then
+      local now = GetTime()
+      if now - lastRebuild < 1 then dirty = true return end
+      lastRebuild = now
+      local ok, err = pcall(S.Rebuild)
+      if not ok and ns.Print then ns.Print(tostring(err)) end
+    end
   else
     ReadAmounts()
   end

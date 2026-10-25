@@ -103,6 +103,14 @@ and `/fmf log` (kept in releases for bug reports).
   the frame, auto-lock when a fight starts, reset buttons ask first, inactive settings greyed.
   Not done on purpose: rule seconds next to the regen (moves everyone's layout), "Show only in
   combat" hiding the regen (owner decision), gallery re-shoots (need screenshots).
+- 0.9.2 (owner, 25 Oct: "do it" after three developer reviews, HUD logic / settings and data /
+  performance and robustness): fail closed on errors outside the groups (`SafeUpdate` hides all),
+  own `pcall` for spells, sound, bar, texts and the spell book at login; `CopyDefaults` replaces
+  values of the wrong type, `CleanCustom`, non-table profiles/chars dropped; mana regen only
+  (`UnitPowerType`, `GetPowerRegenForPowerType` in forms); `BAG_UPDATE_COOLDOWN` reads potion
+  cooldowns at once; `ns.AutoLock` also at login in combat; cooldowns cached per tick; count
+  before the level check; the log keeps no names. Guesses left for in-game checks: Clearcasting /
+  Inner Focus and the rule, Life Tap with talents, taint from `HideUIPanel(SettingsPanel)`.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get

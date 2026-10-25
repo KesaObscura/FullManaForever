@@ -1,5 +1,19 @@
 # Changelog
 
+**Full Mana Forever 0.9.2**
+
+Steadier (a review of the code for bugs, speed and safety):
+- Druids in cat or bear form: the regen next to the mana bar no longer shows energy or rage, and normal mana regen no longer stays green afterwards
+- A wand shot right after drinking can no longer hide the potion's 2-minute cooldown (the potion icon could stay lit while it waited)
+- A frame left unlocked also locks itself after a reload in combat; a frame being dragged when a fight starts keeps its new place
+- If something unexpected fails (for example after a game patch), the icons are hidden instead of staying lit; a broken spell part no longer stops the potions, and an odd spell book answer no longer stops the whole addon
+- A damaged settings file (edited by hand) no longer stops the addon: wrong values fall back to the defaults
+- A held potion (HOLD) no longer flashes "ready"; the mana numbers come back after a run of errors instead of staying away until the next loading screen
+- Settings: a reset question no longer waits for the next opening; a profile switch updates the open window instead of rebuilding it; the profiles window shrinks to fit with many characters
+- Own items cannot be added to another class's group any more (they were out of sight); `/fmf profile copy shared` no longer replaces your kept own profile while you use Shared
+- `/fmf log` no longer writes other players' names (the file goes into bug reports), counts addon messages against its limit and writes the long potion line only when it changes; `/fmf log chat` sends no whisper any more
+- Less work every 0.1 s: items not in the bags are no longer looked up, each item's cooldown is read once per update, and the spell book is read at most once a second
+
 **Full Mana Forever 0.9.1**
 
 Easier to read and to set up (a review of the whole display, the settings and the first steps):
