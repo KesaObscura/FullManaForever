@@ -124,7 +124,7 @@ otherwise the game does not load it.
 | `/fmf probe` | print API status for bug reports |
 | `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen, in a group also the group's casts) for a bug report; `/fmf log clear` empties it |
 | `/fmf probe 5sr` | 30 seconds of casts and regen in the chat, for bug reports |
-| `/fmf log chat` | test whether the addon may send chat and addon messages (whispers yourself; in a group also an invisible addon message to the group) |
+| `/fmf log chat` | test whether the addon may send addon messages to your group (an invisible message to the party or raid, also in combat); the answer goes into the log |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
 | `/fmf reset` | reset the position |
