@@ -424,20 +424,26 @@ test("every control in the settings and the item list has a tooltip, also while 
 end)
 
 
-test("options: the rune threshold is greyed out while runes are off; spells have none here", function()
-  local ns = M.load({ enabled = { rune = false } })
+test("options: the health threshold is greyed out only while runes, spells and other items are all off (0.9.3)", function()
+  local ns = M.load({ enabled = { rune = false, spell = false, herb = false } })
   ns.ToggleOptions(true)
   local margin, spellThr
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.minus and w.label and w.label.text == ns.L.optMargin .. ":" then margin = w end
     if w.minus and w.label and w.label.text == ns.L.optSpellThr then spellThr = w end
   end
-  ok(margin, "rune threshold not found")
+  ok(margin, "health threshold not found")
   eq(spellThr, nil, "common spell threshold still in the settings")
-  ok(not margin.plus:IsEnabled(), "rune threshold usable with runes off")
-  ns.db.enabled.rune = true
+  ok(not margin.plus:IsEnabled(), "health threshold usable with all health users off")
+  ns.db.enabled.spell = true            -- Life Tap
   ns.RefreshOptions()
-  ok(margin.plus:IsEnabled(), "rune threshold stays grey after switching on")
+  ok(margin.plus:IsEnabled(), "health threshold grey with spells on (Life Tap)")
+  ns.db.enabled.spell = false; ns.db.enabled.herb = true   -- Power Recycler
+  ns.RefreshOptions()
+  ok(margin.plus:IsEnabled(), "health threshold grey with other items on (Power Recycler)")
+  ns.db.enabled.herb = false; ns.db.enabled.rune = true
+  ns.RefreshOptions()
+  ok(margin.plus:IsEnabled(), "health threshold stays grey after switching runes on")
 end)
 
 

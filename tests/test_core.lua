@@ -1806,7 +1806,7 @@ test("a spell shows before its cooldown ends, counted from the cast in combat, g
   noSpellApis()
 end)
 
-test("settings: 'Show before ready' sits above 'Show only in combat', 0 to 60 s in steps of 5", function()
+test("settings: 'Show before ready' sits above 'Show only in combat', 0 to 120 s in steps of 5 (the potion cooldown, 0.9.3)", function()
   local ns = M.load(nil)
   ns.ToggleOptions(true)
   local st, combat
@@ -1821,8 +1821,8 @@ test("settings: 'Show before ready' sits above 'Show only in combat', 0 to 60 s 
   eq(st.value.text, ns.L.cdShowSec:format(5), "default not 5 s")
   st.minus.scripts.OnClick(st.minus)
   eq(ns.db.cdShow, 0); eq(st.value.text, ns.L.cdShowOff)
-  for _ = 1, 20 do st.plus.scripts.OnClick(st.plus) end
-  eq(ns.db.cdShow, 60, "not capped at 60 s")
+  for _ = 1, 40 do st.plus.scripts.OnClick(st.plus) end
+  eq(ns.db.cdShow, 120, "not capped at 120 s")
 end)
 
 -- data checked in game on 14 Oct 2026 ------------------------------------------------------
@@ -2293,4 +2293,67 @@ test("the log never counts more addon messages than the group cap", function()
   for _, l in ipairs(FullManaForeverLog.lines) do if l:find("addon msg", 1, true) then n = n + 1 end end
   ok(n <= 300, "addon messages not capped: " .. n)
   _G.C_ChatInfo = nil
+end)
+
+-- 0.9.3: from the three player reviews -------------------------------------------------
+
+test("0.9.3: a group buff kept up becomes the normal regen after 5 minutes out of combat; drinking stays green", function()
+  local ns = M.load({ fsr = false }, { bags = POT })
+  local base = 14.75
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local real, now = GetTime, 100
+  _G.GetTime = function() return now end
+  local function at(t) now = t; M.tick() end
+  at(100)
+  base = 30 -- Blessing of Wisdom / Mana Spring from the group
+  at(101); eq(bar(ns).regen.color[1], 0.45, "buff not green at first")
+  for t = 130, 400, 30 do at(t) end
+  eq(bar(ns).regen.color[1], 0.6, "buff kept up for 5 minutes still green")
+  base = 60 -- drinking with the buff up
+  at(401); eq(bar(ns).regen.color[1], 0.45, "drinking not green")
+  -- a long fight takes no samples: the normal rate from before it is kept
+  base = 30; at(402)
+  M.state.combat = true
+  base = M.secret(30); at(500); at(900)
+  M.state.combat = false
+  base = 60; at(901)
+  eq(bar(ns).regen.color[1], 0.45, "drinking after a long fight not green")
+  _G.GetTime = real
+  noRegenApis()
+end)
+
+test("0.9.3: the potion sound follows 'Show only in combat' and the solo / party / raid filter", function()
+  local ns = M.load({ potionSound = true }, { bags = { [3385] = 2 } })
+  local real = GetTime
+  local t0 = real()
+  local function at(sec) _G.GetTime = function() return t0 + sec end; M.tick() end
+  ns.db.onlyCombat = true
+  M.state.cooldowns[3385] = { t0, 120 }
+  at(1); at(121)
+  eq(#M.sounds, 0, "sound out of combat with 'Show only in combat'")
+  M.state.combat = true
+  M.state.cooldowns[3385] = { t0 + 200, 120 }
+  at(201); at(321)
+  eq(#M.sounds, 1, "no sound in combat")
+  M.state.combat = false
+  ns.db.onlyCombat = false; ns.db.showSolo = false
+  M.state.cooldowns[3385] = { t0 + 400, 120 }
+  at(401); at(521)
+  eq(#M.sounds, 1, "sound while icons are hidden when solo")
+  _G.GetTime = real
+end)
+
+test("0.9.3: help, probe and the first warning say where to report bugs", function()
+  local ns = M.load(nil)
+  local function linked()
+    for _, p in ipairs(M.printed) do if p:find(ns.BUG_URL, 1, true) then return true end end
+  end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("help")
+  ok(linked(), "no bug link after the help")
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("probe")
+  ok(linked(), "no bug link after the probe")
+  ok(ns.BUG_URL:find("^https://github%.com/KesaObscura/FullManaForever/issues$"), "wrong link")
 end)

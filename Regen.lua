@@ -10,14 +10,36 @@ local FSR = 5           -- seconds of the five-second rule
 local MANA = 0          -- Enum.PowerType.Mana
 local fsrUntil = 0
 -- regen above normal ("boosted", shown green): out of combat the value is compared with the
--- lowest normal regen seen since the last level-up or gear change; in combat the value is
--- secret, so only own spells that raise regen count, for their known duration
+-- lowest regen of the last 5 minutes out of combat (0.9.3; before: the lowest since the last
+-- level-up or gear change, so an hour-long group buff such as Blessing of Wisdom or Mana
+-- Spring kept the regen green all the time). Short raises (drinking, Spirit Tap) stay green,
+-- a buff that is kept up becomes the normal rate after 5 minutes. Only time out of combat
+-- counts: after a long fight the normal rate from before it is kept, so drinking right after
+-- it is green. In combat the value is secret, so only own spells that raise regen count, for
+-- their known duration
 local BOOST_RATIO = 1.1       -- 10 % above normal, so small rounding never turns it green
 local BOOST_SPELLS = {        -- [spell] = seconds of raised regen (own casts only)
   [12051] = 8,                -- Evocation (channel)
   [1259705] = 30,             -- Read Leyline (30 s without a leyline nearby, else 15 min; game text 17 Oct)
 }
-local baseline
+-- the lowest regen per 30 s, for the last 10 such parts with a sample (5 minutes out of combat)
+local BUCKET, KEEP = 30, 10
+local buckets = {}            -- { { k = part number, v = lowest regen }, ... } oldest first
+local function Learn(base, now)
+  local k = math.floor(now / BUCKET)
+  local last = buckets[#buckets]
+  if last and last.k == k then
+    if base < last.v then last.v = base end
+  else
+    buckets[#buckets + 1] = { k = k, v = base }
+    if #buckets > KEEP then table.remove(buckets, 1) end
+  end
+end
+local function Normal()
+  local m
+  for _, b in ipairs(buckets) do if not m or b.v < m then m = b.v end end
+  return m
+end
 local boostUntil = 0
 local SICKNESS = 15007        -- Resurrection Sickness: -75 % attributes for up to 10 min
 
@@ -80,7 +102,7 @@ end
 frame:RegisterEvent("PLAYER_LEVEL_UP")
 frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
-  if event ~= "UNIT_SPELLCAST_SUCCEEDED" then baseline = nil return end
+  if event ~= "UNIT_SPELLCAST_SUCCEEDED" then wipe(buckets) return end
   if unit ~= "player" then return end
   if CostsMana(spellID) then fsrUntil = GetTime() + FSR end
   local boost = not IsSecret(spellID) and BOOST_SPELLS[spellID]
@@ -123,8 +145,10 @@ function ns.RegenText()
   if not okF then return nil end
   local boosted = GetTime() < boostUntil
   if not inRule and not IsSecret(base) and type(base) == "number" and base > 0 then
-    if (not baseline or base < baseline) and not Lowered() then baseline = base end
-    boosted = boosted or (baseline ~= nil and base > baseline * BOOST_RATIO + 0.05)
+    local now = GetTime()
+    if not Lowered() then Learn(base, now) end
+    local normal = Normal()
+    boosted = boosted or (normal ~= nil and base > normal * BOOST_RATIO + 0.05)
   end
   -- below normal for a while (Resurrection Sickness): red with a down arrow (0.8.9)
   local lowered = not inRule and not boosted and Lowered()

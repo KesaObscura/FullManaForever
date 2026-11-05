@@ -1,5 +1,17 @@
 # Changelog
 
+**Full Mana Forever 0.9.3**
+
+From three reviews by experienced players:
+- The regen no longer stays green all the time under a group buff (Blessing of Wisdom, Mana Spring, Arcane Intellect, ...): your normal rate is now the lowest regen of your last 5 minutes out of combat, so a buff that stays up becomes normal, while drinking and Spirit Tap still turn it green
+- *Keep health above* now also works (and is no longer greyed out) when only Life Tap or the Power Recycler use it, not just runes; its tooltip names all three
+- *Show icons before ready* goes up to 120 s, the whole potion cooldown
+- The "potion ready" sound follows *Show only in combat* and the solo / party / raid choice, like the icons
+- *No waste* says that a weaker potion also starts the shared 2-minute potion cooldown
+- `/fmf help`, `/fmf probe` and the first warning show where to report bugs (the GitHub issues page)
+- Russian and French texts speak to you informally everywhere, like the other languages
+- Bug reports: the help text no longer says the log holds your group members' names (it has not since 0.9.2); it says the file holds your own characters' names and realms (profiles)
+
 **Full Mana Forever 0.9.2**
 
 Steadier (a review of the code for bugs, speed and safety):

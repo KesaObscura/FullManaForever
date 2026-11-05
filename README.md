@@ -138,8 +138,9 @@ did and what you expected. Lua errors are easiest to read with BugGrabber + BugS
 For problems with the five-second rule or the regen display: `/fmf log on`, play until it
 happens, `/fmf log off`, `/reload`, then attach
 `WTF\Account\<account>\SavedVariables\FullManaForever.lua`. The log holds class, level,
-casts, mana costs and regen values. In a group it also holds the names, classes and casts of
-your group members: remove them before you share the file, if you like.
+casts, mana costs and regen values, never other players' names. The same file also holds your
+settings with the names and realms of your own characters (profiles): remove them before you
+share the file, if you like.
 
 ## Development
 

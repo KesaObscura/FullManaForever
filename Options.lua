@@ -711,7 +711,7 @@ Build = function()
   c.Row(Header(col, L.optVisibility), PAD, 24)
   -- icons also show (grey, counting down) this many seconds before their cooldown ends
   local cdShow = Stepper(col, PAD + 4, L.optCdShow, function() return db.cdShow or 0 end,
-    function(v) db.cdShow = v end, { step = 5, lo = 0, hi = 60, tip = L.tipCdShow,
+    function(v) db.cdShow = v end, { step = 5, lo = 0, hi = 120, tip = L.tipCdShow,
       fmt = function(v) return v > 0 and L.cdShowSec:format(v) or L.cdShowOff end })
   -- the label has its own line (long in some languages), the value and -/+ go under it in
   -- the usual columns
@@ -799,7 +799,9 @@ Build = function()
       local s = Stepper(col, PAD + 30, L.optMargin, function() return db.runeMargin end,
         function(v) db.runeMargin = v; ns.InvalidateCurves() end,
         { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pct })
-      ActiveIf(function() return db.enabled.rune end, s)
+      -- the same health check guards Life Tap (own spells) and the Power Recycler (other
+      -- consumables): greyed out only when none of them can light up (0.9.3)
+      ActiveIf(function() return db.enabled.rune or db.enabled.spell or db.enabled.herb end, s)
       return { s.label }
     end,
   }
