@@ -159,11 +159,12 @@ and `/fmf log` (kept in releases for bug reports).
    dropped): the addon goes its own way. Features until the beta ends, each tested in game.
    0.8.10 tested in game (icon, menu tooltip, right-click). 0.8.11 started 17 Oct: icon gaps
    (3c), re-shoot "Just the regen", then the GitHub release; item review moved to 0.8.12. GitHub allows squash merging only.
-5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
-   fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+5. Launch 4 Nov (EU 5 Nov): Interface number checked by the owner on the live client: still
+   16001, no "out of date", 0.9.0 works (5 Nov). Next: the owner's in-game test of 0.9.2, then
+   its release; fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
-   next), launch-day Interface check; other classes (druid forms, Life Tap, Mana Agate, Evocation)
+   next); other classes (druid forms, Life Tap, Mana Agate, Evocation)
    when the owner has a character of that level, or from users. Inner Focus tested 17 Oct.
 7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is
    ready again (option, off), no glow on placeholders. Gallery images 03 (rule row/column) and 10
