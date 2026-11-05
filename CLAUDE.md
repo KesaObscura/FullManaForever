@@ -161,7 +161,8 @@ and `/fmf log` (kept in releases for bug reports).
    (3c), re-shoot "Just the regen", then the GitHub release; item review moved to 0.8.12. GitHub allows squash merging only.
 5. Launch 4 Nov (EU 5 Nov): Interface number checked by the owner on the live client: still
    16001, no "out of date", 0.9.0 works (5 Nov). Launch day: 1 741 downloads, mostly unique.
-   Next: the owner's in-game test of 0.9.2, then its release; the gallery stays as it is for now
+   0.9.2 (with 0.9.1) released on GitHub 5 Nov (PR #18, tag v0.9.2); CurseForge upload by the
+   owner with the changelog of 0.9.1 + 0.9.2; the gallery stays as it is for now
    (owner, 5 Nov: no time); fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
