@@ -80,8 +80,9 @@ and `/fmf log` (kept in releases for bug reports).
 - Auto bar length counts only groups switched on (and usable by the class), each own spell that
   can get an icon (0.8.7, owner: icons must not run past the bar), minimum 3.
 - The potion icon stays lit while wanding (sweep shows the wait).
-- Regen green when above normal (out of combat vs the lowest normal regen since the last
-  level-up or gear change, +10 %; in combat only own Evocation 8 s and Read Leyline 30 s, owner 17 Oct).
+- Regen green when above normal (out of combat vs the lowest regen of the last 5 minutes out of
+  combat, 10 parts of 30 s, wiped on level-up or gear change, +10 %; owner 5 Nov, 0.9.3: group
+  buffs kept up become normal; in combat only own Evocation 8 s and Read Leyline 30 s, owner 17 Oct).
 - Profiles (0.8.3): "Shared" + own per character (copy of Shared, kept when switching back); new
   characters start on Shared; copy/reset/delete confirm, one undo per session; disabled items
   per profile, own items and language account-wide.
@@ -111,6 +112,17 @@ and `/fmf log` (kept in releases for bug reports).
   cooldowns at once; `ns.AutoLock` also at login in combat; cooldowns cached per tick; count
   before the level check; the log keeps no names. Guesses left for in-game checks: Clearcasting /
   Inner Focus and the rule, Life Tap with talents, taint from `HideUIPanel(SettingsPanel)`.
+- 0.9.3 (owner, 5 Nov: quick fixes from three player reviews): regen norm of the last 5 minutes
+  (above), health threshold active for runes, spells (Life Tap) and other items (Power Recycler),
+  "Show icons before ready" up to 120 s, potion sound follows "Show only in combat" and the
+  solo / party / raid filter, bug link (`ns.BUG_URL`) after help, probe and the first warning,
+  log texts without group names, informal "you" in all languages (ru ты, fr tu; de and es were
+  already informal; pt-BR "você" is the informal form; ko keeps the polite UI style; zh 你).
+- 0.9.4 (owner, 5 Nov: "all features, but in 0.9.4, remember"): a switch "icons only in combat"
+  (bar and regen stay out of combat), "full mana in N s" while drinking out of combat, hide the bar
+  at full mana (by the same curve, also in combat). Later: gallery re-shoots (need screenshots),
+  exact fit to unit frames (sizes typed in / attach to the player frame), choice of bar markers
+  (all / potions only / nearest), a "drink" reminder between pulls.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get

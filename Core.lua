@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.2"
+ns.VERSION = "0.9.3"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -88,10 +88,19 @@ local function Debug(key, msg)
   end
 end
 
+-- where bugs go: named in help, after /fmf probe and with the first warning (0.9.3)
+local BUG_URL = "https://github.com/KesaObscura/FullManaForever/issues"
+ns.BUG_URL = BUG_URL
+local bugLinkShown = false
+local function BugLink()
+  Print(L.bugReport:format(BUG_URL))
+end
+
 local function WarnOnce(key, msg)
   if not warned[key] then
     warned[key] = true
     Print("|cffff4444" .. msg .. "|r")
+    if not bugLinkShown then bugLinkShown = true; BugLink() end
   end
 end
 
@@ -1870,8 +1879,10 @@ local function PotionSound()
   if not potionIndex then
     for i, g in ipairs(ns.GROUPS) do if g.key == "potion" then potionIndex = i end end
   end
+  -- the same filters as the icons: solo / party / raid and "Show only in combat" (0.9.3)
+  local shown = groupOK and not (db.onlyCombat and not InCombatLockdown())
   local item = potionIndex and db.potionSound and db.locked and db.enabled.potion and not held
-    and OwnedItem(potionIndex)
+    and shown and OwnedItem(potionIndex)
   if not item then potionWaiting = false return end
   if not CooldownState(item.id) then
     potionWaiting = true
@@ -2049,6 +2060,7 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     if ns.LogCommand then ns.LogCommand(args[2]) end
   elseif cmd == "probe" then
     Probe()
+    BugLink()
   elseif cmd == "debug" then
     acct.debug = not acct.debug; wipe(warned); Print(acct.debug and L.debugOn or L.debugOff)
   elseif cmd == "scale" then
@@ -2061,6 +2073,7 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     ns.ResetPosition(); Print(L.reset)
   else
     Print(L.help)
+    BugLink()
   end
   if ns.RefreshOptions then ns.RefreshOptions() end
 end
