@@ -258,7 +258,7 @@ test("options: text size of the mana numbers, the rule's seconds and the regen c
   local ns = M.load(nil)
   ns.ToggleOptions(true)
   local b = M.upvalue(ns.PositionBar, "bar")
-  eq(b.manaBox.scale, 1); eq(b.fsrBox.scale, 1); eq(b.regenBox.scale, 1)
+  eq(b.manaBox.scale, 1); eq(b.fsrBox.scale, 1.3, "seconds 130 % by default (0.9.1)"); eq(b.regenBox.scale, 1)
   local sizes = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.minus and w.label and w.label.text == ns.L.optTextSize .. ":" then sizes[#sizes + 1] = w end
@@ -267,9 +267,9 @@ test("options: text size of the mana numbers, the rule's seconds and the regen c
   sizes[1].plus.scripts.OnClick(sizes[1].plus)
   sizes[2].plus.scripts.OnClick(sizes[2].plus)
   sizes[3].minus.scripts.OnClick(sizes[3].minus)
-  eq(ns.db.manaScale, 1.1); eq(ns.db.fsrScale, 1.1); eq(ns.db.regenScale, 0.9)
+  eq(ns.db.manaScale, 1.1); eq(ns.db.fsrScale, 1.4); eq(ns.db.regenScale, 0.9)
   eq(b.manaBox.scale, 1.1, "mana numbers not resized")
-  eq(b.fsrBox.scale, 1.1, "seconds not resized")
+  eq(b.fsrBox.scale, 1.4, "seconds not resized")
   eq(b.regenBox.scale, 0.9, "regen not resized")
   eq(sizes[1].value.text, "110%")
   ns.ResetSize()

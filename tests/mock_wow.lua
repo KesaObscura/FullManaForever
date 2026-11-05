@@ -109,6 +109,8 @@ function methods:SetValue(v, ease)
   self.value, self.ease = v, ease
 end
 function methods:SetFrameStrata(st) self.strata = st end
+function methods:Play() self.played = (self.played or 0) + 1 end
+function methods:SetColorTexture(r, g, b, a) self.color = { r, g, b, a } end
 function methods:GetFrameStrata() return self.strata or "MEDIUM" end
 function methods:SetMinMaxValues(a, b) M.calls.SetMinMaxValues = (M.calls.SetMinMaxValues or 0) + 1; self.min, self.max = a, b end
 function methods:GetVerticalScroll() return self.vscroll or 0 end

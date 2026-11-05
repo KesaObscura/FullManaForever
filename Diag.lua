@@ -183,6 +183,15 @@ local function PotionText()
   return " pots " .. table.concat(out, ", ")
 end
 
+-- the potion line is long and mostly the same: written again only when it changed (0.9.2)
+local lastPotion
+local function PotionChange()
+  local t = PotionText()
+  if t == lastPotion then return " potions=same" end
+  lastPotion = t
+  return t
+end
+
 local function HeaderText()
   local _, class = UnitClass("player")
   local race = UnitRace and select(2, UnitRace("player"))
@@ -259,7 +268,7 @@ local function OnEvent(_, event, unit, arg2, arg3)
     Emit((event == "UNIT_SPELLCAST_SUCCEEDED" and "cast " or "channel ") .. text
       .. "  cd=" .. CooldownText(arg3)
       .. "  combat=" .. tostring(InCombatLockdown()) .. "  " .. RegenText() .. WatchText()
-      .. HealthText() .. PotionText())
+      .. HealthText() .. PotionChange())
   end
 end
 
@@ -273,7 +282,7 @@ local function Sample(now)
   if regen ~= clock.lastRegen or now - clock.lastSample >= 10 then
     ToLog(("sample combat=%s mana events=%d %s%s%s fsr=%.1f%s%s%s"):format(tostring(InCombatLockdown()),
       clock.power, regen, WatchText(), DisplayText(), ns.FsrLeft and ns.FsrLeft() or 0, RecentCosts(),
-      HealthText(), PotionText()))
+      HealthText(), PotionChange()))
     clock.lastRegen, clock.lastSample = regen, now
   end
 end
@@ -318,10 +327,14 @@ local MAX_GROUP_LINES = 300
 local groupCount, groupSeen = 0, {}
 local rosterDumps, rosterSize = 0, nil
 
+-- whether the name can be read, never the name itself: the log goes into bug reports, which
+-- are often public, and other players' names do not belong there (0.9.2)
 local function Who(unit)
   if not UnitName then return "?" end
   local ok, name = pcall(UnitName, unit)
-  return ok and Show(name) or "error"
+  if not ok then return "error" end
+  if IsSecret(name) then return "SECRET" end
+  return name and "readable" or "nil"
 end
 
 -- who is in the group (class, level, is the name readable): at log start and when the size
@@ -344,9 +357,11 @@ end
 local function OnGroupEvent(_, event, a1, a2, a3, a4)
   if event == "GROUP_ROSTER_UPDATE" then LogRoster() return end
   if event == "CHAT_MSG_ADDON" then
-    if a1 == "FMF" then
-      ToLog(("addon msg text=%s channel=%s sender=%s combat=%s"):format(Show(a2), Show(a3), Show(a4),
-        tostring(InCombatLockdown())))
+    -- anyone can send these: counted like the group lines, short, without the sender's name
+    if a1 == "FMF" and groupCount < MAX_GROUP_LINES then
+      groupCount = groupCount + 1
+      ToLog(("addon msg text=%s channel=%s sender=%s combat=%s"):format(Show(a2):sub(1, 40), Show(a3),
+        IsSecret(a4) and "SECRET" or (a4 and "readable" or "nil"), tostring(InCombatLockdown())))
     end
     return
   end
@@ -437,24 +452,18 @@ function ns.LogCommand(arg)
     if log.on then ToLog("log off"); log.on = false end
     ns.Print(("log OFF, %d lines. /reload (or log out) so the game writes the file."):format(#log.lines))
   elseif arg == "chat" then
-    -- may an addon send chat and addon messages (in combat too)? Whispers itself only.
-    local me = UnitName("player")
-    local okW, errW = pcall(SendChatMessage, "Full Mana Forever: chat test", "WHISPER", nil, me)
+    -- may an addon send addon messages to the group (in combat too)? No whisper any more: a
+    -- whisper to one's own first name does not arrive in Forever (names have a surname)
     local okP = C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix
       and pcall(C_ChatInfo.RegisterAddonMessagePrefix, "FMF")
-    local okA, resA = false, "API missing"
-    if C_ChatInfo and C_ChatInfo.SendAddonMessage then
-      okA, resA = pcall(C_ChatInfo.SendAddonMessage, "FMF", "test", "WHISPER", me)
-    end
     -- the group gets an invisible addon message: does it reach other FMF users (in combat too)?
     local channel = (IsInRaid and IsInRaid() and "RAID") or (IsInGroup and IsInGroup() and "PARTY") or nil
     local okG, resG = false, "no group"
     if channel and C_ChatInfo and C_ChatInfo.SendAddonMessage then
-      okG, resG = pcall(C_ChatInfo.SendAddonMessage, "FMF", "test " .. Show(me), channel)
+      okG, resG = pcall(C_ChatInfo.SendAddonMessage, "FMF", "test", channel)
     end
-    local text = ("chat test combat=%s whisper=%s prefix=%s addon=%s %s group=%s %s %s"):format(
-      tostring(InCombatLockdown()), okW and "sent" or ("error " .. tostring(errW):sub(1, 80)), tostring(okP),
-      okA and "sent" or "error", Show(resA), Show(channel), okG and "sent" or "error", Show(resG))
+    local text = ("chat test combat=%s prefix=%s group=%s %s %s"):format(
+      tostring(InCombatLockdown()), tostring(okP), Show(channel), okG and "sent" or "error", Show(resG))
     ToLog(text)
     ns.Print(text .. (log.on and "" or "  (/fmf log on first, to record the answer)"))
   elseif arg == "clear" then

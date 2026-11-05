@@ -1,5 +1,34 @@
 # Changelog
 
+**Full Mana Forever 0.9.2**
+
+Steadier (a review of the code for bugs, speed and safety):
+- Druids in cat or bear form: the regen next to the mana bar no longer shows energy or rage, and normal mana regen no longer stays green afterwards
+- A wand shot right after drinking can no longer hide the potion's 2-minute cooldown (the potion icon could stay lit while it waited)
+- A frame left unlocked also locks itself after a reload in combat; a frame being dragged when a fight starts keeps its new place
+- If something unexpected fails (for example after a game patch), the icons are hidden instead of staying lit; a broken spell part no longer stops the potions, and an odd spell book answer no longer stops the whole addon
+- A damaged settings file (edited by hand) no longer stops the addon: wrong values fall back to the defaults
+- A held potion (HOLD) no longer flashes "ready"; the mana numbers come back after a run of errors instead of staying away until the next loading screen
+- Settings: a reset question no longer waits for the next opening; a profile switch updates the open window instead of rebuilding it; the profiles window shrinks to fit with many characters
+- Own items cannot be added to another class's group any more (they were out of sight); `/fmf profile copy shared` no longer replaces your kept own profile while you use Shared
+- `/fmf log` no longer writes other players' names (the file goes into bug reports), counts addon messages against its limit and writes the long potion line only when it changes; `/fmf log chat` sends no whisper any more
+- Less work every 0.1 s: items not in the bags are no longer looked up, each item's cooldown is read once per update, and the spell book is read at most once a second
+
+**Full Mana Forever 0.9.1**
+
+Easier to read and to set up (a review of the whole display, the settings and the first steps):
+- The markers on the bar are one calm colour: thick where an icon lights up, thin where a stronger item becomes the best fit (six group colours clashed with the gold rule strip and the green / red regen)
+- Icons that show before they are ready are dimmer, so the one to press stands out; when the wait is over the icon flashes once
+- The glow of a lit icon pulses more calmly; "HOLD" is white; the five-second seconds are a bit bigger for new players
+- The settings window opens at the right edge and keeps its place, so it no longer covers the icons while you place them; on a small screen it shrinks to fit
+- The unlocked frame has its own **Lock** and **Settings** buttons, and the bar next to the icons drags the frame too
+- A frame left unlocked locks itself when a fight starts (unlocked it shows every icon lit, without the mana check)
+- **Reset position** and **Reset size** ask first
+- Settings that do nothing right now are greyed out: the seconds' text size without *Seconds*, the bar colour with *Only markers*, - / + of a switched-off spell; switched-off items and spells are grey in the item list
+- Bar thickness in steps of 1
+- A potion above your level now shows "needs level N" instead of "none in bags"
+- Texts: the warning when the mana check is unavailable said the opposite of what happens (icons stay hidden); "Other consumables" no longer names the battleground draughts (they are potions); "Settings in use" in the profiles window; *Reset position* says that texts and a separate bar go back too
+
 **Full Mana Forever 0.9.0**
 
 Works together with unit frame addons (asked for in the comments):

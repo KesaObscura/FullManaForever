@@ -255,3 +255,5 @@ Its in-game findings on Forever:
   (15.50 -> 36.30). Our log is first-hand; theirs may be older or a different function.
 - Forever loads `<Addon>_Camelot.toc` (Details does); the BigWigs packager knows the `forever` game
   type from v2.6.0. Our plain `FullManaForever.toc` with Interface 16001 loads fine.
+- Launch (5 Nov 2026): the live client reports Interface 16001 (`select(4, GetBuildInfo())`), the
+  addon is not marked out of date, 0.9.0 works (owner).

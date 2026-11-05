@@ -3,7 +3,7 @@
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
 Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Profiles.lua → Core.lua →
 Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Profiles.lua (0.8.3):
-`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion)
+`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion, optPoint)
 plus `profiles[Shared|Name Surname-Realm]` and `chars[key]` = {profile, class, level, seen, name, realm}; Core's
 `db` is the active profile, `acct` the root; `ns.ApplyProfile` re-reads everything on a switch. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).
@@ -96,6 +96,21 @@ and `/fmf log` (kept in releases for bug reports).
   strata), "Seconds" switch, smooth five-second strip, "Only markers" bar style, "Move the bar
   separately" (`barFree`, `barPoint`), mana fill eased via `Enum.StatusBarInterpolation` when
   the game has it.
+- 0.9.1 (owner, 21 Oct: "all of it" from three UX reviews, HUD / settings / first run): one
+  near-white marker colour (shape tells thick / thin), dimmer "soon" icons with one flash when
+  ready, calmer glow, white HOLD, rule seconds 130 % by default, settings window at the right edge
+  and remembered (`acct.optPoint`), Lock / Settings buttons on the unlocked frame, the bar drags
+  the frame, auto-lock when a fight starts, reset buttons ask first, inactive settings greyed.
+  Not done on purpose: rule seconds next to the regen (moves everyone's layout), "Show only in
+  combat" hiding the regen (owner decision), gallery re-shoots (need screenshots).
+- 0.9.2 (owner, 25 Oct: "do it" after three developer reviews, HUD logic / settings and data /
+  performance and robustness): fail closed on errors outside the groups (`SafeUpdate` hides all),
+  own `pcall` for spells, sound, bar, texts and the spell book at login; `CopyDefaults` replaces
+  values of the wrong type, `CleanCustom`, non-table profiles/chars dropped; mana regen only
+  (`UnitPowerType`, `GetPowerRegenForPowerType` in forms); `BAG_UPDATE_COOLDOWN` reads potion
+  cooldowns at once; `ns.AutoLock` also at login in combat; cooldowns cached per tick; count
+  before the level check; the log keeps no names. Guesses left for in-game checks: Clearcasting /
+  Inner Focus and the rule, Life Tap with talents, taint from `HideUIPanel(SettingsPanel)`.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get
@@ -115,7 +130,10 @@ and `/fmf log` (kept in releases for bug reports).
    images linked from GitHub: they show on CurseForge; gallery 06 and 07 new), 0.8.8 on 16 Oct (description
    with "See it coming", gallery unchanged); 0.8.9 next, with new screenshots and a GIF (owner
    records video). 0.8.10 released on GitHub 16 Oct (own icon, minimap menu tooltip, gallery and GIFs);
-   0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); CurseForge:
+   0.8.11 released on GitHub 17 Oct (icon order without gaps, - / + fix, gallery 12); 0.9.0
+   released on GitHub and CurseForge 21 Oct (unit frame options, item review, Read Leyline 30 s;
+   CurseForge changelog covered 0.8.10-0.9.0). Before the beta end (23 Oct): two more releases,
+   the first from the three UX reviews (HUD, settings, first run). CurseForge (history):
    0.8.9 is the last upload; 0.8.10 and 0.8.11 were skipped there (owner, 21 Oct): 0.9.0 goes up
    next with one changelog covering 0.8.10, 0.8.11 and 0.9.0, released together on GitHub. PR bodies: check after creating
    that no session link was appended (removed from PR #1-#15 on 16 Oct).
@@ -141,11 +159,13 @@ and `/fmf log` (kept in releases for bug reports).
    dropped): the addon goes its own way. Features until the beta ends, each tested in game.
    0.8.10 tested in game (icon, menu tooltip, right-click). 0.8.11 started 17 Oct: icon gaps
    (3c), re-shoot "Just the regen", then the GitHub release; item review moved to 0.8.12. GitHub allows squash merging only.
-5. Launch 4 Nov (EU 5 Nov): check the Interface number of the live client (16001 may change),
-   fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+5. Launch 4 Nov (EU 5 Nov): Interface number checked by the owner on the live client: still
+   16001, no "out of date", 0.9.0 works (5 Nov). Launch day: 1 741 downloads, mostly unique.
+   Next: the owner's in-game test of 0.9.2, then its release; the gallery stays as it is for now
+   (owner, 5 Nov: no time); fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
-   next), launch-day Interface check; other classes (druid forms, Life Tap, Mana Agate, Evocation)
+   next); other classes (druid forms, Life Tap, Mana Agate, Evocation)
    when the owner has a character of that level, or from users. Inner Focus tested 17 Oct.
 7. 0.8.4 (owner: one release per day until 21 Oct): whole seconds, sound when the potion is
    ready again (option, off), no glow on placeholders. Gallery images 03 (rule row/column) and 10

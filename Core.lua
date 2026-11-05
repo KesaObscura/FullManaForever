@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.0"
+ns.VERSION = "0.9.2"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -37,7 +37,7 @@ local DEFAULTS = {
   manaTextOn = true,    -- mana numbers at the bar (also without the bar)
   manaText   = "number", -- how: "number" / "percent" / "both"
   manaScale  = 1,       -- text size of the mana numbers
-  fsrScale   = 1,       -- text size of the rule's seconds (1 = 100 %)
+  fsrScale   = 1.3,     -- text size of the rule's seconds (the smallest text before 0.9.1)
   regenScale = 1,       -- text size of the regen number
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
   vertical   = false,   -- icons in a column, mana bar standing next to them
@@ -108,8 +108,21 @@ local function CopyDefaults(src, dst)
       elseif k ~= "custom" and k ~= "point" and k ~= "disabled" then
         CopyDefaults(v, dst[k])
       end
-    elseif dst[k] == nil then
+    elseif dst[k] == nil or type(dst[k]) ~= type(v) then
+      -- missing, or a value of the wrong type (a file edited by hand): the default (0.9.2)
       dst[k] = v
+    end
+  end
+end
+
+-- own items as saved: anything that is not { id = number, max = number } is dropped, so a
+-- damaged file never stops the addon at login (0.9.2)
+local function CleanCustom(list)
+  for k = #list, 1, -1 do
+    local c = list[k]
+    if type(c) ~= "table" or type(c.id) ~= "number" or type(c.max) ~= "number"
+      or (c.group ~= nil and type(c.group) ~= "string") then
+      table.remove(list, k)
     end
   end
 end
@@ -287,17 +300,19 @@ local function OwnedItem(i)
   end
   local bg = InBattleground()
   local preferReady, fallback, fallbackN = ns.GROUPS[i].preferReady
+  -- the count first: the level check asks the game about the item, which is wasted (and may
+  -- go to the server) for the many items not in the bags (0.9.2)
   for _, it in ipairs(lists[i]) do
-    if Usable(it, bg) then
-      local n = C_Item.GetItemCount(it.id)
-      if IsSecret(n) then
-        -- never seen in Forever; assume the item is there rather than hide the group
+    local n = C_Item.GetItemCount(it.id)
+    if IsSecret(n) then
+      -- never seen in Forever; assume the item is there rather than hide the group
+      if Usable(it, bg) then
         Debug("countsecret", "item count is secret")
         return it, 1
-      elseif n and n > 0 then
-        if not preferReady or CooldownState(it.id) then return it, n end
-        if not fallback then fallback, fallbackN = it, n end
       end
+    elseif n and n > 0 and Usable(it, bg) then
+      if not preferReady or CooldownState(it.id) then return it, n end
+      if not fallback then fallback, fallbackN = it, n end
     end
   end
   return fallback, fallbackN
@@ -313,7 +328,8 @@ local longStart = {} -- [item] = start of that cooldown (for the countdown on th
 -- the last short cooldown seen on any item: the game puts it on spells too, where it cannot be
 -- read in combat, so the spell icon borrows it for its sweep
 local lockStart, lockDur
-CooldownState = function(id)
+local ReadCooldown
+ReadCooldown = function(id)
   local s, d, enable = C_Container.GetItemCooldown(id)
   if IsSecret(s) or IsSecret(d) or IsSecret(enable) then
     Debug("cdsecret", "item cooldown is secret - treating as ready")
@@ -337,7 +353,35 @@ CooldownState = function(id)
   local left = s + d - GetTime()
   return left <= 0.05, math.max(left, 0)
 end
+
+-- the same item is asked 2-3 times per tick (icons, bar markers, sound): read it once per tick
+-- (0.9.2). The cache is one reused table per item, nothing is allocated in steady state.
+local cdCache = {}
+CooldownState = function(id)
+  local c = cdCache[id]
+  if not c then c = {}; cdCache[id] = c end
+  if c.tick ~= candTick or c.at ~= GetTime() then
+    c.tick, c.at = candTick, GetTime()
+    c.ready, c.left, c.waits = ReadCooldown(id)
+  end
+  return c.ready, c.left, c.waits
+end
 ns.CooldownState = function(id) return CooldownState(id) end
+
+-- a cooldown starts: read the items in the bags at once. Between two ticks a wand shot can
+-- replace the potion's 2 min cooldown by its own short one, and a long cooldown never seen
+-- would leave the potion lit while it waits (0.9.2)
+local cdFrame = CreateFrame("Frame")
+cdFrame:RegisterEvent("BAG_UPDATE_COOLDOWN")
+cdFrame:SetScript("OnEvent", function()
+  if not db then return end
+  for i = 1, #ns.GROUPS do
+    for _, it in ipairs(lists[i] or {}) do
+      local n = C_Item.GetItemCount(it.id)
+      if not IsSecret(n) and n and n > 0 then ReadCooldown(it.id) end
+    end
+  end
+end)
 
 -- shown on the icons: ready, or its own cooldown ends within db.cdShow seconds (then the icon
 -- is grey and counts down). Returns show, secondsLeft (0 when ready)
@@ -418,10 +462,9 @@ local function BandCandidates(i)
   wipe(res); wipe(all); wipe(seen)
   local bg = InBattleground()
   for idx, it in ipairs(lists[i]) do
-    if Usable(it, bg) then
-      local n = C_Item.GetItemCount(it.id)
-      local show, left = false, 0
-      if not IsSecret(n) and n and n > 0 then show, left = Soon(it.id) end
+    local n = C_Item.GetItemCount(it.id)
+    if not IsSecret(n) and n and n > 0 and Usable(it, bg) then
+      local show, left = Soon(it.id)
       if show then
         local e = pool[#all + 1] or {}
         pool[#all + 1] = e
@@ -449,6 +492,19 @@ local function FirstThreshold(i, maxMana)
   end
   local item = OwnedItem(i)
   return item and Threshold(item, maxMana)
+end
+
+-- the lowest level that unlocks an item of this group you carry (nil: none waits for a level)
+function ns.BlockedLevel(i)
+  local need
+  for _, it in ipairs(lists[i]) do
+    local n = C_Item.GetItemCount(it.id)
+    if not IsSecret(n) and n and n > 0 then
+      local lv = ns.LevelTooLow(it)
+      if lv and (not need or lv < need) then need = lv end
+    end
+  end
+  return need
 end
 
 -- status for the options window
@@ -577,14 +633,12 @@ local PLACEHOLDER = {
   herb   = "Interface\\Icons\\INV_Misc_QuestionMark",
   gear   = "Interface\\Icons\\INV_Jewelry_Talisman_07",
 }
-local TICK_COLOR = {
-  potion = { 0.45, 0.75, 1 },
-  rune   = { 0.75, 0.45, 1 },
-  gem    = { 1, 0.35, 0.35 },
-  herb   = { 0.4, 1, 0.5 },
-  gear   = { 1, 0.8, 0.3 },
-  spell  = { 0.3, 1, 1 },
-}
+-- one near-white colour for every marker (0.9.1): six group colours were never explained,
+-- and gold / green / red already mean the five-second rule and the regen; blue and teal
+-- vanished on a blue bar. The shape tells the rest: thick where an icon lights up, thin
+-- where a stronger item becomes the best fit
+local TICK_WHITE = { 0.95, 0.95, 0.88 }
+local TICK_COLOR = setmetatable({}, { __index = function() return TICK_WHITE end })
 ns.BAR_COLORS = {
   { key = "blue",   top = { 0.30, 0.62, 1.00 }, bottom = { 0.06, 0.28, 0.78 } },
   { key = "light",  top = { 0.55, 0.85, 1.00 }, bottom = { 0.15, 0.50, 0.85 } },
@@ -662,6 +716,7 @@ local function CreateLayer(parent)
   holdTop:SetFrameLevel((l:GetFrameLevel() or 1) + 3)
   l.holdText = holdTop:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   OutlineFont(l.holdText, "GameFontNormal", true)
+  l.holdText:SetTextColor(1, 1, 1) -- white: gold already means the five-second rule (0.9.1)
   l.holdText:SetPoint("CENTER")
   l.holdText:Hide()
   -- soft light from the top that fades out downwards: a slightly "glassy" icon. A flat
@@ -687,10 +742,24 @@ local function CreateLayer(parent)
   local ag = l.glow:CreateAnimationGroup()
   ag:SetLooping("BOUNCE")
   local a = ag:CreateAnimation("Alpha")
+  -- a calm pulse (0.9.1): a deep fast one was soon not seen any more
   a:SetFromAlpha(1)
-  a:SetToAlpha(0.25)
-  a:SetDuration(0.5)
+  a:SetToAlpha(0.6)
+  a:SetDuration(0.9)
   ag:Play()
+  -- one short flash when the item's own cooldown is over and it lights up (0.9.1)
+  l.flash = l:CreateTexture(nil, "OVERLAY", nil, 6)
+  l.flash:SetAllPoints(l.icon)
+  l.flash:SetColorTexture(1, 1, 1, 1)
+  l.flash:SetBlendMode("ADD")
+  l.flash:SetAlpha(0)
+  local fg = l.flash:CreateAnimationGroup()
+  local f = fg:CreateAnimation("Alpha")
+  f:SetFromAlpha(0.7)
+  f:SetToAlpha(0)
+  f:SetDuration(0.6)
+  fg:SetScript("OnFinished", function() l.flash:SetAlpha(0) end)
+  l.flashAG = fg
   l:Hide()
   return l
 end
@@ -794,8 +863,13 @@ local function CreateBar()
   bar:SetMovable(true)
   bar:SetClampedToScreen(true)
   bar:RegisterForDrag("LeftButton")
-  bar:SetScript("OnDragStart", function(self) if db.barFree and not db.locked then self:StartMoving() end end)
+  -- a bar next to the icons drags the whole frame, like the icons do (0.9.1)
+  bar:SetScript("OnDragStart", function(self)
+    if db.locked then return end
+    if db.barFree then self:StartMoving() else anchor:GetScript("OnDragStart")(anchor) end
+  end)
   bar:SetScript("OnDragStop", function(self)
+    if not db.barFree then anchor:GetScript("OnDragStop")(anchor) return end
     self:StopMovingOrSizing()
     local l, t = self:GetLeft(), self:GetTop()
     if l and t then db.barPoint = { l, t } end
@@ -923,10 +997,14 @@ ns.ManaPercent = ManaPercent
 
 -- mana numbers like the game's "Status Text": number / percentage / both / none.
 -- Secret values only go into string.format, never into arithmetic or comparisons.
-local textFails = 0
+local textFails, textRetryAt = 0, 0
 local function SetBarText(maxMana)
   local mode = db.manaText or "number"
-  if textFails > 20 then return end -- given up until the next loading screen
+  -- after many failures in a row: try again every 5 s instead of giving up for the session
+  if textFails > 20 then
+    if GetTime() < (textRetryAt or 0) then return end
+    textRetryAt = GetTime() + 5
+  end
   local pct = (mode == "percent" or mode == "both") and ManaPercent() or nil
   local ok, text
   if mode == "percent" and pct ~= nil then
@@ -1167,20 +1245,54 @@ function ns.ApplyLock()
   anchor:EnableMouse(unlocked)
   anchor.bg:SetShown(unlocked)
   anchor.label:SetShown(unlocked)
+  anchor.lockBtn:SetShown(unlocked)
+  anchor.cfgBtn:SetShown(unlocked)
   if bar then
     local drag = unlocked and db.textFree and true or false
     for _, field in pairs(TEXT_KEYS) do
       bar[field]:EnableMouse(drag)
       bar[field].bg:SetShown(drag)
     end
-    local barDrag = unlocked and db.barFree and true or false
-    bar:EnableMouse(barDrag)
-    bar.dragBg:SetShown(barDrag)
+    bar:EnableMouse(unlocked)
+    bar.dragBg:SetShown(unlocked and db.barFree and true or false)
   end
 end
 
 function ns.OnLanguageChanged()
-  if anchor then anchor.label:SetText(L.anchor) end
+  if not anchor then return end
+  anchor.label:SetText(L.anchor)
+  anchor.lockBtn:SetLabel(L.btnLock)
+  anchor.cfgBtn:SetLabel(L.btnSettings)
+end
+
+-- small buttons on the unlocked frame (0.9.1): lock it, or open the settings, without
+-- searching for the settings window (it may cover the frame)
+local function FrameButton(onClick, title, tip)
+  local b = CreateFrame("Button", nil, anchor)
+  b:SetHeight(20)
+  local bg = b:CreateTexture(nil, "BACKGROUND")
+  bg:SetAllPoints()
+  bg:SetColorTexture(0.04, 0.10, 0.22, 0.9)
+  local hl = b:CreateTexture(nil, "HIGHLIGHT")
+  hl:SetAllPoints()
+  hl:SetColorTexture(0.3, 0.6, 1, 0.25)
+  b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(b.text, "GameFontHighlightSmall", true)
+  b.text:SetPoint("CENTER")
+  function b:SetLabel(text)
+    self.text:SetText(text)
+    self:SetWidth(math.max(60, math.ceil((self.text:GetStringWidth() or 0) + 16)))
+  end
+  b:SetScript("OnClick", onClick)
+  b:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText(title(), 1, 1, 1)
+    GameTooltip:AddLine(tip(), 0.82, 0.82, 0.82, true)
+    GameTooltip:Show()
+  end)
+  b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  b:Hide()
+  return b
 end
 
 -- The frame changes size whenever icons appear or disappear (and when the frame is
@@ -1249,6 +1361,18 @@ local function CreateAnchor()
   anchor.label = anchor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 6)
   anchor.label:SetText(L.anchor)
+  anchor.lockBtn = FrameButton(function()
+    db.locked = true
+    ns.ApplyLock()
+    if ns.RefreshOptions then ns.RefreshOptions() end
+  end, function() return L.btnLock end, function() return L.tipBtnLock end)
+  anchor.lockBtn:SetPoint("BOTTOMRIGHT", anchor.label, "TOP", -2, 4)
+  anchor.cfgBtn = FrameButton(function()
+    if ns.ToggleOptions then ns.ToggleOptions(true) end
+  end, function() return L.btnSettings end, function() return L.tipBtnSettings end)
+  anchor.cfgBtn:SetPoint("BOTTOMLEFT", anchor.label, "TOP", 2, 4)
+  anchor.lockBtn:SetLabel(L.btnLock)
+  anchor.cfgBtn:SetLabel(L.btnSettings)
 
   -- one button per group, then the spell group's extra icons (it is the last group, so they
   -- follow it in the row)
@@ -1313,6 +1437,29 @@ local function SpellLock()
   if lockStart and lockStart + lockDur > GetTime() then return lockStart, lockDur end
 end
 
+-- a frame left unlocked shows every icon lit, without the mana check: a fight locks it, so
+-- the icons never say "drink" when they should not (0.9.1)
+-- also right after loading when the fight is already on (a reload in combat), and a frame
+-- being dragged right now keeps the place it was dropped at (0.9.2)
+function ns.AutoLock()
+  if not db or db.locked or not anchor or not InCombatLockdown() then return end
+  anchor:StopMovingOrSizing()
+  PinTopLeft()
+  if bar and db.barFree then
+    bar:StopMovingOrSizing()
+    local l, t = bar:GetLeft(), bar:GetTop()
+    if l and t then db.barPoint = { l, t } end
+  end
+  db.locked = true
+  ns.ApplyLock()
+  ns.PositionBar()
+  Print(L.autoLocked)
+  if ns.RefreshOptions then ns.RefreshOptions() end
+end
+local lockFrame = CreateFrame("Frame")
+lockFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+lockFrame:SetScript("OnEvent", function() ns.AutoLock() end)
+
 local function SetLayer(l, id, n, texture)
   if l.itemID ~= id or not id then
     ClearSweep(l)
@@ -1320,7 +1467,19 @@ local function SetLayer(l, id, n, texture)
     l.itemID = id
   end
   l.icon:SetDesaturated(id == nil)
+  l.icon:SetAlpha(1)
   l.count:SetText(n and n > 1 and n or "")
+end
+
+-- "soon": grey and dimmer than a lit icon, so the one to press stands out (0.9.1); the
+-- countdown numbers stay bright. A plain factor, multiplied by the game with its own alpha.
+-- When the wait is over the icon flashes once.
+local SOON_ALPHA = 0.6
+local function MarkSoon(l, soon, hold)
+  l.icon:SetAlpha(soon and SOON_ALPHA or 1)
+  -- a held potion is not "ready to drink": no flash (0.9.2)
+  if l.wasSoon and not soon and not hold and l.soonID == l.itemID and l.flashAG then l.flashAG:Play() end
+  l.wasSoon, l.soonID = soon, l.itemID
 end
 
 local function HideLayers(b, from)
@@ -1429,6 +1588,7 @@ local function UpdateSpellButtons(b, maxMana, maxHP, on)
       if db.locked then
         local cs, cd = S.Countdown(sp) -- nearly ready (db.cdShow): grey, counting down, no glow
         l.icon:SetDesaturated(cs ~= nil)
+        MarkSoon(l, cs ~= nil)
         SetGlow(l, cs == nil)
         if cs then CountdownAt(l, cs, cd) else SweepAt(l, SpellLock()) end
         ApplyBand(l, nil, S.Threshold(sp, maxMana))
@@ -1489,6 +1649,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
     SetLayer(l, c.it.id, c.n)
     local cooling = (c.left or 0) > 0 -- shown early: grey, no glow, the game's countdown on it
     if hold or cooling then l.icon:SetDesaturated(true) end
+    MarkSoon(l, cooling, hold)
     ShowHeld(b, l, hold)
     SetGlow(l, not hold and not cooling)
     if cooling then CountdownAt(l, OwnCooldown(c.it.id)) else ApplySweep(l, c.it.id) end
@@ -1746,10 +1907,14 @@ local function Update()
     return
   end
   local maxHP = UnitHealthMax("player")
-  ns.Spells.Refresh() -- out of combat: read every spell cooldown, also with hidden icons
+  -- out of combat: read every spell cooldown, also with hidden icons. Own spells and the
+  -- sound have their own protection: when they fail, the potions still work (0.9.2)
+  local okS, errS = pcall(ns.Spells.Refresh)
+  if not okS then WarnOnce("spells", L.warnUpdate:format(tostring(errS))) end
   groupOK = GroupAllowed()
   playerLevel = ReadPlayerLevel()
-  PotionSound()
+  local okP, errP = pcall(PotionSound)
+  if not okP then WarnOnce("sound", L.warnUpdate:format(tostring(errP))) end
   -- one broken group (odd item, API change) must not blank the others
   for i = 1, #ns.GROUPS do
     local b = buttons[i]
@@ -1763,13 +1928,28 @@ local function Update()
     end
   end
   ns.Layout()
-  UpdateBar(maxMana)
-  if bar then UpdateTexts(maxMana) end
+  -- the bar and its texts have their own protection: a broken group's markers do not hide
+  -- the icons of the others
+  local okB, errB = pcall(UpdateBar, maxMana)
+  if not okB then
+    if bar then bar:Hide() end
+    WarnOnce("bar", L.warnUpdate:format(tostring(errB)))
+  end
+  if bar then
+    local okT, errT = pcall(UpdateTexts, maxMana)
+    if not okT then WarnOnce("texts", L.warnUpdate:format(tostring(errT))) end
+  end
 end
 
+-- an error outside the groups' own protection hides everything: a lit icon must never stay
+-- lit when it cannot be checked any more (a hidden icon costs nothing, a wrong one a potion)
 local function SafeUpdate()
   local ok, err = pcall(Update)
-  if not ok then WarnOnce("update", L.warnUpdate:format(tostring(err))) end
+  if not ok then
+    for _, b in ipairs(buttons) do b.outer:Hide() end
+    if bar then bar:Hide() end
+    WarnOnce("update", L.warnUpdate:format(tostring(err)))
+  end
 end
 
 function ns.InvalidateCurves()
@@ -1822,12 +2002,15 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     elseif sub == "copy" then
       local key, name = nil, args[3] and table.concat(args, " ", 3) -- "Name Surname"
       if name == "shared" then
+        -- onto Shared itself it would replace the kept own profile: the window does not
+        -- offer it, the command does not either (0.9.2)
+        if not P.IsOwn() then Print(L.profHelp) return end
         key, name = P.SHARED, L.profShared
       else
         local o = P.Find(name)
         if o then key, name = o.key, o.name end
       end
-      if not key or not P.CopyFrom(key) then Print(L.profUnknown, args[3] or "") return end
+      if not key or not P.CopyFrom(key) then Print(L.profUnknown, name or "") return end
       Print(L.profCopied, name)
       return
     elseif sub == "undo" then
@@ -1918,8 +2101,11 @@ function ns.AddCustom(id, amount, group)
   if not ok then Print("|cffff4444" .. err .. "|r") return false end
   local valid, home = false, nil
   for _, g in ipairs(ns.GROUPS) do
-    if g.key == group and not g.spells then valid = true end
-    for _, it in ipairs(g.items) do if it.id == id then home = g.key end end
+    -- only groups this class can see: another class's group has no icon and no row in the
+    -- item list, so the item would be added out of sight (0.9.2)
+    local mine = ns.ForMyClass(g)
+    if g.key == group and not g.spells and mine then valid = true end
+    for _, it in ipairs(g.items) do if it.id == id and mine then home = g.key end end
   end
   -- no (valid) category given: a known item stays in its own group, others are potions
   if not valid then group = home or "potion" end
@@ -1973,11 +2159,13 @@ local DB_VERSION = 10 -- the last migration below
 local freshInstall = false
 local function InitDB()
   -- a new install has nothing to migrate
+  if FullManaForeverDB ~= nil and type(FullManaForeverDB) ~= "table" then FullManaForeverDB = nil end
   freshInstall = FullManaForeverDB == nil
   FullManaForeverDB = FullManaForeverDB or { dbVersion = DB_VERSION }
   acct = FullManaForeverDB
   ns.acct = acct
   CopyDefaults(ACCOUNT_DEFAULTS, acct)
+  CleanCustom(acct.custom)
   -- migrations up to 8 work on the flat settings of before 0.8.3
   db = acct
   if (db.dbVersion or 0) < 2 then
@@ -2060,8 +2248,11 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     CopyDefaults(DEFAULTS, db)
     ns.db = db
     ns.RebuildLists() -- player class is known now
-    ns.Spells.Rebuild()
+    -- an odd spell book (a patch) must not stop the whole addon (0.9.2)
+    local okS, errS = pcall(ns.Spells.Rebuild)
+    if not okS then WarnOnce("spells", L.warnUpdate:format(tostring(errS))) end
     CreateAnchor()
+    ns.AutoLock() -- a reload in combat: the fight's start event has already passed
     if ns.InitOptions then
       local ok, err = pcall(ns.InitOptions)
       if not ok then Print(L.warnOptions, tostring(err)) end
