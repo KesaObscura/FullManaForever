@@ -1816,45 +1816,61 @@ local function UpdateTexts(maxMana)
 end
 
 -- out of combat the bar and its texts can fade (0.9.4): to db.fadeAlpha, and with db.fadeFull
--- only while the mana is full, so they come back as soon as mana is spent. Out of combat the
--- mana is readable; in combat everything is fully shown at once (the mana is secret there,
--- and in a fight the bar is wanted anyway). Back in 0.2 s, fading out takes 1 s. While the
--- settings window is open the bar is fully shown, so it can be set up at 0 %. After a login or
--- /reload the first known value is taken at once (no fade-out on every loading screen).
-local FADE_IN, FADE_OUT = 0.5, 0.1 -- alpha per tick (10 ticks a second)
+-- only while the mana is full, so they come back as soon as mana is spent. The current mana is
+-- secret in Forever also out of combat (docs/notes.md), so "full" is decided by the game: a step
+-- curve through UnitPowerPercent gives alpha 1 below full and the faded alpha at full, like the
+-- icons. In combat, while the frame is unlocked and while the settings are open everything is
+-- fully shown. Our own count fades from 1 to the chosen alpha over 1 s (after a fight, after
+-- closing the settings); coming back is at once. The first value after a login is taken at once.
+local FADE_OUT = 0.1 -- alpha per tick (10 ticks a second)
 local fadeA, fadeStarted = 1, false
--- returns the alpha and whether it is known (max mana not read yet at login: not known)
-local function FadeTarget()
-  if not db.locked or InCombatLockdown() then return 1, true end
-  if ns.OptionsOpen and ns.OptionsOpen() then return 1, true end
-  local a = tonumber(db.fadeAlpha) or 1
-  if a >= 1 then return 1, true end
-  if a < 0 then a = 0 end
-  if db.fadeFull ~= false then
-    local cur, max = UnitPower("player", MANA), UnitPowerMax("player", MANA)
-    if IsSecret(cur) or IsSecret(max) then return 1, true end
-    if type(cur) ~= "number" or type(max) ~= "number" or max <= 0 then return 1, false end
-    if cur < max then return 1, true end
-  end
-  return a, true
-end
+local fadeCurve, fadeKey
 function ns.FadeAlpha() return fadeA end
 
+local function SetFadeAlpha(a)
+  if bar.fadeA == a then return end
+  bar.fadeA = a
+  bar:SetAlpha(a)
+  for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(a) end
+end
+
 local function UpdateFade()
-  local target, known = FadeTarget()
+  local a = tonumber(db.fadeAlpha) or 1
+  if a < 0 then a = 0 end
+  local off = a >= 1 or not db.locked or InCombatLockdown()
+    or (ns.OptionsOpen and ns.OptionsOpen()) or false
+  local target = off and 1 or a
   if not fadeStarted then
-    if known then fadeStarted = true end
-    fadeA = target
+    fadeA, fadeStarted = target, true
   elseif target > fadeA then
-    fadeA = InCombatLockdown() and target or math.min(target, fadeA + FADE_IN)
+    fadeA = target
   elseif target < fadeA then
-    fadeA = math.max(target, fadeA - FADE_OUT)
+    -- rounded: the curve is cached by this value as text (Lua prints 0.30000000000000016 as 0.3)
+    fadeA = math.max(target, math.floor((fadeA - FADE_OUT) * 100 + 0.5) / 100)
   end
-  if bar.fadeA ~= fadeA then
-    bar.fadeA = fadeA
-    bar:SetAlpha(fadeA)
-    for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(fadeA) end
+  if off or db.fadeFull == false or fadeA >= 1 then
+    SetFadeAlpha(fadeA)
+    return
   end
+  -- only at full mana: the engine compares the secret mana with "full" (half a point of mana
+  -- below the maximum, so one missing point still counts as not full)
+  local max = UnitPowerMax("player", MANA)
+  if IsSecret(max) or type(max) ~= "number" or max <= 0 then
+    SetFadeAlpha(1)
+    return
+  end
+  local key = fadeA .. ":" .. max .. ":" .. Scale()
+  if key ~= fadeKey then
+    local c = C_CurveUtil.CreateColorCurve()
+    c:SetType(Enum.LuaCurveType.Step)
+    c:AddPoint(0, CreateColor(1, 1, 1, 1))
+    c:AddPoint((1 - 0.5 / max) * Scale(), CreateColor(1, 1, 1, fadeA))
+    fadeCurve, fadeKey = c, key
+  end
+  local color = PowerColor(fadeCurve)
+  bar.fadeA = nil -- the alpha comes from the engine (secret): set on every tick
+  ApplyAlpha(bar, color, 1)
+  for _, field in pairs(TEXT_KEYS) do ApplyAlpha(bar[field], color, 1) end
 end
 
 local function UpdateBar(maxMana)

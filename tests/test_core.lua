@@ -2361,45 +2361,45 @@ end)
 -- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
 
 test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()
+  -- the mock keeps UnitPower secret, as Forever does also out of combat: "full" comes from the curve
   local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
-  local mana = 1000
-  _G.UnitPower = function() return mana end
+  M.state.manaPct = 1
   local b = bar(ns)
   local function alphas() return b.alpha, b.manaBox.alpha, b.regenBox.alpha, b.fsrBox.alpha end
   -- after a login or /reload: faded at once, no flash on every loading screen
   M.tick()
   for _, a in ipairs({ alphas() }) do eq(a, 0.3, "bar or a text not faded to 30 % at login") end
-  -- a spell spends mana out of combat: back within two ticks
-  mana = 900; M.tick()
-  ok(b.alpha > 0.3 and b.alpha < 1, "not coming back smoothly")
-  M.tick(); eq(b.alpha, 1, "not fully back after mana was spent")
-  -- full again: fades smoothly; a fight shows everything at once, even at full (secret) mana
-  mana = 1000
-  M.tick()
-  ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade: " .. tostring(b.alpha))
+  -- mana spent out of combat: back at once; one point missing is not full
+  M.state.manaPct = 0.9; M.tick()
+  for _, a in ipairs({ alphas() }) do eq(a, 1, "not back after mana was spent") end
+  M.state.manaPct = 1207 / 1208; M.state.maxMana = 1208; M.tick()
+  eq(b.alpha, 1, "one missing point counted as full")
+  M.state.manaPct = 1; M.tick()
+  eq(b.alpha, 0.3, "not faded at full mana")
+  -- a fight shows everything at once, even at full mana; after it the bar fades over 1 s
+  M.state.combat = true; M.tick()
+  for _, a in ipairs({ alphas() }) do eq(a, 1, "faded in combat") end
+  M.state.combat = false; M.tick()
+  ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade after the fight: " .. tostring(b.alpha))
   for _ = 1, 10 do M.tick() end
   eq(b.alpha, 0.3)
   -- the settings window open: fully shown, so the bar can be set up at 0 %
-  ns.ToggleOptions(true); M.tick(); M.tick()
+  ns.ToggleOptions(true); M.tick()
   eq(b.alpha, 1, "faded while the settings are open")
   ns.ToggleOptions(); for _ = 1, 10 do M.tick() end
   eq(b.alpha, 0.3, "not faded again after closing the settings")
-  M.state.combat = true
-  _G.UnitPower = function() return M.secret(1000) end
-  M.tick()
-  for _, a in ipairs({ alphas() }) do eq(a, 1, "faded in combat") end
-  M.state.combat = false
   -- without "only at full mana": fades with mana missing too
-  _G.UnitPower = function() return 500 end
+  M.state.manaPct = 0.5
   ns.db.fadeFull = false
   for _ = 1, 10 do M.tick() end
   eq(b.alpha, 0.3, "not faded with mana missing while 'only at full mana' is off")
   -- the unlocked frame and the default never fade
-  ns.db.locked = false; M.tick(); M.tick()
+  ns.db.locked = false; M.tick()
   eq(b.alpha, 1, "unlocked frame faded")
   ns.db.locked = true; ns.db.fadeAlpha = 1
   for _ = 1, 3 do M.tick() end
   eq(b.alpha, 1, "faded with the setting off")
+  M.state.maxMana = 1000
 end)
 
 test("0.9.4: settings: fading sits under 'Show only in combat', 0 to 100 %, greyed out with it", function()
@@ -2426,7 +2426,7 @@ end)
 
 test("0.9.4: a failing fade shows the bar fully and fades again once it works", function()
   local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
-  _G.UnitPower = function() return 1000 end
+  M.state.manaPct = 1
   local b = bar(ns)
   M.tick(); eq(b.alpha, 0.3)
   local real = ns.OptionsOpen

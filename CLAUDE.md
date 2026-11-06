@@ -52,6 +52,8 @@ and `/fmf log` (kept in releases for bug reports).
 ## Forever facts the code relies on (details and logs: `docs/notes.md`)
 
 - Mana regen is continuous, no 2-second ticks; the five-second rule exists. No mp5 in combat.
+- Current mana (`UnitPower`) is secret also OUT of combat (notes; 0.9.4 bug in the owner's test,
+  6 Nov): "full" or any mana check only through `UnitPowerPercent` with a curve. Tests keep it secret.
 - Secret in combat: current mana, `GetPowerRegen`/`GetManaRegen`, spell cooldowns
   (`C_Spell.GetSpellCooldown`), auras (buffs are invisible to addons in combat). Readable in
   combat: max mana, max health, item cooldowns and counts, spell IDs and mana costs of own casts
@@ -120,10 +122,10 @@ and `/fmf log` (kept in releases for bug reports).
   already informal; pt-BR "você" is the informal form; ko keeps the polite UI style; zh 你).
 - 0.9.4 (owner, 6 Nov: only what a CurseForge comment asked for): "Fade out of combat to"
   (`fadeAlpha`, 1 = off, steps of 10 %) and "Only at full mana" (`fadeFull`, on) for the bar and
-  its three texts; out of combat only (mana readable), full at once in combat, back in 0.2 s,
-  fading out 1 s; greyed with "Show only in combat"; unlocked frame and open settings
+  its three texts; out of combat only, "full" by a step curve (`UnitPowerPercent`, half a point
+  below max), full at once in combat, back at once, fading out 1 s after a fight / closing the settings; greyed with "Show only in combat"; unlocked frame and open settings
   (`ns.OptionsOpen`) never fade; the first known value after login is taken at once. Reviewed by
-  the three player agents (8 / 9 / 8); to check in game: mana reaches exactly `UnitPowerMax`.
+  the three player agents (8 / 9 / 8).
 - 0.9.5 (owner, 5 Nov list, moved on 6 Nov): a switch "icons only in combat" (bar and regen stay
   out of combat), "full mana in N s" while drinking out of combat, hide the bar at full mana also
   in combat (by the curve; maybe as part of the fading above). Later: gallery re-shoots (need
