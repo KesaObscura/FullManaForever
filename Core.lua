@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.4"
+ns.VERSION = "0.9.5"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -19,8 +19,10 @@ local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
   locked     = true,
   onlyCombat = false,
+  iconsCombat = false,  -- icons (and the potion sound) only in combat; bar and texts stay (0.9.5)
   fadeAlpha  = 1,       -- bar and its texts out of combat (1: no fading; 0.9.4, asked for in a comment)
   fadeFull   = true,    -- fade only while the mana is full: back as soon as mana is spent (like the retail display)
+  fadeCombat = false,   -- with fadeFull: also in combat (0.9.5; full decided by the curve there too)
   cdShow = 5,           -- seconds before its cooldown ends an icon already shows (grey, counting down); 0: off
   showSolo   = true,    -- where to show: alone / in a party / in a raid (any combination)
   showParty  = true,
@@ -1575,6 +1577,13 @@ local NONE = {}
 -- own spells: every ready spell gets an icon (the group's button, then its extra buttons
 -- after the last group), each with its own threshold and the same health gate as runes.
 -- Layer IDs of spells are negative so they never match an item ID.
+-- out of combat the icons are hidden with "Show only in combat" and with "Icons only in combat"
+-- (0.9.5: bar and texts stay; asked for in three player reviews, lit icons between pulls tempt
+-- to waste a cooldown)
+local function IconsHidden()
+  return (db.onlyCombat or db.iconsCombat) and not InCombatLockdown() and true or false
+end
+
 local spellList, spellPreview = {}, {}
 local function UpdateSpellButtons(b, maxMana, maxHP, on)
   local S = ns.Spells
@@ -1582,7 +1591,7 @@ local function UpdateSpellButtons(b, maxMana, maxHP, on)
   if on and S.AnyActive() then
     if not db.locked then
       list = S.ActiveList(spellPreview) -- positioning preview: every icon that can appear
-    elseif not (db.onlyCombat and not InCombatLockdown()) and groupOK then
+    elseif not IconsHidden() and groupOK then
       list = S.Candidates(spellList, maxMana)
     end
   end
@@ -1629,7 +1638,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
     return
   end
 
-  if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
+  if IconsHidden() then b.outer:Hide() return end
   if not groupOK then b.outer:Hide() return end
 
   -- which items go into the slot, and their mana bands
@@ -1857,7 +1866,10 @@ local function UpdateFade()
   if not quietFrom then quietFrom = now + 2 end
   local a = tonumber(db.fadeAlpha) or 1
   if a < 0 then a = 0 end
-  local off = a >= 1 or not db.locked or InCombatLockdown() or false
+  -- in combat only with "Also in combat" (and "Only at full mana": a fight never hides a bar
+  -- with mana missing)
+  local combatOff = InCombatLockdown() and not (db.fadeCombat and db.fadeFull ~= false)
+  local off = a >= 1 or not db.locked or combatOff or false
   if off then holdAt = now end
   local p = (now - holdAt) / FADE_TIME
   if p > 1 then p = 1 elseif p < 0 then p = 0 end
@@ -1981,7 +1993,7 @@ local function PotionSound()
     for i, g in ipairs(ns.GROUPS) do if g.key == "potion" then potionIndex = i end end
   end
   -- the same filters as the icons: solo / party / raid and "Show only in combat" (0.9.3)
-  local shown = groupOK and not (db.onlyCombat and not InCombatLockdown())
+  local shown = groupOK and not IconsHidden()
   local item = potionIndex and db.potionSound and db.locked and db.enabled.potion and not held
     and shown and OwnedItem(potionIndex)
   if not item then potionWaiting = false return end

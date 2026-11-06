@@ -128,11 +128,14 @@ and `/fmf log` (kept in releases for bug reports).
   for MANA: events stop once the mana is full; counted, never read; ignored for 2 s after login); greyed with "Show only in combat"; the unlocked frame never
   fades, the open settings do (owner, 6 Nov: a change must show at once); the first known value after login is taken at once. Reviewed by
   the three player agents (8 / 9 / 8).
-- 0.9.5 (owner, 5 Nov list, moved on 6 Nov): a switch "icons only in combat" (bar and regen stay
-  out of combat), "full mana in N s" while drinking out of combat, hide the bar at full mana also
-  in combat (by the curve; maybe as part of the fading above). Later: gallery re-shoots (need
-  screenshots), exact fit to unit frames (sizes typed in / attach to the player frame), choice of
-  bar markers (all / potions only / nearest), a "drink" reminder between pulls.
+- 0.9.5 (owner, 7 Nov: "start 0.9.5"): "Icons only in combat" (`iconsCombat`; `IconsHidden` in
+  Core also for the potion sound; bar and texts stay; ticked and greyed with "Show only in
+  combat"); "Also in combat" (`fadeCombat`, with `fadeFull` only): the fading also in a fight.
+  "Full mana in N s" while drinking: impossible as arithmetic (current mana secret also out of
+  combat); possible only as band texts through curves: asked the owner.
+  Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
+  to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
+  between pulls.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get

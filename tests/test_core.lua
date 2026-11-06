@@ -2452,3 +2452,66 @@ test("0.9.4: a failing fade shows the bar fully and fades again once it works", 
   M.tick(); M.tick()
   ok(b.alpha < 1, "stuck at full after the error was gone")
 end)
+
+-- 0.9.5 ------------------------------------------------------------------------------------
+
+test("0.9.5: 'Icons only in combat' hides the icons and the potion sound out of combat, the bar stays", function()
+  local ns = M.load({ iconsCombat = true, potionSound = true }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.tick()
+  ok(not slotVisible(ns, 1), "potion lit out of combat")
+  ok(bar(ns).shown, "bar hidden out of combat")
+  M.state.combat = true; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit in combat")
+  M.state.combat = false
+  -- the sound follows the icons: a cooldown ending out of combat makes no sound
+  local real, t0 = GetTime, GetTime()
+  local function at(sec) _G.GetTime = function() return t0 + sec end; M.tick() end
+  M.state.cooldowns[3385] = { t0, 120 }
+  at(1); at(121)
+  eq(#M.sounds, 0, "sound out of combat with 'Icons only in combat'")
+  _G.GetTime = real
+  -- the unlocked frame still shows every icon
+  ns.db.locked = false; M.tick()
+  ok(buttons(ns)[1].outer.shown, "unlocked frame hides the icons")
+  M.state.manaPct = 1
+end)
+
+test("0.9.5: 'Also in combat' fades the bar at full mana in a fight too, back when mana is spent", function()
+  local ns = M.load({ fadeAlpha = 0.3, fadeCombat = true }, { bags = POT })
+  M.state.manaPct = 1
+  local b = bar(ns)
+  local function at(t) M.state.time = t; M.tick() end
+  at(100); eq(b.alpha, 0.3)
+  M.state.combat = true; at(101)
+  eq(b.alpha, 0.3, "not faded in combat at full mana")
+  M.state.manaPct = 0.8; at(102)
+  eq(b.alpha, 1, "not back in combat after mana was spent")
+  -- off: a fight shows the bar fully again
+  M.state.manaPct = 1; ns.db.fadeCombat = false; at(103)
+  eq(b.alpha, 1, "faded in combat without 'Also in combat'")
+  -- without "Only at full mana" a fight never hides the bar
+  ns.db.fadeCombat, ns.db.fadeFull = true, false; at(104)
+  eq(b.alpha, 1, "faded in combat with mana missing allowed")
+  M.state.combat, M.state.time = false, nil
+end)
+
+test("0.9.5: settings: 'Icons only in combat' and 'Also in combat' with their greyed-out states", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local icons, alsoCombat, combat
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.optIconsCombat then icons = w end
+    if w.label and w.label.text == ns.L.optFadeCombat then alsoCombat = w end
+    if w.label and w.label.text == ns.L.optCombat then combat = w end
+  end
+  ok(icons and alsoCombat and combat, "settings not found")
+  ok(icons:IsEnabled(), "'Icons only in combat' grey by default")
+  ok(not alsoCombat:IsEnabled(), "'Also in combat' usable while fading is off")
+  ns.db.fadeAlpha = 0.5; ns.RefreshOptions()
+  ok(alsoCombat:IsEnabled(), "'Also in combat' grey while fading at full mana")
+  ns.db.fadeFull = false; ns.RefreshOptions()
+  ok(not alsoCombat:IsEnabled(), "'Also in combat' usable without 'Only at full mana'")
+  ns.db.onlyCombat = true; ns.RefreshOptions()
+  ok(not icons:IsEnabled() and icons:GetChecked(), "'Icons only in combat' not grey and ticked with 'Show only in combat'")
+end)

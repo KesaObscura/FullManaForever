@@ -63,7 +63,8 @@ when the icon lights up.
 - **Mana text** like the game's status text: number, percentage or both, with its own switch
   and text size.
 - **Show**: solo / in a party / in a raid, optionally only in combat. Out of combat the bar and
-  its texts can fade to any opacity, also only while your mana is full (back as soon as you spend mana).
+  its texts can fade to any opacity, also only while your mana is full (back as soon as you spend mana),
+  and also in combat. *Icons only in combat* keeps the bar and hides the icons out of combat.
 - **See it coming**: icons already show in the last seconds of their cooldown (5 s by default,
   up to 60), grey and counting down like the action bar; at 0 only when ready.
 - **Sound when your potion is ready again** (optional, off by default): three sounds of the addon's own.

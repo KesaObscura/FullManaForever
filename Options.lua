@@ -722,6 +722,10 @@ Build = function()
   cdShow.minus:SetPoint("LEFT", cdShow.label, "LEFT", BTN_X - cdShow.x, -22)
   c.Row(Check(col, L.optCombat, function() return db.onlyCombat end, function(v) db.onlyCombat = v end,
     L.tipCombat))
+  -- icons only in combat, the bar and its texts stay out of combat (0.9.5)
+  c.Row(Check(col, L.optIconsCombat, function() return db.iconsCombat or db.onlyCombat end,
+    function(v) db.iconsCombat = v end, L.tipIconsCombat, function() return not db.onlyCombat end),
+    PAD + 26, 26)
   -- out of combat the bar and its texts can fade, also only while the mana is full (0.9.4,
   -- asked for in a comment); with "Show only in combat" they are hidden there anyway
   local fade = Stepper(col, PAD + 4, L.optFade, function() return db.fadeAlpha or 1 end,
@@ -736,6 +740,10 @@ Build = function()
   c.Row(Check(col, L.optFadeFull, function() return db.fadeFull ~= false end,
     function(v) db.fadeFull = v end, L.tipFadeFull,
     function() return not db.onlyCombat and (db.fadeAlpha or 1) < 1 end), PAD + 26, 26)
+  c.Row(Check(col, L.optFadeCombat, function() return db.fadeCombat end,
+    function(v) db.fadeCombat = v end, L.tipFadeCombat,
+    function() return not db.onlyCombat and (db.fadeAlpha or 1) < 1 and db.fadeFull ~= false end),
+    PAD + 48, 26)
   local showLabel = Label(col, L.optShowIn .. ":")
   c.Row(showLabel, PAD + 4, 24)
   TipArea(col, showLabel, L.optShowIn, L.tipShowIn)

@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.9.5**
+
+- **Icons only in combat**: out of combat the icons are hidden (no potion wasted between pulls), the mana bar, the five-second rule and the regen stay; the potion sound follows the icons
+- **Also in combat** (with *Only at full mana*): the bar fades in a fight too while your mana is full and comes back as soon as you spend mana
+
 **Full Mana Forever 0.9.4**
 
 Asked for in the comments:
