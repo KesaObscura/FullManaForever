@@ -186,7 +186,9 @@ and `/fmf log` (kept in releases for bug reports).
    0.9.2 (with 0.9.1) released on GitHub 5 Nov (PR #18, tag v0.9.2); CurseForge upload by the
    owner with the changelog of 0.9.1 + 0.9.2; the gallery stays as it is for now
    (owner, 5 Nov: no time); 0.9.3 released on GitHub 5 Nov (PR #19, tag v0.9.3), CurseForge upload
-   by the owner (description: log texts and regen line changed); fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+   by the owner (description: log texts and regen line changed); 0.9.4 released on GitHub 6 Nov
+   (PR #20, tag v0.9.4), CurseForge upload by the owner on 7 Nov (description: "Fades out of combat"
+   line new); reply to the commenter once it is live; fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
    next); other classes (druid forms, Life Tap, Mana Agate, Evocation)
