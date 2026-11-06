@@ -128,9 +128,16 @@ and `/fmf log` (kept in releases for bug reports).
   for MANA: events stop once the mana is full; counted, never read; ignored for 2 s after login); greyed with "Show only in combat"; the unlocked frame never
   fades, the open settings do (owner, 6 Nov: a change must show at once); the first known value after login is taken at once. Reviewed by
   the three player agents (8 / 9 / 8).
-- 0.9.5 (owner, 7 Nov: "start 0.9.5"): "Icons only in combat" (`iconsCombat`; `IconsHidden` in
-  Core also for the potion sound; bar and texts stay; ticked and greyed with "Show only in
-  combat"); "Also in combat" (`fadeCombat`, with `fadeFull` only): the fading also in a fight.
+- 0.9.5 (owner, 7 Nov: "start 0.9.5"; settings from three UI reviews, owner 7 Nov "do all 4"):
+  "Out of combat" list (all / without icons / nothing -> `iconsCombat`, `onlyCombat`; `IconsHidden`
+  in Core also for the potion sound); "When it fades" list (full / full also in combat / after a
+  fight -> `fadeFull`, `fadeCombat`); "Show icons" (`showIcons`, also markers and sound; groups
+  keep their switches, greyed); lists instead of sub-switches for mana text (off -> `manaTextOn`),
+  rule seconds (`fsrNum`, `fsrWhole`), bar style (`barStyle`); "Keep health above" under "When to
+  light up"; group rows always two lines (no jumping). Saved keys unchanged.
+  0.9.6 (owner, 7 Nov): the full regroup of the settings window in two columns (left: position /
+  icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
+  the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
   "Full mana in N s" while drinking: impossible as arithmetic (current mana secret also out of
   combat); possible only as band texts through curves (~45 texts, one curve each): owner 7 Nov,
   not now, long backlog.

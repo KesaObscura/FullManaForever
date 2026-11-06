@@ -19,6 +19,7 @@ local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
   locked     = true,
   onlyCombat = false,
+  showIcons  = true,    -- false: no icons and no markers at all, only the bar and its texts (0.9.5)
   iconsCombat = false,  -- icons (and the potion sound) only in combat; bar and texts stay (0.9.5)
   fadeAlpha  = 1,       -- bar and its texts out of combat (1: no fading; 0.9.4, asked for in a comment)
   fadeFull   = true,    -- fade only while the mana is full: back as soon as mana is spent (like the retail display)
@@ -1627,9 +1628,13 @@ end
 local function UpdateButton(i, b, maxMana, maxHP)
   local group = ns.GROUPS[i]
   if group.spells then
-    return UpdateSpellButtons(b, maxMana, maxHP, db.enabled[group.key] and ns.ForMyClass(group))
+    return UpdateSpellButtons(b, maxMana, maxHP,
+      db.showIcons ~= false and db.enabled[group.key] and ns.ForMyClass(group))
   end
-  if not db.enabled[group.key] or not ns.ForMyClass(group) then b.outer:Hide() return end
+  if db.showIcons == false or not db.enabled[group.key] or not ns.ForMyClass(group) then
+    b.outer:Hide()
+    return
+  end
   if not db.locked then -- positioning preview, in the order the icons light up
     local item = OwnedItem(i)
     b.sortThr = FirstThreshold(i, maxMana)
@@ -1949,7 +1954,7 @@ local function UpdateBar(maxMana)
   for i, group in ipairs(ns.GROUPS) do
     local ticks = bar.ticks[i]
     local used = 0
-    if db.enabled[group.key] and ns.ForMyClass(group) then
+    if db.showIcons ~= false and db.enabled[group.key] and ns.ForMyClass(group) then
       if group.spells then
         -- one mark per spell icon that can light up now (ready, switched on); a spell on
         -- cooldown has no mark. The unlocked frame marks every spell it previews.
@@ -1995,6 +2000,7 @@ local function PotionSound()
   -- the same filters as the icons: solo / party / raid and "Show only in combat" (0.9.3)
   local shown = groupOK and not IconsHidden()
   local item = potionIndex and db.potionSound and db.locked and db.enabled.potion and not held
+    and db.showIcons ~= false
     and shown and OwnedItem(potionIndex)
   if not item then potionWaiting = false return end
   if not CooldownState(item.id) then

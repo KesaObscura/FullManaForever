@@ -527,6 +527,16 @@ Build = function()
   ------------------------------------------------------------ left column
   local c = left
   local col = c.frame
+  -- "Label:   [list]" on one row; one list instead of a switch with sub-switches (0.9.5, three
+  -- UI reviews: one decision, one control)
+  local function LabeledDD(text, x, entries, getText, onPick, tip)
+    local lab = Label(col, text .. ":")
+    local dd = Dropdown(col, DD_W, entries, getText, onPick)
+    c.Right(dd)
+    c.Row(lab, x, 30)
+    TipBoth(col, lab, dd, text, tip)
+    return lab, dd
+  end
   c.Row(Header(col, L.optDisplay), PAD, 24)
   -- one switch for placing: unlocked = movable and showing everything that is switched on
   -- unlock, "Move texts freely" under it, then the two reset buttons as two equal halves,
@@ -607,6 +617,12 @@ Build = function()
   c.Row(gap.label, PAD + 4, 30)
 
   c.Row(Check(col, L.optBar, function() return db.showBar end, function(v) db.showBar = v end, L.tipBar))
+  -- the style right under the bar switch: the colour below depends on it (0.9.0 "Only
+  -- markers", a list since 0.9.5)
+  local styleLabel, styleDD = LabeledDD(L.optBarStyle, PAD + 30, {
+    { value = "full", text = L.bsFull }, { value = "markers", text = L.bsMarkers },
+  }, function() return db.barStyle == "markers" and L.bsMarkers or L.bsFull end,
+  function(v) db.barStyle = v; ns.Layout(true); ns.RefreshOptions() end, L.tipBarMarkers)
   local bpLabel = Label(col, L.optBarPos .. ":")
   local bp
   if db.vertical then
@@ -659,13 +675,8 @@ Build = function()
       end,
     })
   c.Row(blen.label, PAD + 30, 32)
-  -- only the markers, the strip and the texts: to lay the bar over another mana bar (0.9.0)
-  local markersCb = Check(col, L.optBarMarkers, function() return db.barStyle == "markers" end,
-    function(v) db.barStyle = v and "markers" or "full"; ns.Layout(true) end, L.tipBarMarkers,
-    function() return db.showBar end)
-  c.Row(markersCb, PAD + 26, 30)
   -- the bar's own look only matters while it is on
-  ActiveIf(function() return db.showBar end, bpLabel, bp, thick, blen)
+  ActiveIf(function() return db.showBar end, styleLabel, styleDD, bpLabel, bp, thick, blen)
   -- "Only markers" draws no fill: its colour has nothing to colour (0.9.1)
   ActiveIf(function() return db.showBar and db.barStyle ~= "markers" end, colLabel, colDD)
   -- the three texts: each has its own switch and text size and also shows without the bar
@@ -678,27 +689,36 @@ Build = function()
     return st
   end
   -- mana numbers like the game's "Status Text": number, percentage or both
+  -- one list: off or the format (0.9.5; keys manaTextOn + manaText stay)
   local mtText = { number = L.mtNumber, percent = L.mtPercent, both = L.mtBoth }
-  local manaCb = Check(col, L.optManaText, function() return db.manaTextOn end,
-    function(v) db.manaTextOn = v end, L.tipManaText)
-  local mtDD = Dropdown(col, DD_W, {
-    { value = "number", text = L.mtNumber }, { value = "percent", text = L.mtPercent },
-    { value = "both", text = L.mtBoth },
-  }, function() return mtText[db.manaText or "number"] or L.mtNumber end,
-  function(v) db.manaText = v; ns.RefreshOptions() end)
-  c.Right(mtDD)
-  c.Row(manaCb, PAD, 30)
-  Tip(mtDD, L.optManaText, L.tipManaFmt)
-  ActiveIf(function() return db.manaTextOn end, mtDD, SizeStepper("manaScale"))
+  LabeledDD(L.optManaText, PAD + 4, {
+    { value = "off", text = L.mtOff }, { value = "number", text = L.mtNumber },
+    { value = "percent", text = L.mtPercent }, { value = "both", text = L.mtBoth },
+  }, function()
+    if not db.manaTextOn then return L.mtOff end
+    return mtText[db.manaText or "number"] or L.mtNumber
+  end, function(v)
+    if v == "off" then db.manaTextOn = false else db.manaTextOn, db.manaText = true, v end
+    ns.RefreshOptions()
+  end, L.tipManaText)
+  ActiveIf(function() return db.manaTextOn end, SizeStepper("manaScale"))
   c.Row(Check(col, L.optFsr, function() return db.fsr end,
     function(v) db.fsr = v; ns.Layout(true) end, L.tipFsr), PAD, 26)
-  -- the seconds can go: the strip alone shows the rule (0.9.0); their size and whole
-  -- seconds only matter while they show (0.9.1)
-  c.Row(Check(col, L.optFsrNum, function() return db.fsrNum ~= false end,
-    function(v) db.fsrNum = v; ns.Layout(true) end, L.tipFsrNum, function() return db.fsr end), PAD + 26, 26)
-  c.Row(Check(col, L.optFsrWhole, function() return db.fsrWhole end,
-    function(v) db.fsrWhole = v end, L.tipFsrWhole,
-    function() return db.fsr and db.fsrNum ~= false end), PAD + 26, 26)
+  -- the seconds: off (the strip alone shows the rule, 0.9.0), whole or tenths; one list since
+  -- 0.9.5 (keys fsrNum + fsrWhole stay)
+  local secText = { off = L.fsOff, whole = "5, 4, 3", tenths = "4.3" }
+  local function Sec()
+    if db.fsrNum == false then return "off" end
+    return db.fsrWhole and "whole" or "tenths"
+  end
+  local secLabel, secDD = LabeledDD(L.optFsrNum, PAD + 30, {
+    { value = "off", text = secText.off }, { value = "whole", text = secText.whole },
+    { value = "tenths", text = secText.tenths },
+  }, function() return secText[Sec()] end, function(v)
+    if v == "off" then db.fsrNum = false else db.fsrNum, db.fsrWhole = true, v == "whole" end
+    ns.Layout(true); ns.RefreshOptions()
+  end, L.tipFsrNum)
+  ActiveIf(function() return db.fsr end, secLabel, secDD)
   ActiveIf(function() return db.fsr and db.fsrNum ~= false end, SizeStepper("fsrScale"))
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
@@ -720,30 +740,41 @@ Build = function()
   cdShow.value:SetPoint("LEFT", cdShow.label, "LEFT", VALUE_X - cdShow.x, -22)
   cdShow.minus:ClearAllPoints()
   cdShow.minus:SetPoint("LEFT", cdShow.label, "LEFT", BTN_X - cdShow.x, -22)
-  c.Row(Check(col, L.optCombat, function() return db.onlyCombat end, function(v) db.onlyCombat = v end,
-    L.tipCombat))
-  -- icons only in combat, the bar and its texts stay out of combat (0.9.5)
-  c.Row(Check(col, L.optIconsCombat, function() return db.iconsCombat or db.onlyCombat end,
-    function(v) db.iconsCombat = v end, L.tipIconsCombat, function() return not db.onlyCombat end),
-    PAD + 26, 26)
-  -- out of combat the bar and its texts can fade, also only while the mana is full (0.9.4,
-  -- asked for in a comment); with "Show only in combat" they are hidden there anyway
+  -- out of combat: one choice instead of two switches (0.9.5; keys onlyCombat + iconsCombat stay)
+  local ooText = { all = L.ooAll, icons = L.ooNoIcons, none = L.ooNothing }
+  local function OutOfCombat()
+    if db.onlyCombat then return "none" end
+    return db.iconsCombat and "icons" or "all"
+  end
+  LabeledDD(L.optOutCombat, PAD + 4, {
+    { value = "all", text = L.ooAll }, { value = "icons", text = L.ooNoIcons },
+    { value = "none", text = L.ooNothing },
+  }, function() return ooText[OutOfCombat()] end, function(v)
+    db.onlyCombat, db.iconsCombat = v == "none", v == "icons"
+    ns.RefreshOptions()
+  end, L.tipOutCombat)
+  -- the bar and its texts can fade (0.9.4, asked for in a comment): how far, then when; with
+  -- "Nothing" out of combat they are hidden there anyway
   local fade = Stepper(col, PAD + 4, L.optFade, function() return db.fadeAlpha or 1 end,
     function(v) db.fadeAlpha = v end, { step = 0.1, lo = 0, hi = 1, tip = L.tipFade,
       fmt = function(v) return v >= 1 and L.fadeOff or ("%d%%"):format(math.floor(v * 100 + 0.5)) end })
-  c.Row(fade.label, PAD + 4, 48)
-  fade.value:ClearAllPoints()
-  fade.value:SetPoint("LEFT", fade.label, "LEFT", VALUE_X - fade.x, -22)
-  fade.minus:ClearAllPoints()
-  fade.minus:SetPoint("LEFT", fade.label, "LEFT", BTN_X - fade.x, -22)
+  c.Row(fade.label, PAD + 4, 30)
   ActiveIf(function() return not db.onlyCombat end, fade)
-  c.Row(Check(col, L.optFadeFull, function() return db.fadeFull ~= false end,
-    function(v) db.fadeFull = v end, L.tipFadeFull,
-    function() return not db.onlyCombat and (db.fadeAlpha or 1) < 1 end), PAD + 26, 26)
-  c.Row(Check(col, L.optFadeCombat, function() return db.fadeCombat end,
-    function(v) db.fadeCombat = v end, L.tipFadeCombat,
-    function() return not db.onlyCombat and (db.fadeAlpha or 1) < 1 and db.fadeFull ~= false end),
-    PAD + 48, 26)
+  -- one list instead of "Only at full mana" + "Also in combat" (0.9.5; keys fadeFull +
+  -- fadeCombat stay)
+  local fwText = { full = L.fwFull, after = L.fwAfter, combat = L.fwFullCombat }
+  local function FadeWhen()
+    if db.fadeFull == false then return "after" end
+    return db.fadeCombat and "combat" or "full"
+  end
+  local fwLabel, fwDD = LabeledDD(L.optFadeWhen, PAD + 30, {
+    { value = "full", text = L.fwFull }, { value = "combat", text = L.fwFullCombat },
+    { value = "after", text = L.fwAfter },
+  }, function() return fwText[FadeWhen()] end, function(v)
+    db.fadeFull, db.fadeCombat = v ~= "after", v == "combat"
+    ns.RefreshOptions()
+  end, L.tipFadeWhen)
+  ActiveIf(function() return not db.onlyCombat and (db.fadeAlpha or 1) < 1 end, fwLabel, fwDD)
   local showLabel = Label(col, L.optShowIn .. ":")
   c.Row(showLabel, PAD + 4, 24)
   TipArea(col, showLabel, L.optShowIn, L.tipShowIn)
@@ -757,6 +788,11 @@ Build = function()
   c.y = c.y - 34
 
   c.Row(Header(col, L.optGroups), PAD, 24)
+  -- one switch for all icons: off = only the bar and its texts (0.9.5; the groups keep their
+  -- own switches)
+  c.Row(Check(col, L.optShowIcons, function() return db.showIcons ~= false end,
+    function(v) db.showIcons = v; ns.Layout(true) end, L.tipShowIcons), PAD, 28)
+  local function IconsOn() return db.showIcons ~= false end
   -- one choice instead of two lists: how eagerly to drink
   local function Strategy()
     if db.pickMode == "strongest" then return "strong" end
@@ -788,6 +824,15 @@ Build = function()
   desc:SetWidth(W - 2 * PAD - 8)
   c.Row(desc, PAD + 4, 44)
   registry[#registry + 1] = { Refresh = function() desc:SetText(stratDesc[Strategy()]) end }
+  -- health kept after runes, Life Tap and the Power Recycler: one setting for all three, so it
+  -- sits with "When to light up", not under the runes (0.9.5)
+  local function pctM(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
+  local margin = Stepper(col, PAD + 4, L.optMargin, function() return db.runeMargin end,
+    function(v) db.runeMargin = v; ns.InvalidateCurves() end,
+    { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pctM })
+  c.Row(margin.label, PAD + 4, 32)
+  ActiveIf(IconsOn, stLabel, strat)
+  ActiveIf(function() return IconsOn() and (db.enabled.rune or db.enabled.spell or db.enabled.herb) end, margin)
 
   -- groups are chained: a group with nothing to report keeps its status on the same
   -- line and takes less room (see PlaceGroups); the first one sits at a fixed spot.
@@ -800,7 +845,7 @@ Build = function()
       local snd = Check(col, L.optPotionSound, function() return db.potionSound end,
         function(v) db.potionSound = v; if v and ns.PlayPotionSound then ns.PlayPotionSound() end end,
         L.tipPotionSound,
-        function() return db.enabled.potion end)
+        function() return IconsOn() and db.enabled.potion end)
       -- three sounds of the addon's own: picking one plays it
       local kindLabel = Label(col, L.optSoundKind .. ":")
       local kind = Dropdown(col, 170, {
@@ -814,17 +859,8 @@ Build = function()
       end)
       kind:SetPoint("LEFT", kindLabel, "LEFT", VALUE_X - PAD - 30, 0)
       TipBoth(col, kindLabel, kind, L.optSoundKind, L.tipSoundKind)
-      ActiveIf(function() return db.enabled.potion and db.potionSound end, kindLabel, kind)
+      ActiveIf(function() return IconsOn() and db.enabled.potion and db.potionSound end, kindLabel, kind)
       return { snd, kindLabel }
-    end,
-    rune = function()
-      local s = Stepper(col, PAD + 30, L.optMargin, function() return db.runeMargin end,
-        function(v) db.runeMargin = v; ns.InvalidateCurves() end,
-        { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pct })
-      -- the same health check guards Life Tap (own spells) and the Power Recycler (other
-      -- consumables): greyed out only when none of them can light up (0.9.3)
-      ActiveIf(function() return db.enabled.rune or db.enabled.spell or db.enabled.herb end, s)
-      return { s.label }
     end,
   }
   local first = true
@@ -832,7 +868,7 @@ Build = function()
     if ns.ForMyClass(group) then
       local cb = Check(col, L["grp_" .. group.key], function() return db.enabled[group.key] end,
         function(v) db.enabled[group.key] = v; ns.Layout(true) end, -- auto bar length follows
-        L["tipGrp_" .. group.key])
+        L["tipGrp_" .. group.key], IconsOn)
       if first then cb:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y); first = false end
       local st = Label(col, "", "GameFontHighlightSmall")
       if st.SetWordWrap then st:SetWordWrap(false) end -- one line; long texts end in "..."
@@ -932,9 +968,10 @@ function ns.RefreshOptions()
   if not win or not win:IsShown() then return end
   for _, w in ipairs(widgets) do w.Refresh() end
   for _, r in ipairs(groupRows) do
-    local text, compact = StatusText(r.i, ns.GROUPS[r.i])
+    local text = StatusText(r.i, ns.GROUPS[r.i])
     if text ~= r.st.text then r.st.text = text; r.st:SetText(text) end
-    r.compact = compact or false
+    -- every group keeps two lines: rows no longer jump when a group is switched off (0.9.5)
+    r.compact = false
   end
   PlaceGroups()
 end

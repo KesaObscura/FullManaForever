@@ -54,7 +54,7 @@ when the icon lights up.
   color, thickness, length, icon size and spacing are adjustable. For unit frame addons: *Only
   markers* (no fill, background or border: lay the markers and the five-second strip over your
   unit frame's mana bar), *Move the bar separately* (its own place, apart from the icons) and
-  *Above other frames*. On a unit frame: *Only markers*, unlock, *Move the bar separately*, drag the
+  *Above other frames*. On a unit frame: *Style: Only markers*, unlock, *Move the bar separately*, drag the
   bar onto the unit frame's mana bar, match length and thickness, *Above other frames*.
 - **Five-second rule and mana regen** on the bar: a gold strip (and the seconds, can be switched off) after a spell
   that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns
@@ -62,9 +62,9 @@ when the icon lights up.
   mana numbers, the seconds and the regen also show without the bar, and each can be dragged anywhere ("Move texts freely").
 - **Mana text** like the game's status text: number, percentage or both, with its own switch
   and text size.
-- **Show**: solo / in a party / in a raid, optionally only in combat. Out of combat the bar and
-  its texts can fade to any opacity, also only while your mana is full (back as soon as you spend mana),
-  and also in combat. *Icons only in combat* keeps the bar and hides the icons out of combat.
+- **When to show**: solo / in a party / in a raid; *Out of combat*: everything, without icons (the
+  bar stays) or nothing. *Fade the bar to* any opacity, *When it fades*: at full mana (back as soon
+  as you spend mana), at full mana also in combat, or after a fight. *Show icons* off: only the bar.
 - **See it coming**: icons already show in the last seconds of their cooldown (5 s by default,
   up to 60), grey and counting down like the action bar; at 0 only when ready.
 - **Sound when your potion is ready again** (optional, off by default): three sounds of the addon's own.

@@ -2,8 +2,17 @@
 
 **Full Mana Forever 0.9.5**
 
-- **Icons only in combat**: out of combat the icons are hidden (no potion wasted between pulls), the mana bar, the five-second rule and the regen stay; the potion sound follows the icons
-- **Also in combat** (with *Only at full mana*): the bar fades in a fight too while your mana is full and comes back as soon as you spend mana
+New:
+- **Out of combat: Everything / Without icons / Nothing**: *Without icons* hides the icons out of combat (no potion wasted between pulls) while the mana bar, the five-second rule and the regen stay; the potion sound follows the icons. *Nothing* is the old *Show only in combat*
+- **When it fades: At full mana / At full mana, also in combat / After a fight**: the fading can now also work in a fight while your mana is full
+- **Show icons**: one switch for all icons and markers; off leaves only the mana bar and its texts, the groups keep their own settings
+
+Simpler settings (three reviews of the settings window):
+- One list instead of a switch with sub-switches: *Mana text* (Off / Number / Percent / Both), the rule's *Seconds* (Off / 5, 4, 3 / 4.3), the bar's *Style* (Full bar / Only markers, right under the bar switch); your settings carry over
+- *Fade the bar to: no fade* instead of "Fade out of combat to: off" (which read as "hidden out of combat"); the bar's place is called *Position*
+- *Keep health above* sits with *When to light up*: it is for runes, Life Tap and the Power Recycler alike
+- The consumable rows no longer jump when a group is switched off
+- Tooltips: solo / party / raid hides the bar and its texts too, not just the icons
 
 **Full Mana Forever 0.9.4**
 
