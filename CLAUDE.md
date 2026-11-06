@@ -132,7 +132,8 @@ and `/fmf log` (kept in releases for bug reports).
   Core also for the potion sound; bar and texts stay; ticked and greyed with "Show only in
   combat"); "Also in combat" (`fadeCombat`, with `fadeFull` only): the fading also in a fight.
   "Full mana in N s" while drinking: impossible as arithmetic (current mana secret also out of
-  combat); possible only as band texts through curves: asked the owner.
+  combat); possible only as band texts through curves (~45 texts, one curve each): owner 7 Nov,
+  not now, long backlog.
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.
