@@ -46,6 +46,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Profiles per character.** All characters share one set of settings, or a character gets its own (a copy of the shared ones to start with). Copy the settings of another character in one click, reset a profile or delete the settings of characters you no longer play; one undo if you clicked the wrong one. Language and your own items stay the same for all.
 - **Sound when your potion is ready again** (optional): a short sound when the mana potion cooldown is over, also in combat; three sounds of the addon's own to choose from.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
+- **Fades out of combat if you like.** The bar and its texts fade to the opacity you choose, also only while your mana is full: spend mana and the bar is back at once, in combat it is always fully shown.
 - **9 languages:** English, Deutsch, Español (EU and AL), Français, Русский, 한국어, Português, 简体中文, 繁體中文.
 
 ## Looking for a mana tick or mp5 tracker?

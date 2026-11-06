@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.3"
+ns.VERSION = "0.9.4"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -19,6 +19,8 @@ local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
   locked     = true,
   onlyCombat = false,
+  fadeAlpha  = 1,       -- bar and its texts out of combat (1: no fading; 0.9.4, asked for in a comment)
+  fadeFull   = true,    -- fade only while the mana is full: back as soon as mana is spent (like the retail display)
   cdShow = 5,           -- seconds before its cooldown ends an icon already shows (grey, counting down); 0: off
   showSolo   = true,    -- where to show: alone / in a party / in a raid (any combination)
   showParty  = true,
@@ -1813,6 +1815,105 @@ local function UpdateTexts(maxMana)
   UpdateRegenText(visible)
 end
 
+-- out of combat the bar and its texts can fade (0.9.4): to db.fadeAlpha, and with db.fadeFull
+-- only while the mana is full, so they come back as soon as mana is spent. The current mana is
+-- secret in Forever also out of combat (docs/notes.md), so "full" is decided by the game: a step
+-- curve through UnitPowerPercent gives alpha 1 below full and the faded alpha at full, like the
+-- icons. In combat and while the frame is unlocked (the way to set up the bar at 0 %) everything
+-- is fully shown; with the settings open the fading shows as it is (owner, 6 Nov: a change of
+-- the setting must be visible at once). Coming back is at once; fading out is smooth, frame by
+-- frame over FADE_TIME after the last reason to show: a fight, the unlocked frame, and with
+-- "only at full mana" a change of the mana. The game sends UNIT_POWER_FREQUENT while the mana
+-- changes and stops once it is full, so the fade starts when the mana has filled up; the event
+-- is only counted, its value never read. The first value after a login is taken at once.
+local FADE_TIME = 1.5
+local fadeA, holdAt, quietFrom = 1, -math.huge, nil
+local fadeCurves, fadeCurveKey = {}, nil
+
+local fadeFrame = CreateFrame("Frame")
+if fadeFrame.RegisterUnitEvent then
+  fadeFrame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+else
+  fadeFrame:RegisterEvent("UNIT_POWER_FREQUENT")
+end
+fadeFrame:SetScript("OnEvent", function(_, _, unit, powerType)
+  if unit ~= nil and not IsSecret(unit) and unit ~= "player" then return end
+  -- energy or rage in a druid form does not keep the mana bar shown
+  if powerType ~= nil and not IsSecret(powerType) and powerType ~= "MANA" then return end
+  -- the events of the loading screen do not count: no fade-out after every login
+  if quietFrom and GetTime() >= quietFrom and db and db.fadeFull ~= false then holdAt = GetTime() end
+end)
+
+local function SetFadeAlpha(a)
+  if bar.fadeA == a then return end
+  bar.fadeA = a
+  bar:SetAlpha(a)
+  for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(a) end
+end
+
+-- returns true while a fade-out is running (then it is updated on every frame)
+local function UpdateFade()
+  local now = GetTime()
+  if not quietFrom then quietFrom = now + 2 end
+  local a = tonumber(db.fadeAlpha) or 1
+  if a < 0 then a = 0 end
+  local off = a >= 1 or not db.locked or InCombatLockdown() or false
+  if off then holdAt = now end
+  local p = (now - holdAt) / FADE_TIME
+  if p > 1 then p = 1 elseif p < 0 then p = 0 end
+  -- eased, in steps of 2 % (each step of the curve below is built once)
+  local v = math.floor((1 - (1 - a) * (1 - (1 - p) * (1 - p))) * 50 + 0.5) / 50
+  if v < a then v = a end
+  fadeA = v
+  if off or db.fadeFull == false or v >= 1 then
+    SetFadeAlpha(v)
+    return p < 1 and not off
+  end
+  -- only at full mana: the engine compares the secret mana with "full" (half a point of mana
+  -- below the maximum, so one missing point still counts as not full)
+  local max = UnitPowerMax("player", MANA)
+  if IsSecret(max) or type(max) ~= "number" or max <= 0 then
+    SetFadeAlpha(1)
+    return false
+  end
+  local key = max .. ":" .. Scale()
+  if key ~= fadeCurveKey then wipe(fadeCurves); fadeCurveKey = key end
+  local c = fadeCurves[v]
+  if not c then
+    c = C_CurveUtil.CreateColorCurve()
+    c:SetType(Enum.LuaCurveType.Step)
+    c:AddPoint(0, CreateColor(1, 1, 1, 1))
+    c:AddPoint((1 - 0.5 / max) * Scale(), CreateColor(1, 1, 1, v))
+    fadeCurves[v] = c
+  end
+  local color = PowerColor(c)
+  bar.fadeA = nil -- the alpha comes from the engine (secret): set on every update
+  ApplyAlpha(bar, color, 1)
+  for _, field in pairs(TEXT_KEYS) do ApplyAlpha(bar[field], color, 1) end
+  return p < 1
+end
+
+-- protected: when the fade cannot be worked out, the bar is fully shown, never left faded
+local function FadeOnUpdate() end
+local function RunFade()
+  local ok, fading = pcall(UpdateFade)
+  if not ok then
+    fadeA, bar.fadeA = 1, nil
+    bar:SetAlpha(1)
+    for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(1) end
+    WarnOnce("fade", L.warnUpdate:format(tostring(fading)))
+    fading = false
+  end
+  if fading then
+    if not fadeFrame.running then fadeFrame.running = true; fadeFrame:SetScript("OnUpdate", FadeOnUpdate) end
+  elseif fadeFrame.running then
+    fadeFrame.running = false; fadeFrame:SetScript("OnUpdate", nil)
+  end
+end
+FadeOnUpdate = function() RunFade() end
+-- for the tests: the faded alpha and whether it is updated on every frame right now
+function ns.FadeAlpha() return fadeA, fadeFrame.running and true or false end
+
 local function UpdateBar(maxMana)
   if not bar then return end
   if not BarVisible() then bar:Hide() return end
@@ -1949,6 +2050,7 @@ local function Update()
   if bar then
     local okT, errT = pcall(UpdateTexts, maxMana)
     if not okT then WarnOnce("texts", L.warnUpdate:format(tostring(errT))) end
+    RunFade()
   end
 end
 

@@ -52,6 +52,8 @@ and `/fmf log` (kept in releases for bug reports).
 ## Forever facts the code relies on (details and logs: `docs/notes.md`)
 
 - Mana regen is continuous, no 2-second ticks; the five-second rule exists. No mp5 in combat.
+- Current mana (`UnitPower`) is secret also OUT of combat (notes; 0.9.4 bug in the owner's test,
+  6 Nov): "full" or any mana check only through `UnitPowerPercent` with a curve. Tests keep it secret.
 - Secret in combat: current mana, `GetPowerRegen`/`GetManaRegen`, spell cooldowns
   (`C_Spell.GetSpellCooldown`), auras (buffs are invisible to addons in combat). Readable in
   combat: max mana, max health, item cooldowns and counts, spell IDs and mana costs of own casts
@@ -118,11 +120,19 @@ and `/fmf log` (kept in releases for bug reports).
   solo / party / raid filter, bug link (`ns.BUG_URL`) after help, probe and the first warning,
   log texts without group names, informal "you" in all languages (ru ты, fr tu; de and es were
   already informal; pt-BR "você" is the informal form; ko keeps the polite UI style; zh 你).
-- 0.9.4 (owner, 5 Nov: "all features, but in 0.9.4, remember"): a switch "icons only in combat"
-  (bar and regen stay out of combat), "full mana in N s" while drinking out of combat, hide the bar
-  at full mana (by the same curve, also in combat). Later: gallery re-shoots (need screenshots),
-  exact fit to unit frames (sizes typed in / attach to the player frame), choice of bar markers
-  (all / potions only / nearest), a "drink" reminder between pulls.
+- 0.9.4 (owner, 6 Nov: only what a CurseForge comment asked for): "Fade out of combat to"
+  (`fadeAlpha`, 1 = off, steps of 10 %) and "Only at full mana" (`fadeFull`, on) for the bar and
+  its three texts; out of combat only, "full" by a step curve (`UnitPowerPercent`, half a point
+  below max), full at once in combat, back at once; fading out frame by frame over 1.5 s after the
+  last reason to show (fight, unlocked frame, with "only at full mana" the last `UNIT_POWER_FREQUENT`
+  for MANA: events stop once the mana is full; counted, never read; ignored for 2 s after login); greyed with "Show only in combat"; the unlocked frame never
+  fades, the open settings do (owner, 6 Nov: a change must show at once); the first known value after login is taken at once. Reviewed by
+  the three player agents (8 / 9 / 8).
+- 0.9.5 (owner, 5 Nov list, moved on 6 Nov): a switch "icons only in combat" (bar and regen stay
+  out of combat), "full mana in N s" while drinking out of combat, hide the bar at full mana also
+  in combat (by the curve; maybe as part of the fading above). Later: gallery re-shoots (need
+  screenshots), exact fit to unit frames (sizes typed in / attach to the player frame), choice of
+  bar markers (all / potions only / nearest), a "drink" reminder between pulls.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get
@@ -175,7 +185,8 @@ and `/fmf log` (kept in releases for bug reports).
    16001, no "out of date", 0.9.0 works (5 Nov). Launch day: 1 741 downloads, mostly unique.
    0.9.2 (with 0.9.1) released on GitHub 5 Nov (PR #18, tag v0.9.2); CurseForge upload by the
    owner with the changelog of 0.9.1 + 0.9.2; the gallery stays as it is for now
-   (owner, 5 Nov: no time); fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+   (owner, 5 Nov: no time); 0.9.3 released on GitHub 5 Nov (PR #19, tag v0.9.3), CurseForge upload
+   by the owner (description: log texts and regen line changed); fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
    next); other classes (druid forms, Life Tap, Mana Agate, Evocation)

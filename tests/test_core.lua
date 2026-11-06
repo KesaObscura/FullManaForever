@@ -2357,3 +2357,98 @@ test("0.9.3: help, probe and the first warning say where to report bugs", functi
   ok(linked(), "no bug link after the probe")
   ok(ns.BUG_URL:find("^https://github%.com/KesaObscura/FullManaForever/issues$"), "wrong link")
 end)
+
+-- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
+
+test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()
+  -- the mock keeps UnitPower secret, as Forever does also out of combat: "full" comes from the curve
+  local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
+  M.state.manaPct = 1
+  local b = bar(ns)
+  local function alphas() return b.alpha, b.manaBox.alpha, b.regenBox.alpha, b.fsrBox.alpha end
+  local function at(t) M.state.time = t; M.tick() end
+  local function power(t) M.state.time = t; M.Fire("UNIT_POWER_FREQUENT", "player", "MANA"); M.tick() end
+  -- after a login or /reload: faded at once, no flash; the power events of the loading screen
+  -- do not count
+  at(100)
+  for _, a in ipairs({ alphas() }) do eq(a, 0.3, "bar or a text not faded to 30 % at login") end
+  power(100.5)
+  eq(b.alpha, 0.3, "loading screen power event brought the bar back")
+  -- mana spent out of combat: back at once; one point missing is not full
+  M.state.manaPct = 0.9; power(110)
+  for _, a in ipairs({ alphas() }) do eq(a, 1, "not back after mana was spent") end
+  M.state.maxMana = 1208; M.state.manaPct = 1207 / 1208; at(115)
+  eq(b.alpha, 1, "one missing point counted as full")
+  -- the mana fills up: the events stop and the bar fades smoothly over 1.5 s
+  M.state.manaPct = 1; power(120)
+  eq(b.alpha, 1, "faded while the mana was still changing")
+  at(120.5); local mid = b.alpha
+  ok(mid < 1 and mid > 0.3, "no smooth fade when the mana filled up: " .. tostring(mid))
+  at(121); ok(b.alpha < mid and b.alpha > 0.3, "fade does not go on: " .. tostring(b.alpha))
+  ok(select(2, ns.FadeAlpha()), "fade not updated on every frame")
+  at(121.6); eq(b.alpha, 0.3)
+  M.state.time = 121.7; M.Fire("UNIT_POWER_FREQUENT", "player", "ENERGY"); at(121.8)
+  eq(b.alpha, 0.3, "energy in cat form brought the mana bar back")
+  ok(not select(2, ns.FadeAlpha()), "frame update left running after the fade")
+  -- a fight shows everything at once, even at full mana; after it the bar fades smoothly
+  M.state.combat = true; at(130)
+  for _, a in ipairs({ alphas() }) do eq(a, 1, "faded in combat") end
+  M.state.combat = false; at(130.5)
+  ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade after the fight: " .. tostring(b.alpha))
+  at(132); eq(b.alpha, 0.3)
+  -- with the settings open the fading shows as it is: a change is seen at once (owner, 6 Nov)
+  ns.ToggleOptions(true); at(133)
+  eq(b.alpha, 0.3, "settings window stops the fading")
+  ns.db.fadeAlpha = 0.6; at(133.1)
+  eq(b.alpha, 0.6, "a change of the setting not seen at once")
+  ns.ToggleOptions(); ns.db.fadeAlpha = 0.3; at(133.2)
+  eq(b.alpha, 0.3)
+  -- without "only at full mana": fades with mana missing too, mana changes do not count
+  M.state.manaPct = 0.5
+  ns.db.fadeFull = false
+  power(134)
+  eq(b.alpha, 0.3, "not faded with mana missing while 'only at full mana' is off")
+  -- the unlocked frame and the default never fade
+  ns.db.locked = false; at(135)
+  eq(b.alpha, 1, "unlocked frame faded")
+  ns.db.locked = true; ns.db.fadeAlpha = 1; at(140)
+  eq(b.alpha, 1, "faded with the setting off")
+  M.state.maxMana, M.state.time = 1000, nil
+end)
+
+test("0.9.4: settings: fading sits under 'Show only in combat', 0 to 100 %, greyed out with it", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local fade, full, combat
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == ns.L.optFade .. ":" then fade = w end
+    if w.label and w.label.text == ns.L.optFadeFull then full = w end
+    if w.label and w.label.text == ns.L.optCombat then combat = w end
+  end
+  ok(fade and full and combat, "settings not found")
+  ok(fade.label.points[1][5] < combat.points[1][5], "not under 'Show only in combat'")
+  eq(fade.value.text, ns.L.fadeOff, "default not off")
+  ok(not full:IsEnabled(), "'Only at full mana' usable while fading is off")
+  fade.minus.scripts.OnClick(fade.minus)
+  eq(ns.db.fadeAlpha, 0.9); eq(fade.value.text, "90%")
+  ok(full:IsEnabled(), "'Only at full mana' grey while fading is on")
+  for _ = 1, 12 do fade.minus.scripts.OnClick(fade.minus) end
+  eq(ns.db.fadeAlpha, 0, "not down to 0 %")
+  ns.db.onlyCombat = true; ns.RefreshOptions()
+  ok(not fade.plus:IsEnabled() and not full:IsEnabled(), "fading usable with 'Show only in combat'")
+end)
+
+test("0.9.4: a failing fade shows the bar fully and fades again once it works", function()
+  local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
+  M.state.manaPct = 1
+  local b = bar(ns)
+  M.tick(); eq(b.alpha, 0.3)
+  local real = C_CurveUtil.CreateColorCurve
+  C_CurveUtil.CreateColorCurve = function() error("broken") end
+  M.state.maxMana = 1200 -- a new curve is needed
+  M.tick(); eq(b.alpha, 1, "faded bar after an error")
+  C_CurveUtil.CreateColorCurve = real
+  M.state.maxMana = 1000
+  M.tick(); M.tick()
+  ok(b.alpha < 1, "stuck at full after the error was gone")
+end)
