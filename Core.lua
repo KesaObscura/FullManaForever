@@ -1818,28 +1818,34 @@ end
 -- out of combat the bar and its texts can fade (0.9.4): to db.fadeAlpha, and with db.fadeFull
 -- only while the mana is full, so they come back as soon as mana is spent. Out of combat the
 -- mana is readable; in combat everything is fully shown at once (the mana is secret there,
--- and in a fight the bar is wanted anyway). Back in 0.2 s, fading out takes 1 s.
+-- and in a fight the bar is wanted anyway). Back in 0.2 s, fading out takes 1 s. While the
+-- settings window is open the bar is fully shown, so it can be set up at 0 %. After a login or
+-- /reload the first known value is taken at once (no fade-out on every loading screen).
 local FADE_IN, FADE_OUT = 0.5, 0.1 -- alpha per tick (10 ticks a second)
-local fadeA = 1
+local fadeA, fadeStarted = 1, false
+-- returns the alpha and whether it is known (max mana not read yet at login: not known)
 local function FadeTarget()
-  if not db.locked or InCombatLockdown() then return 1 end
+  if not db.locked or InCombatLockdown() then return 1, true end
+  if ns.OptionsOpen and ns.OptionsOpen() then return 1, true end
   local a = tonumber(db.fadeAlpha) or 1
-  if a >= 1 then return 1 end
+  if a >= 1 then return 1, true end
   if a < 0 then a = 0 end
   if db.fadeFull ~= false then
     local cur, max = UnitPower("player", MANA), UnitPowerMax("player", MANA)
-    if IsSecret(cur) or IsSecret(max) or type(cur) ~= "number" or type(max) ~= "number"
-      or max <= 0 or cur < max then
-      return 1
-    end
+    if IsSecret(cur) or IsSecret(max) then return 1, true end
+    if type(cur) ~= "number" or type(max) ~= "number" or max <= 0 then return 1, false end
+    if cur < max then return 1, true end
   end
-  return a
+  return a, true
 end
 function ns.FadeAlpha() return fadeA end
 
 local function UpdateFade()
-  local target = FadeTarget()
-  if target > fadeA then
+  local target, known = FadeTarget()
+  if not fadeStarted then
+    if known then fadeStarted = true end
+    fadeA = target
+  elseif target > fadeA then
     fadeA = InCombatLockdown() and target or math.min(target, fadeA + FADE_IN)
   elseif target < fadeA then
     fadeA = math.max(target, fadeA - FADE_OUT)
@@ -1990,6 +1996,7 @@ local function Update()
     local okF, errF = pcall(UpdateFade)
     if not okF then
       -- never leave the bar faded out when the fade cannot be worked out
+      fadeA, bar.fadeA = 1, nil
       bar:SetAlpha(1)
       for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(1) end
       WarnOnce("fade", L.warnUpdate:format(tostring(errF)))

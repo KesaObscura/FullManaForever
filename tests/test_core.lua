@@ -2366,18 +2366,24 @@ test("0.9.4: out of combat the bar and its texts fade at full mana, come back wh
   _G.UnitPower = function() return mana end
   local b = bar(ns)
   local function alphas() return b.alpha, b.manaBox.alpha, b.regenBox.alpha, b.fsrBox.alpha end
+  -- after a login or /reload: faded at once, no flash on every loading screen
   M.tick()
-  ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade: " .. tostring(b.alpha))
-  for _ = 1, 10 do M.tick() end
-  for _, a in ipairs({ alphas() }) do eq(a, 0.3, "bar or a text not faded to 30 %") end
+  for _, a in ipairs({ alphas() }) do eq(a, 0.3, "bar or a text not faded to 30 % at login") end
   -- a spell spends mana out of combat: back within two ticks
   mana = 900; M.tick()
   ok(b.alpha > 0.3 and b.alpha < 1, "not coming back smoothly")
   M.tick(); eq(b.alpha, 1, "not fully back after mana was spent")
-  -- full again: fades; a fight shows everything at once, even at full (secret) mana
+  -- full again: fades smoothly; a fight shows everything at once, even at full (secret) mana
   mana = 1000
+  M.tick()
+  ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade: " .. tostring(b.alpha))
   for _ = 1, 10 do M.tick() end
   eq(b.alpha, 0.3)
+  -- the settings window open: fully shown, so the bar can be set up at 0 %
+  ns.ToggleOptions(true); M.tick(); M.tick()
+  eq(b.alpha, 1, "faded while the settings are open")
+  ns.ToggleOptions(); for _ = 1, 10 do M.tick() end
+  eq(b.alpha, 0.3, "not faded again after closing the settings")
   M.state.combat = true
   _G.UnitPower = function() return M.secret(1000) end
   M.tick()
@@ -2416,4 +2422,17 @@ test("0.9.4: settings: fading sits under 'Show only in combat', 0 to 100 %, grey
   eq(ns.db.fadeAlpha, 0, "not down to 0 %")
   ns.db.onlyCombat = true; ns.RefreshOptions()
   ok(not fade.plus:IsEnabled() and not full:IsEnabled(), "fading usable with 'Show only in combat'")
+end)
+
+test("0.9.4: a failing fade shows the bar fully and fades again once it works", function()
+  local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
+  _G.UnitPower = function() return 1000 end
+  local b = bar(ns)
+  M.tick(); eq(b.alpha, 0.3)
+  local real = ns.OptionsOpen
+  ns.OptionsOpen = function() error("broken") end
+  M.tick(); eq(b.alpha, 1, "faded bar after an error")
+  ns.OptionsOpen = real
+  M.tick(); M.tick()
+  ok(b.alpha < 1, "stuck at full after the error was gone")
 end)

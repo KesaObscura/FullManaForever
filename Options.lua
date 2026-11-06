@@ -931,6 +931,9 @@ function ns.RefreshOptions()
   PlaceGroups()
 end
 
+-- the bar does not fade while the settings are open (Core: FadeTarget)
+function ns.OptionsOpen() return win ~= nil and win:IsShown() end
+
 function ns.ToggleOptions(forceShow)
   if not win then Build() end
   if forceShow or not win:IsShown() then
