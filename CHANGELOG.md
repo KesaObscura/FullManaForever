@@ -1,5 +1,12 @@
 # Changelog
 
+**Full Mana Forever 0.9.4**
+
+Asked for in the comments:
+- **Fade out of combat to**: out of combat the mana bar and its texts (mana, seconds, regen) fade to the opacity you choose, down to hidden; in combat they are always fully shown
+- **Only at full mana** (on by default): the bar fades only while your mana is full and comes back as soon as you spend mana or drink
+- Tip: if you only want the bar, switch off the groups under *Consumables* in the settings
+
 **Full Mana Forever 0.9.3**
 
 From three reviews by experienced players:

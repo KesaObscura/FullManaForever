@@ -2357,3 +2357,63 @@ test("0.9.3: help, probe and the first warning say where to report bugs", functi
   ok(linked(), "no bug link after the probe")
   ok(ns.BUG_URL:find("^https://github%.com/KesaObscura/FullManaForever/issues$"), "wrong link")
 end)
+
+-- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
+
+test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()
+  local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
+  local mana = 1000
+  _G.UnitPower = function() return mana end
+  local b = bar(ns)
+  local function alphas() return b.alpha, b.manaBox.alpha, b.regenBox.alpha, b.fsrBox.alpha end
+  M.tick()
+  ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade: " .. tostring(b.alpha))
+  for _ = 1, 10 do M.tick() end
+  for _, a in ipairs({ alphas() }) do eq(a, 0.3, "bar or a text not faded to 30 %") end
+  -- a spell spends mana out of combat: back within two ticks
+  mana = 900; M.tick()
+  ok(b.alpha > 0.3 and b.alpha < 1, "not coming back smoothly")
+  M.tick(); eq(b.alpha, 1, "not fully back after mana was spent")
+  -- full again: fades; a fight shows everything at once, even at full (secret) mana
+  mana = 1000
+  for _ = 1, 10 do M.tick() end
+  eq(b.alpha, 0.3)
+  M.state.combat = true
+  _G.UnitPower = function() return M.secret(1000) end
+  M.tick()
+  for _, a in ipairs({ alphas() }) do eq(a, 1, "faded in combat") end
+  M.state.combat = false
+  -- without "only at full mana": fades with mana missing too
+  _G.UnitPower = function() return 500 end
+  ns.db.fadeFull = false
+  for _ = 1, 10 do M.tick() end
+  eq(b.alpha, 0.3, "not faded with mana missing while 'only at full mana' is off")
+  -- the unlocked frame and the default never fade
+  ns.db.locked = false; M.tick(); M.tick()
+  eq(b.alpha, 1, "unlocked frame faded")
+  ns.db.locked = true; ns.db.fadeAlpha = 1
+  for _ = 1, 3 do M.tick() end
+  eq(b.alpha, 1, "faded with the setting off")
+end)
+
+test("0.9.4: settings: fading sits under 'Show only in combat', 0 to 100 %, greyed out with it", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local fade, full, combat
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.minus and w.label and w.label.text == ns.L.optFade .. ":" then fade = w end
+    if w.label and w.label.text == ns.L.optFadeFull then full = w end
+    if w.label and w.label.text == ns.L.optCombat then combat = w end
+  end
+  ok(fade and full and combat, "settings not found")
+  ok(fade.label.points[1][5] < combat.points[1][5], "not under 'Show only in combat'")
+  eq(fade.value.text, ns.L.fadeOff, "default not off")
+  ok(not full:IsEnabled(), "'Only at full mana' usable while fading is off")
+  fade.minus.scripts.OnClick(fade.minus)
+  eq(ns.db.fadeAlpha, 0.9); eq(fade.value.text, "90%")
+  ok(full:IsEnabled(), "'Only at full mana' grey while fading is on")
+  for _ = 1, 12 do fade.minus.scripts.OnClick(fade.minus) end
+  eq(ns.db.fadeAlpha, 0, "not down to 0 %")
+  ns.db.onlyCombat = true; ns.RefreshOptions()
+  ok(not fade.plus:IsEnabled() and not full:IsEnabled(), "fading usable with 'Show only in combat'")
+end)

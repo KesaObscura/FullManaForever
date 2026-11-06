@@ -118,11 +118,15 @@ and `/fmf log` (kept in releases for bug reports).
   solo / party / raid filter, bug link (`ns.BUG_URL`) after help, probe and the first warning,
   log texts without group names, informal "you" in all languages (ru ты, fr tu; de and es were
   already informal; pt-BR "você" is the informal form; ko keeps the polite UI style; zh 你).
-- 0.9.4 (owner, 5 Nov: "all features, but in 0.9.4, remember"): a switch "icons only in combat"
-  (bar and regen stay out of combat), "full mana in N s" while drinking out of combat, hide the bar
-  at full mana (by the same curve, also in combat). Later: gallery re-shoots (need screenshots),
-  exact fit to unit frames (sizes typed in / attach to the player frame), choice of bar markers
-  (all / potions only / nearest), a "drink" reminder between pulls.
+- 0.9.4 (owner, 6 Nov: only what a CurseForge comment asked for): "Fade out of combat to"
+  (`fadeAlpha`, 1 = off, steps of 10 %) and "Only at full mana" (`fadeFull`, on) for the bar and
+  its three texts; out of combat only (mana readable), full at once in combat, back in 0.2 s,
+  fading out 1 s; greyed with "Show only in combat"; unlocked frame never fades.
+- 0.9.5 (owner, 5 Nov list, moved on 6 Nov): a switch "icons only in combat" (bar and regen stay
+  out of combat), "full mana in N s" while drinking out of combat, hide the bar at full mana also
+  in combat (by the curve; maybe as part of the fading above). Later: gallery re-shoots (need
+  screenshots), exact fit to unit frames (sizes typed in / attach to the player frame), choice of
+  bar markers (all / potions only / nearest), a "drink" reminder between pulls.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get
