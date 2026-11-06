@@ -2383,11 +2383,14 @@ test("0.9.4: out of combat the bar and its texts fade at full mana, come back wh
   ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade after the fight: " .. tostring(b.alpha))
   for _ = 1, 10 do M.tick() end
   eq(b.alpha, 0.3)
-  -- the settings window open: fully shown, so the bar can be set up at 0 %
+  -- with the settings open the fading shows as it is: a change is seen at once (owner, 6 Nov)
   ns.ToggleOptions(true); M.tick()
-  eq(b.alpha, 1, "faded while the settings are open")
-  ns.ToggleOptions(); for _ = 1, 10 do M.tick() end
-  eq(b.alpha, 0.3, "not faded again after closing the settings")
+  eq(b.alpha, 0.3, "settings window stops the fading")
+  ns.db.fadeAlpha = 0.6; M.tick()
+  eq(b.alpha, 0.6, "a change of the setting not seen at once")
+  ns.ToggleOptions(); ns.db.fadeAlpha = 0.3
+  for _ = 1, 4 do M.tick() end
+  eq(b.alpha, 0.3)
   -- without "only at full mana": fades with mana missing too
   M.state.manaPct = 0.5
   ns.db.fadeFull = false
@@ -2429,10 +2432,12 @@ test("0.9.4: a failing fade shows the bar fully and fades again once it works", 
   M.state.manaPct = 1
   local b = bar(ns)
   M.tick(); eq(b.alpha, 0.3)
-  local real = ns.OptionsOpen
-  ns.OptionsOpen = function() error("broken") end
+  local real = C_CurveUtil.CreateColorCurve
+  C_CurveUtil.CreateColorCurve = function() error("broken") end
+  M.state.maxMana = 1200 -- a new curve is needed
   M.tick(); eq(b.alpha, 1, "faded bar after an error")
-  ns.OptionsOpen = real
+  C_CurveUtil.CreateColorCurve = real
+  M.state.maxMana = 1000
   M.tick(); M.tick()
   ok(b.alpha < 1, "stuck at full after the error was gone")
 end)

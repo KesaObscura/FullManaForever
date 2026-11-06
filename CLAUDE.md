@@ -123,8 +123,8 @@ and `/fmf log` (kept in releases for bug reports).
 - 0.9.4 (owner, 6 Nov: only what a CurseForge comment asked for): "Fade out of combat to"
   (`fadeAlpha`, 1 = off, steps of 10 %) and "Only at full mana" (`fadeFull`, on) for the bar and
   its three texts; out of combat only, "full" by a step curve (`UnitPowerPercent`, half a point
-  below max), full at once in combat, back at once, fading out 1 s after a fight / closing the settings; greyed with "Show only in combat"; unlocked frame and open settings
-  (`ns.OptionsOpen`) never fade; the first known value after login is taken at once. Reviewed by
+  below max), full at once in combat, back at once, fading out 1 s after a fight / unlocking; greyed with "Show only in combat"; the unlocked frame never
+  fades, the open settings do (owner, 6 Nov: a change must show at once); the first known value after login is taken at once. Reviewed by
   the three player agents (8 / 9 / 8).
 - 0.9.5 (owner, 5 Nov list, moved on 6 Nov): a switch "icons only in combat" (bar and regen stay
   out of combat), "full mana in N s" while drinking out of combat, hide the bar at full mana also

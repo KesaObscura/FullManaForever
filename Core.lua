@@ -1819,9 +1819,10 @@ end
 -- only while the mana is full, so they come back as soon as mana is spent. The current mana is
 -- secret in Forever also out of combat (docs/notes.md), so "full" is decided by the game: a step
 -- curve through UnitPowerPercent gives alpha 1 below full and the faded alpha at full, like the
--- icons. In combat, while the frame is unlocked and while the settings are open everything is
--- fully shown. Our own count fades from 1 to the chosen alpha over 1 s (after a fight, after
--- closing the settings); coming back is at once. The first value after a login is taken at once.
+-- icons. In combat and while the frame is unlocked (the way to set up the bar at 0 %) everything
+-- is fully shown; with the settings open the fading shows as it is (owner, 6 Nov: a change of
+-- the setting must be visible at once). Our own count fades from 1 to the chosen alpha over 1 s
+-- (after a fight, after unlocking); coming back is at once. The first value after a login is taken at once.
 local FADE_OUT = 0.1 -- alpha per tick (10 ticks a second)
 local fadeA, fadeStarted = 1, false
 local fadeCurve, fadeKey
@@ -1837,8 +1838,7 @@ end
 local function UpdateFade()
   local a = tonumber(db.fadeAlpha) or 1
   if a < 0 then a = 0 end
-  local off = a >= 1 or not db.locked or InCombatLockdown()
-    or (ns.OptionsOpen and ns.OptionsOpen()) or false
+  local off = a >= 1 or not db.locked or InCombatLockdown() or false
   local target = off and 1 or a
   if not fadeStarted then
     fadeA, fadeStarted = target, true

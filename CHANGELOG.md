@@ -5,7 +5,7 @@
 Asked for in the comments:
 - **Fade out of combat to**: out of combat the mana bar and its texts (mana, seconds, regen) fade to the opacity you choose, down to hidden; in combat they are always fully shown
 - **Only at full mana** (on by default): the bar fades only while your mana is full and comes back as soon as it is not full any more (mana spent, or more maximum mana from a buff)
-- While the frame is unlocked or the settings are open the bar is fully shown, so it can be set up even at 0%; after a login or /reload it is faded at once, without a flash; the icons never fade
+- While the frame is unlocked the bar is fully shown, so it can be set up even at 0%; with the settings open a change shows at once; after a login or /reload it is faded at once, without a flash; the icons never fade
 - Tip: if you only want the bar, switch off the groups under *Consumables* in the settings
 
 **Full Mana Forever 0.9.3**
