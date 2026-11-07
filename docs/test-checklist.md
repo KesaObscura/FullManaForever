@@ -64,5 +64,5 @@
 
 ## Dungeon and shared potion cooldown (after 0.9.5)
 - [ ] A dungeon run: icons, bar, regen and the five-second rule work as in the open world (dungeons
-      add restrictions; if icons never light up there, `/fmf probe` inside and send the output)
+      add restrictions; if icons never light up there, `/fmf probe` inside, then `/reload` and send `FullManaForever.lua`)
 - [ ] Drink a healing potion: does the mana potion icon show a 2-minute wait? (shared cooldown)

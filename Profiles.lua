@@ -15,7 +15,7 @@ P.SHARED = SHARED
 -- keys of the saved variables that are not part of a profile
 P.ACCOUNT = {
   dbVersion = true, seenVersion = true, language = true, custom = true, debug = true,
-  scale100 = true, profiles = true, chars = true, optPoint = true,
+  scale100 = true, profiles = true, chars = true, optPoint = true, probe = true,
 }
 
 local root  -- FullManaForeverDB

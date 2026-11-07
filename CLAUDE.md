@@ -3,7 +3,7 @@
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
 Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Profiles.lua → Core.lua →
 Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Profiles.lua (0.8.3):
-`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion, optPoint)
+`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion, optPoint, probe)
 plus `profiles[Shared|Name Surname-Realm]` and `chars[key]` = {profile, class, level, seen, name, realm}; Core's
 `db` is the active profile, `acct` the root; `ns.ApplyProfile` re-reads everything on a switch. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).

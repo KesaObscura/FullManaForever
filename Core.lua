@@ -2096,23 +2096,66 @@ end
 ------------------------------------------------------------------------
 -- probe
 ------------------------------------------------------------------------
+-- /fmf probe: printed to the chat and kept in the saved variables (the last 3 runs), so a bug
+-- report can send the file instead of a screenshot (0.9.5, like the Full Health Forever probe).
+-- Only booleans, numbers and API names: never a secret, never a name.
+local PROBE_KEEP = 3
 local function Probe()
+  local lines = {}
+  local function P(msg, ...)
+    if select("#", ...) > 0 then msg = msg:format(...) end
+    Print(msg)
+    if not IsSecret(msg) then lines[#lines + 1] = msg end
+  end
   local function yn(v) return v and "yes" or "no" end
-  Print("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VERSION, tostring(InCombatLockdown()),
+  local function S(v) -- a value as text, "SECRET" for a secret
+    if IsSecret(v) then return "SECRET" end
+    return tostring(v)
+  end
+  P("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VERSION, tostring(InCombatLockdown()),
     tostring(IsSecret(UnitPower("player", MANA))), tostring(IsSecret(UnitPowerMax("player", MANA))))
-  Print("API: UnitPowerPercent=%s UnitHealthPercent=%s C_CurveUtil=%s LuaCurveType=%s",
+  P("API: UnitPowerPercent=%s UnitHealthPercent=%s C_CurveUtil=%s LuaCurveType=%s",
     yn(UnitPowerPercent), yn(UnitHealthPercent), yn(C_CurveUtil and C_CurveUtil.CreateColorCurve),
     yn(Enum and Enum.LuaCurveType))
   local ok, err = pcall(function()
     local c = ManaCurve(0.5)
     local lo, hi = c:Evaluate(0.2 * Scale()), c:Evaluate(0.8 * Scale())
-    Print("curve test (expect 1 / 0): %s / %s", tostring(select(4, lo:GetRGBA())), tostring(select(4, hi:GetRGBA())))
+    P("curve test (expect 1 / 0): %s / %s", tostring(select(4, lo:GetRGBA())), tostring(select(4, hi:GetRGBA())))
     local r = PowerColor(c)
-    Print("UnitPowerPercent+curve: %s (variant %s)", r and "ok" or "FAILED", tostring(powerVariant))
+    P("UnitPowerPercent+curve: %s (variant %s)", r and "ok" or "FAILED", tostring(powerVariant))
   end)
-  if not ok then Print("curve probe error: %s", tostring(err)) end
-  Print("scale100=%s locked=%s onlyCombat=%s custom=%d", tostring(acct.scale100), tostring(db.locked),
-    tostring(db.onlyCombat), #acct.custom)
+  if not ok then P("curve probe error: %s", S(err)) end
+  -- where we are and which rules are on: dungeons and raids add restrictions (Map, Encounter)
+  local okI, inInst, kind = pcall(function() return IsInInstance() end)
+  P("instance=%s type=%s", okI and S(inInst) or "?", okI and S(kind) or "?")
+  local RA = C_RestrictedActions and C_RestrictedActions.GetAddOnRestrictionState
+  if RA then
+    local st = {}
+    -- types 0..5 (Enum.AddOnRestrictionType); states 0 off, 1 activating, 2 on
+    for i, name in ipairs({ "combat", "encounter", "challenge", "pvp", "map", "chat" }) do
+      local okR, v = pcall(RA, i - 1)
+      st[#st + 1] = name .. "=" .. (okR and S(v) or "?")
+    end
+    P("restrictions: %s", table.concat(st, " "))
+  else
+    P("restrictions: no API")
+  end
+  local CS = C_Secrets
+  if CS then
+    local function q(f) local okQ, v = pcall(f) return okQ and S(v) or "?" end
+    P("secret now: auras=%s cooldowns=%s stats=%s", CS.ShouldAurasBeSecret and q(CS.ShouldAurasBeSecret) or "-",
+      CS.ShouldCooldownsBeSecret and q(CS.ShouldCooldownsBeSecret) or "-",
+      CS.ShouldUnitStatsBeSecret and q(CS.ShouldUnitStatsBeSecret) or "-")
+  end
+  P("scale100=%s locked=%s onlyCombat=%s iconsCombat=%s showIcons=%s custom=%d", tostring(acct.scale100),
+    tostring(db.locked), tostring(db.onlyCombat), tostring(db.iconsCombat), tostring(db.showIcons ~= false),
+    #acct.custom)
+  -- kept for the bug report: the newest first
+  if type(acct.probe) ~= "table" then acct.probe = {} end
+  local when = date and date("%Y-%m-%d %H:%M") or tostring(time and time() or "")
+  table.insert(acct.probe, 1, { when = when, lines = lines })
+  while #acct.probe > PROBE_KEEP do table.remove(acct.probe) end
+  Print(L.probeSaved)
 end
 
 ------------------------------------------------------------------------

@@ -123,7 +123,7 @@ otherwise the game does not load it.
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |
 | `/fmf item <id> <amount> [potion\|rune\|gem\|herb\|gear]` | add your own item |
 | `/fmf item clear` | remove all own items |
-| `/fmf probe` | print API status for bug reports |
+| `/fmf probe` | print API status for bug reports (also kept in the settings file, the last 3 runs) |
 | `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen, in a group also the group's casts) for a bug report; `/fmf log clear` empties it |
 | `/fmf probe 5sr` | 30 seconds of casts and regen in the chat, for bug reports |
 | `/fmf log chat` | test whether the addon may send addon messages to your group (an invisible message to the party or raid, also in combat); the answer goes into the log |
@@ -134,7 +134,7 @@ otherwise the game does not load it.
 
 ## Bug reports
 
-Please open an [issue](https://github.com/KesaObscura/FullManaForever/issues) with the output of `/fmf probe`, your class and level, what you
+Please open an [issue](https://github.com/KesaObscura/FullManaForever/issues) with the output of `/fmf probe` (or, after a `/reload`, the file `WTF\Account\<account>\SavedVariables\FullManaForever.lua`, which keeps it), your class and level, what you
 did and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
 For problems with the five-second rule or the regen display: `/fmf log on`, play until it

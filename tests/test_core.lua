@@ -2546,3 +2546,24 @@ test("0.9.5: 'Show icons' off: no icons, no markers, no sound; the bar stays; th
   ok(grp:IsEnabled(), "group stays grey")
   M.state.manaPct = 1
 end)
+
+test("0.9.5: /fmf probe is also kept in the saved variables (last 3 runs), without secrets", function()
+  local ns = M.load(nil)
+  _G.C_RestrictedActions = { GetAddOnRestrictionState = function(t) return t == 4 and 2 or 0 end }
+  _G.C_Secrets = { ShouldAurasBeSecret = function() return M.secret(true) end,
+    ShouldCooldownsBeSecret = function() return false end }
+  _G.IsInInstance = function() return true, "party" end
+  for _ = 1, 4 do SlashCmdList.FULLMANAFOREVER("probe") end
+  local saved = ns.acct.probe
+  eq(#saved, 3, "not the last 3 runs")
+  local all = table.concat(saved[1].lines, "\n")
+  ok(all:find("secretMana=true", 1, true), "mana line missing")
+  ok(all:find("instance=true type=party", 1, true), "instance missing")
+  ok(all:find("map=2", 1, true) and all:find("combat=0", 1, true), "restriction states missing")
+  ok(all:find("auras=SECRET", 1, true), "a secret answer not marked")
+  for _, run in ipairs(saved) do
+    for _, l in ipairs(run.lines) do ok(not M.isSecret or not M.isSecret(l), "secret stored") end
+  end
+  ok(ns.Profiles.ACCOUNT.probe, "probe not an account key (would go into a profile)")
+  _G.C_RestrictedActions, _G.C_Secrets, _G.IsInInstance = nil, nil, nil
+end)

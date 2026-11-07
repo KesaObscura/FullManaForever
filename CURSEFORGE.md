@@ -77,7 +77,7 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |
 | `/fmf reset` | move the icons and the texts back to the default position |
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
-| `/fmf probe` | print API status for bug reports |
+| `/fmf probe` | print API status for bug reports (also kept in the settings file) |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap (left-click: settings, right-click: items and spells).
@@ -101,7 +101,7 @@ Pre-pull checklist (consumables, buffs), who in your group has Innervate / Mana 
 
 ## Bug reports
 
-Please include the output of `/fmf probe`, your class and level, and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
+Please include the output of `/fmf probe` (it is also kept in `FullManaForever.lua`, see below), your class and level, and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
 For the five-second rule or the regen display: `/fmf log on`, play until it happens, `/fmf log off`, `/reload`, and attach `WTF\Account\ACCOUNTNAME\SavedVariables\FullManaForever.lua` (class, level, casts and regen values, never other players' names; the file also holds your own characters' names and realms from the profiles — remove them before sharing if you like).
 

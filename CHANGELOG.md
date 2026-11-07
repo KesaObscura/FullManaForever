@@ -13,6 +13,7 @@ Simpler settings (three reviews of the settings window):
 - *Keep health above* sits with *When to light up*: it is for runes, Life Tap and the Power Recycler alike
 - The consumable rows no longer jump when a group is switched off
 - Tooltips: solo / party / raid hides the bar and its texts too, not just the icons
+- `/fmf probe` is also kept in the settings file (the last 3 runs) and now shows where you are (dungeon, raid) and which game restrictions are on: a bug report can send the file instead of a screenshot
 
 **Full Mana Forever 0.9.4**
 
