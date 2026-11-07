@@ -258,6 +258,13 @@ Facts that matter for this addon (the full list lives in that project):
   during every global cooldown. `C_Spell.GetSpellCooldownDuration(id, true)` +
   `EvaluateRemainingDuration(curve)` gives "ready" in combat with the GCD ignored; a spell's own
   cooldown in combat not seen yet. If it works, our own spells could use it instead of own timers.
+- Dungeon (7 Nov, our `/fmf probe` 0.9.5, priest 21, party dungeon): Map restriction on the whole
+  time inside, Combat on only in a fight; max mana readable in and out of combat
+  (`secretMax=false`); the curve test and `UnitPowerPercent` with a curve work; auras / cooldowns /
+  stats secret only in combat, as in the open world. Whether the icons lit up there: owner to say.
+- Boss fight (Full Health Forever log, same dungeon): Encounter=2 and **Chat=2** while the boss is
+  pulled. Addon messages are probably blocked then: the planned group features (who has Innervate /
+  Mana Tide ready) would not work in boss fights; `/fmf log chat` neither. Not tested by us.
 - Healing potion item cooldown readable (858: 120 s). Whether mana and healing potions share the
   cooldown in Forever is not tested; our potion icon reads the mana potion's own item cooldown, so a
   shared cooldown would simply show as its wait.
