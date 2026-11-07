@@ -202,7 +202,11 @@ and `/fmf log` (kept in releases for bug reports).
    (owner, 5 Nov: no time); 0.9.3 released on GitHub 5 Nov (PR #19, tag v0.9.3), CurseForge upload
    by the owner (description: log texts and regen line changed); 0.9.4 released on GitHub 6 Nov
    (PR #20, tag v0.9.4), CurseForge upload by the owner on 7 Nov (description: "Fades out of combat"
-   line new); reply to the commenter once it is live; fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+   line new); reply to the commenter once it is live. SEO from the Full Health Forever session (7 Nov):
+   once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
+   GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a
+   feature line "own spells ready in combat straight from the game" only once the duration-object
+   test (Psychic Scream) works and FMF uses it. Summary with the full name proposed to the owner; fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
    next); other classes (druid forms, Life Tap, Mana Agate, Evocation)
