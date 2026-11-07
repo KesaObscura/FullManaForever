@@ -261,7 +261,8 @@ Facts that matter for this addon (the full list lives in that project):
 - Dungeon (7 Nov, our `/fmf probe` 0.9.5, priest 21, party dungeon): Map restriction on the whole
   time inside, Combat on only in a fight; max mana readable in and out of combat
   (`secretMax=false`); the curve test and `UnitPowerPercent` with a curve work; auras / cooldowns /
-  stats secret only in combat, as in the open world. Whether the icons lit up there: owner to say.
+  stats secret only in combat, as in the open world. Owner: the addon worked there "like clockwork"
+  (icons, bar, regen, rule).
 - Boss fight (Full Health Forever log, same dungeon): Encounter=2 and **Chat=2** while the boss is
   pulled. Addon messages are probably blocked then: the planned group features (who has Innervate /
   Mana Tide ready) would not work in boss fights; `/fmf log chat` neither. Not tested by us.

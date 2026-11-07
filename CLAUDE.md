@@ -56,7 +56,7 @@ and `/fmf log` (kept in releases for bug reports).
   6 Nov): "full" or any mana check only through `UnitPowerPercent` with a curve. Tests keep it secret.
 - Health is secret also out of combat (Full Health Forever probe, 7 Nov); a secret must not even be
   compared with nil (`IsSecret` / `type` first). Dungeons and raids add restrictions (Map /
-  Encounter): FMF's probe in a dungeon (7 Nov): max mana readable, curves work; boss fights add
+  Encounter): FMF in a dungeon (7 Nov): works (owner), max mana readable, curves work; boss fights add
   Encounter and Chat restrictions (addon messages, group features at risk). Details: `docs/notes.md`.
 - Secret in combat: current mana, `GetPowerRegen`/`GetManaRegen`, spell cooldowns
   (`C_Spell.GetSpellCooldown`), auras (buffs are invisible to addons in combat). Readable in
