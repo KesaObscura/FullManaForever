@@ -54,6 +54,9 @@ and `/fmf log` (kept in releases for bug reports).
 - Mana regen is continuous, no 2-second ticks; the five-second rule exists. No mp5 in combat.
 - Current mana (`UnitPower`) is secret also OUT of combat (notes; 0.9.4 bug in the owner's test,
   6 Nov): "full" or any mana check only through `UnitPowerPercent` with a curve. Tests keep it secret.
+- Health is secret also out of combat (Full Health Forever probe, 7 Nov); a secret must not even be
+  compared with nil (`IsSecret` / `type` first). Dungeons and raids add restrictions (Map /
+  Encounter): FMF untested there. Details: `docs/notes.md`, "From Full Health Forever".
 - Secret in combat: current mana, `GetPowerRegen`/`GetManaRegen`, spell cooldowns
   (`C_Spell.GetSpellCooldown`), auras (buffs are invisible to addons in combat). Readable in
   combat: max mana, max health, item cooldowns and counts, spell IDs and mana costs of own casts

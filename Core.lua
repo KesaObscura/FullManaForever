@@ -1845,15 +1845,18 @@ local fadeA, holdAt, quietFrom = 1, -math.huge, nil
 local fadeCurves, fadeCurveKey = {}, nil
 
 local fadeFrame = CreateFrame("Frame")
+-- protected: a client that refuses the event (UNIT_HEALTH_FREQUENT cannot be registered in
+-- Forever) only loses the smooth fade when the mana fills up, never the addon
 if fadeFrame.RegisterUnitEvent then
-  fadeFrame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+  pcall(fadeFrame.RegisterUnitEvent, fadeFrame, "UNIT_POWER_FREQUENT", "player")
 else
-  fadeFrame:RegisterEvent("UNIT_POWER_FREQUENT")
+  pcall(fadeFrame.RegisterEvent, fadeFrame, "UNIT_POWER_FREQUENT")
 end
 fadeFrame:SetScript("OnEvent", function(_, _, unit, powerType)
-  if unit ~= nil and not IsSecret(unit) and unit ~= "player" then return end
+  -- a secret must not even be compared with nil: IsSecret first
+  if not IsSecret(unit) and type(unit) == "string" and unit ~= "player" then return end
   -- energy or rage in a druid form does not keep the mana bar shown
-  if powerType ~= nil and not IsSecret(powerType) and powerType ~= "MANA" then return end
+  if not IsSecret(powerType) and type(powerType) == "string" and powerType ~= "MANA" then return end
   -- the events of the loading screen do not count: no fade-out after every login
   if quietFrom and GetTime() >= quietFrom and db and db.fadeFull ~= false then holdAt = GetTime() end
 end)
