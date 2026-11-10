@@ -58,6 +58,8 @@ and `/fmf log` (kept in releases for bug reports).
   compared with nil (`IsSecret` / `type` first). Dungeons and raids add restrictions (Map /
   Encounter): FMF in a dungeon (7 Nov): works (owner), max mana readable, curves work; boss fights add
   Encounter and Chat restrictions (addon messages, group features at risk). Details: `docs/notes.md`.
+- A NUMERIC curve through `UnitPowerPercent` returns the value as a secret number, printable with
+  `string.format` (owner's test addon, 10 Nov): "time to full mana" (0.9.7) uses it.
 - Secret in combat: current mana, `GetPowerRegen`/`GetManaRegen`, spell cooldowns
   (`C_Spell.GetSpellCooldown`), auras (buffs are invisible to addons in combat). Readable in
   combat: max mana, max health, item cooldowns and counts, spell IDs and mana costs of own casts
@@ -142,12 +144,14 @@ and `/fmf log` (kept in releases for bug reports).
   0.9.6 (owner, 10 Nov: "grow direction and the rest"): "Icons grow" (`iconGrow` normal / reverse;
   reverse: the frame keeps the bar's length, icons from the far end; asked in a comment); typing a
   value by clicking a stepper's number (exact, clamped, % typed as percent; bar length 0 = auto).
-  0.9.7 (owner, 10 Nov: release 0.9.6 first, the regroup next; planned 7 Nov): the full regroup of the settings window in two columns (left: position /
+  0.9.8 (owner, 10 Nov: release 0.9.6 first, the regroup next; planned 7 Nov): the full regroup of the settings window in two columns (left: position /
   icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
   the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
-  "Full mana in N s" while drinking: impossible as arithmetic (current mana secret also out of
-  combat); possible only as band texts through curves (~45 texts, one curve each): owner 7 Nov,
-  not now, long backlog.
+  0.9.7 (owner, 10 Nov; players asked): "Time to full mana" (`fullTimer`, on) out of combat next to
+  the regen: a numeric curve over the mana share, piecewise for the five-second rule (casting rate
+  first), hidden at full mana by a step curve; not in combat (regen secret, and meaningless while
+  casting). The early end of drinking is not foreseen (drink aura IDs unknown): later.
+  The settings regroup moves to 0.9.8.
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.
@@ -207,7 +211,8 @@ and `/fmf log` (kept in releases for bug reports).
    by the owner (description: log texts and regen line changed); 0.9.4 released on GitHub 6 Nov
    (PR #20, tag v0.9.4), CurseForge upload by the owner on 7 Nov (description: "Fades out of combat"
    line new); 0.9.5 released on GitHub and CurseForge 10 Nov (PR #21, tag v0.9.5; 0.9.4 had 6.1K
-   downloads in two days). Reply to the commenter once it is live. SEO from the Full Health Forever session (7 Nov):
+   downloads in two days); 0.9.6 merged 10 Nov (PR #22, tag v0.9.6, CurseForge by the owner).
+   Reply to the commenters once it is live. SEO from the Full Health Forever session (7 Nov):
    once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
    GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a
    feature line "own spells ready in combat straight from the game" only once the duration-object

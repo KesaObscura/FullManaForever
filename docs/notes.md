@@ -238,6 +238,18 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Innervate 40, Life Tap 6-56). The Adventures talent "Thrill of Adventure" 1225472 gives 5 % of
   max health and mana over 10 s at max rank; a proc, not a button, so no icon.
 
+## Numeric curves (owner's test addon, 8-10 Nov 2026, priest 24, open world)
+
+- `UnitPowerPercent("player", 0, false, curve)` also takes a NUMERIC curve (`C_CurveUtil.CreateCurve()`,
+  type Linear): the engine puts the hidden mana share (0..1) into it and returns a hidden number.
+- `string.format("%.0f", secret)` and `C_StringUtil.RoundToNearestString(secret)` turn it into text.
+  Refused with secrets: `C_StringUtil.CreateSecondsFormatter():Format`, `C_DurationUtil` durations,
+  `Curve:Evaluate`.
+- Measured: drinking, 515 / 1879 mana, regen 51.0/s: shown "~27 s" (26.7). Right after a cast the
+  plain rate was too optimistic (the rule runs first): 0.9.7 builds the curve piecewise.
+- Used for "time to full mana" (0.9.7). Not tested: whether `AddPoint` takes a secret (for a timer in
+  combat); Lua 5.1 does not call `__eq` for a secret compared with a number of another type.
+
 ## From Full Health Forever (same owner; its in-game probe, 7 Nov 2026, one priest level 21, solo, open world)
 
 Facts that matter for this addon (the full list lives in that project):

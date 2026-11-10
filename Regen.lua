@@ -133,6 +133,15 @@ local function ManaRegen()
   return pcall(GetPowerRegen)
 end
 
+-- base and casting rate as plain numbers, nil while they are secret (in combat): for the time
+-- to full mana (0.9.7), which only shows out of combat
+function ns.RegenRates()
+  local ok, base, casting = ManaRegen()
+  if not ok or IsSecret(base) or type(base) ~= "number" then return nil end
+  if IsSecret(casting) or type(casting) ~= "number" then casting = 0 end
+  return base, casting
+end
+
 function ns.RegenText()
   local ok, base, casting = ManaRegen()
   if not ok then return nil end
