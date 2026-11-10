@@ -142,7 +142,7 @@ and `/fmf log` (kept in releases for bug reports).
   0.9.6 (owner, 10 Nov: "grow direction and the rest"): "Icons grow" (`iconGrow` normal / reverse;
   reverse: the frame keeps the bar's length, icons from the far end; asked in a comment); typing a
   value by clicking a stepper's number (exact, clamped, % typed as percent; bar length 0 = auto).
-  Also 0.9.6 (owner, 7 Nov): the full regroup of the settings window in two columns (left: position /
+  0.9.7 (owner, 10 Nov: release 0.9.6 first, the regroup next; planned 7 Nov): the full regroup of the settings window in two columns (left: position /
   icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
   the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
   "Full mana in N s" while drinking: impossible as arithmetic (current mana secret also out of
