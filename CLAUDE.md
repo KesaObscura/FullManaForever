@@ -3,7 +3,7 @@
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
 Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Profiles.lua → Core.lua →
 Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Profiles.lua (0.8.3):
-`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion, optPoint)
+`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion, optPoint, probe)
 plus `profiles[Shared|Name Surname-Realm]` and `chars[key]` = {profile, class, level, seen, name, realm}; Core's
 `db` is the active profile, `acct` the root; `ns.ApplyProfile` re-reads everything on a switch. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).
@@ -54,6 +54,10 @@ and `/fmf log` (kept in releases for bug reports).
 - Mana regen is continuous, no 2-second ticks; the five-second rule exists. No mp5 in combat.
 - Current mana (`UnitPower`) is secret also OUT of combat (notes; 0.9.4 bug in the owner's test,
   6 Nov): "full" or any mana check only through `UnitPowerPercent` with a curve. Tests keep it secret.
+- Health is secret also out of combat (Full Health Forever probe, 7 Nov); a secret must not even be
+  compared with nil (`IsSecret` / `type` first). Dungeons and raids add restrictions (Map /
+  Encounter): FMF in a dungeon (7 Nov): works (owner), max mana readable, curves work; boss fights add
+  Encounter and Chat restrictions (addon messages, group features at risk). Details: `docs/notes.md`.
 - Secret in combat: current mana, `GetPowerRegen`/`GetManaRegen`, spell cooldowns
   (`C_Spell.GetSpellCooldown`), auras (buffs are invisible to addons in combat). Readable in
   combat: max mana, max health, item cooldowns and counts, spell IDs and mana costs of own casts
@@ -128,11 +132,22 @@ and `/fmf log` (kept in releases for bug reports).
   for MANA: events stop once the mana is full; counted, never read; ignored for 2 s after login); greyed with "Show only in combat"; the unlocked frame never
   fades, the open settings do (owner, 6 Nov: a change must show at once); the first known value after login is taken at once. Reviewed by
   the three player agents (8 / 9 / 8).
-- 0.9.5 (owner, 5 Nov list, moved on 6 Nov): a switch "icons only in combat" (bar and regen stay
-  out of combat), "full mana in N s" while drinking out of combat, hide the bar at full mana also
-  in combat (by the curve; maybe as part of the fading above). Later: gallery re-shoots (need
-  screenshots), exact fit to unit frames (sizes typed in / attach to the player frame), choice of
-  bar markers (all / potions only / nearest), a "drink" reminder between pulls.
+- 0.9.5 (owner, 7 Nov: "start 0.9.5"; settings from three UI reviews, owner 7 Nov "do all 4"):
+  "Out of combat" list (all / without icons / nothing -> `iconsCombat`, `onlyCombat`; `IconsHidden`
+  in Core also for the potion sound); "When it fades" list (full / full also in combat / after a
+  fight -> `fadeFull`, `fadeCombat`); "Show icons" (`showIcons`, also markers and sound; groups
+  keep their switches, greyed); lists instead of sub-switches for mana text (off -> `manaTextOn`),
+  rule seconds (`fsrNum`, `fsrWhole`), bar style (`barStyle`); "Keep health above" under "When to
+  light up"; group rows always two lines (no jumping). Saved keys unchanged.
+  0.9.6 (owner, 7 Nov): the full regroup of the settings window in two columns (left: position /
+  icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
+  the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
+  "Full mana in N s" while drinking: impossible as arithmetic (current mana secret also out of
+  combat); possible only as band texts through curves (~45 texts, one curve each): owner 7 Nov,
+  not now, long backlog.
+  Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
+  to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
+  between pulls.
 - Texts and SEO: keywords WoW, WoW Forever, World of Warcraft: Forever, Classic+; "mana tick" and
   "mp5" only in their true context (Forever has none, the addon shows live regen); never claim
   Classic Era / retail support; no user names in texts ("features asked for in the comments get
@@ -186,7 +201,13 @@ and `/fmf log` (kept in releases for bug reports).
    0.9.2 (with 0.9.1) released on GitHub 5 Nov (PR #18, tag v0.9.2); CurseForge upload by the
    owner with the changelog of 0.9.1 + 0.9.2; the gallery stays as it is for now
    (owner, 5 Nov: no time); 0.9.3 released on GitHub 5 Nov (PR #19, tag v0.9.3), CurseForge upload
-   by the owner (description: log texts and regen line changed); fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
+   by the owner (description: log texts and regen line changed); 0.9.4 released on GitHub 6 Nov
+   (PR #20, tag v0.9.4), CurseForge upload by the owner on 7 Nov (description: "Fades out of combat"
+   line new); reply to the commenter once it is live. SEO from the Full Health Forever session (7 Nov):
+   once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
+   GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a
+   feature line "own spells ready in combat straight from the game" only once the duration-object
+   test (Psychic Scream) works and FMF uses it. Summary with the full name proposed to the owner; fix bugs, reply to CurseForge comments within 1-2 days. No promotion posts (owner, 17 Oct:
    Blizzard forum, Reddit and notes to other sites dropped; the addon goes its own way).
 6. Untested in game: owner's printed list `docs/test-checklist.md`: group log (owner records it
    next); other classes (druid forms, Life Tap, Mana Agate, Evocation)

@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.4"
+ns.VERSION = "0.9.5"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -19,8 +19,11 @@ local DEFAULTS = {
   point      = { "CENTER", "UIParent", "CENTER", 0, -120 }, -- turned into TOPLEFT on first load
   locked     = true,
   onlyCombat = false,
+  showIcons  = true,    -- false: no icons and no markers at all, only the bar and its texts (0.9.5)
+  iconsCombat = false,  -- icons (and the potion sound) only in combat; bar and texts stay (0.9.5)
   fadeAlpha  = 1,       -- bar and its texts out of combat (1: no fading; 0.9.4, asked for in a comment)
   fadeFull   = true,    -- fade only while the mana is full: back as soon as mana is spent (like the retail display)
+  fadeCombat = false,   -- with fadeFull: also in combat (0.9.5; full decided by the curve there too)
   cdShow = 5,           -- seconds before its cooldown ends an icon already shows (grey, counting down); 0: off
   showSolo   = true,    -- where to show: alone / in a party / in a raid (any combination)
   showParty  = true,
@@ -1575,6 +1578,13 @@ local NONE = {}
 -- own spells: every ready spell gets an icon (the group's button, then its extra buttons
 -- after the last group), each with its own threshold and the same health gate as runes.
 -- Layer IDs of spells are negative so they never match an item ID.
+-- out of combat the icons are hidden with "Show only in combat" and with "Icons only in combat"
+-- (0.9.5: bar and texts stay; asked for in three player reviews, lit icons between pulls tempt
+-- to waste a cooldown)
+local function IconsHidden()
+  return (db.onlyCombat or db.iconsCombat) and not InCombatLockdown() and true or false
+end
+
 local spellList, spellPreview = {}, {}
 local function UpdateSpellButtons(b, maxMana, maxHP, on)
   local S = ns.Spells
@@ -1582,7 +1592,7 @@ local function UpdateSpellButtons(b, maxMana, maxHP, on)
   if on and S.AnyActive() then
     if not db.locked then
       list = S.ActiveList(spellPreview) -- positioning preview: every icon that can appear
-    elseif not (db.onlyCombat and not InCombatLockdown()) and groupOK then
+    elseif not IconsHidden() and groupOK then
       list = S.Candidates(spellList, maxMana)
     end
   end
@@ -1618,9 +1628,13 @@ end
 local function UpdateButton(i, b, maxMana, maxHP)
   local group = ns.GROUPS[i]
   if group.spells then
-    return UpdateSpellButtons(b, maxMana, maxHP, db.enabled[group.key] and ns.ForMyClass(group))
+    return UpdateSpellButtons(b, maxMana, maxHP,
+      db.showIcons ~= false and db.enabled[group.key] and ns.ForMyClass(group))
   end
-  if not db.enabled[group.key] or not ns.ForMyClass(group) then b.outer:Hide() return end
+  if db.showIcons == false or not db.enabled[group.key] or not ns.ForMyClass(group) then
+    b.outer:Hide()
+    return
+  end
   if not db.locked then -- positioning preview, in the order the icons light up
     local item = OwnedItem(i)
     b.sortThr = FirstThreshold(i, maxMana)
@@ -1629,7 +1643,7 @@ local function UpdateButton(i, b, maxMana, maxHP)
     return
   end
 
-  if db.onlyCombat and not InCombatLockdown() then b.outer:Hide() return end
+  if IconsHidden() then b.outer:Hide() return end
   if not groupOK then b.outer:Hide() return end
 
   -- which items go into the slot, and their mana bands
@@ -1831,15 +1845,18 @@ local fadeA, holdAt, quietFrom = 1, -math.huge, nil
 local fadeCurves, fadeCurveKey = {}, nil
 
 local fadeFrame = CreateFrame("Frame")
+-- protected: a client that refuses the event (UNIT_HEALTH_FREQUENT cannot be registered in
+-- Forever) only loses the smooth fade when the mana fills up, never the addon
 if fadeFrame.RegisterUnitEvent then
-  fadeFrame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+  pcall(fadeFrame.RegisterUnitEvent, fadeFrame, "UNIT_POWER_FREQUENT", "player")
 else
-  fadeFrame:RegisterEvent("UNIT_POWER_FREQUENT")
+  pcall(fadeFrame.RegisterEvent, fadeFrame, "UNIT_POWER_FREQUENT")
 end
 fadeFrame:SetScript("OnEvent", function(_, _, unit, powerType)
-  if unit ~= nil and not IsSecret(unit) and unit ~= "player" then return end
+  -- a secret must not even be compared with nil: IsSecret first
+  if not IsSecret(unit) and type(unit) == "string" and unit ~= "player" then return end
   -- energy or rage in a druid form does not keep the mana bar shown
-  if powerType ~= nil and not IsSecret(powerType) and powerType ~= "MANA" then return end
+  if not IsSecret(powerType) and type(powerType) == "string" and powerType ~= "MANA" then return end
   -- the events of the loading screen do not count: no fade-out after every login
   if quietFrom and GetTime() >= quietFrom and db and db.fadeFull ~= false then holdAt = GetTime() end
 end)
@@ -1857,7 +1874,10 @@ local function UpdateFade()
   if not quietFrom then quietFrom = now + 2 end
   local a = tonumber(db.fadeAlpha) or 1
   if a < 0 then a = 0 end
-  local off = a >= 1 or not db.locked or InCombatLockdown() or false
+  -- in combat only with "Also in combat" (and "Only at full mana": a fight never hides a bar
+  -- with mana missing)
+  local combatOff = InCombatLockdown() and not (db.fadeCombat and db.fadeFull ~= false)
+  local off = a >= 1 or not db.locked or combatOff or false
   if off then holdAt = now end
   local p = (now - holdAt) / FADE_TIME
   if p > 1 then p = 1 elseif p < 0 then p = 0 end
@@ -1937,7 +1957,7 @@ local function UpdateBar(maxMana)
   for i, group in ipairs(ns.GROUPS) do
     local ticks = bar.ticks[i]
     local used = 0
-    if db.enabled[group.key] and ns.ForMyClass(group) then
+    if db.showIcons ~= false and db.enabled[group.key] and ns.ForMyClass(group) then
       if group.spells then
         -- one mark per spell icon that can light up now (ready, switched on); a spell on
         -- cooldown has no mark. The unlocked frame marks every spell it previews.
@@ -1981,8 +2001,9 @@ local function PotionSound()
     for i, g in ipairs(ns.GROUPS) do if g.key == "potion" then potionIndex = i end end
   end
   -- the same filters as the icons: solo / party / raid and "Show only in combat" (0.9.3)
-  local shown = groupOK and not (db.onlyCombat and not InCombatLockdown())
+  local shown = groupOK and not IconsHidden()
   local item = potionIndex and db.potionSound and db.locked and db.enabled.potion and not held
+    and db.showIcons ~= false
     and shown and OwnedItem(potionIndex)
   if not item then potionWaiting = false return end
   if not CooldownState(item.id) then
@@ -2075,23 +2096,66 @@ end
 ------------------------------------------------------------------------
 -- probe
 ------------------------------------------------------------------------
+-- /fmf probe: printed to the chat and kept in the saved variables (the last 3 runs), so a bug
+-- report can send the file instead of a screenshot (0.9.5, like the Full Health Forever probe).
+-- Only booleans, numbers and API names: never a secret, never a name.
+local PROBE_KEEP = 3
 local function Probe()
+  local lines = {}
+  local function P(msg, ...)
+    if select("#", ...) > 0 then msg = msg:format(...) end
+    Print(msg)
+    if not IsSecret(msg) then lines[#lines + 1] = msg end
+  end
   local function yn(v) return v and "yes" or "no" end
-  Print("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VERSION, tostring(InCombatLockdown()),
+  local function S(v) -- a value as text, "SECRET" for a secret
+    if IsSecret(v) then return "SECRET" end
+    return tostring(v)
+  end
+  P("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VERSION, tostring(InCombatLockdown()),
     tostring(IsSecret(UnitPower("player", MANA))), tostring(IsSecret(UnitPowerMax("player", MANA))))
-  Print("API: UnitPowerPercent=%s UnitHealthPercent=%s C_CurveUtil=%s LuaCurveType=%s",
+  P("API: UnitPowerPercent=%s UnitHealthPercent=%s C_CurveUtil=%s LuaCurveType=%s",
     yn(UnitPowerPercent), yn(UnitHealthPercent), yn(C_CurveUtil and C_CurveUtil.CreateColorCurve),
     yn(Enum and Enum.LuaCurveType))
   local ok, err = pcall(function()
     local c = ManaCurve(0.5)
     local lo, hi = c:Evaluate(0.2 * Scale()), c:Evaluate(0.8 * Scale())
-    Print("curve test (expect 1 / 0): %s / %s", tostring(select(4, lo:GetRGBA())), tostring(select(4, hi:GetRGBA())))
+    P("curve test (expect 1 / 0): %s / %s", tostring(select(4, lo:GetRGBA())), tostring(select(4, hi:GetRGBA())))
     local r = PowerColor(c)
-    Print("UnitPowerPercent+curve: %s (variant %s)", r and "ok" or "FAILED", tostring(powerVariant))
+    P("UnitPowerPercent+curve: %s (variant %s)", r and "ok" or "FAILED", tostring(powerVariant))
   end)
-  if not ok then Print("curve probe error: %s", tostring(err)) end
-  Print("scale100=%s locked=%s onlyCombat=%s custom=%d", tostring(acct.scale100), tostring(db.locked),
-    tostring(db.onlyCombat), #acct.custom)
+  if not ok then P("curve probe error: %s", S(err)) end
+  -- where we are and which rules are on: dungeons and raids add restrictions (Map, Encounter)
+  local okI, inInst, kind = pcall(function() return IsInInstance() end)
+  P("instance=%s type=%s", okI and S(inInst) or "?", okI and S(kind) or "?")
+  local RA = C_RestrictedActions and C_RestrictedActions.GetAddOnRestrictionState
+  if RA then
+    local st = {}
+    -- types 0..5 (Enum.AddOnRestrictionType); states 0 off, 1 activating, 2 on
+    for i, name in ipairs({ "combat", "encounter", "challenge", "pvp", "map", "chat" }) do
+      local okR, v = pcall(RA, i - 1)
+      st[#st + 1] = name .. "=" .. (okR and S(v) or "?")
+    end
+    P("restrictions: %s", table.concat(st, " "))
+  else
+    P("restrictions: no API")
+  end
+  local CS = C_Secrets
+  if CS then
+    local function q(f) local okQ, v = pcall(f) return okQ and S(v) or "?" end
+    P("secret now: auras=%s cooldowns=%s stats=%s", CS.ShouldAurasBeSecret and q(CS.ShouldAurasBeSecret) or "-",
+      CS.ShouldCooldownsBeSecret and q(CS.ShouldCooldownsBeSecret) or "-",
+      CS.ShouldUnitStatsBeSecret and q(CS.ShouldUnitStatsBeSecret) or "-")
+  end
+  P("scale100=%s locked=%s onlyCombat=%s iconsCombat=%s showIcons=%s custom=%d", tostring(acct.scale100),
+    tostring(db.locked), tostring(db.onlyCombat), tostring(db.iconsCombat), tostring(db.showIcons ~= false),
+    #acct.custom)
+  -- kept for the bug report: the newest first
+  if type(acct.probe) ~= "table" then acct.probe = {} end
+  local when = date and date("%Y-%m-%d %H:%M") or tostring(time and time() or "")
+  table.insert(acct.probe, 1, { when = when, lines = lines })
+  while #acct.probe > PROBE_KEEP do table.remove(acct.probe) end
+  Print(L.probeSaved)
 end
 
 ------------------------------------------------------------------------

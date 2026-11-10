@@ -1806,18 +1806,18 @@ test("a spell shows before its cooldown ends, counted from the cast in combat, g
   noSpellApis()
 end)
 
-test("settings: 'Show before ready' sits above 'Show only in combat', 0 to 120 s in steps of 5 (the potion cooldown, 0.9.3)", function()
+test("settings: 'Show before ready' sits above 'Out of combat', 0 to 120 s in steps of 5 (the potion cooldown, 0.9.3)", function()
   local ns = M.load(nil)
   ns.ToggleOptions(true)
   local st, combat
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.minus and w.label and w.label.text == ns.L.optCdShow .. ":" then st = w end
-    if w.label and w.label.text == ns.L.optCombat then combat = w end
+    if w.entries and w.entries[1].value == "all" then combat = w end
   end
   ok(st and combat, "settings not found")
-  ok(st.label.points[1][5] > combat.points[1][5], "not above 'Show only in combat'")
+  ok(st.label.points[1][5] > combat.points[1][5], "not above 'Out of combat'")
   ok(st.value.points[1][5] < 0 and st.minus.points[1][5] < 0, "value and -/+ not on the line under the label")
-  ok(combat.points[1][5] <= st.label.points[1][5] - 48, "'Show only in combat' not under the value line")
+  ok(combat.points[1][5] <= st.label.points[1][5] - 45, "'Out of combat' not under the value line")
   eq(st.value.text, ns.L.cdShowSec:format(5), "default not 5 s")
   st.minus.scripts.OnClick(st.minus)
   eq(ns.db.cdShow, 0); eq(st.value.text, ns.L.cdShowOff)
@@ -2416,26 +2416,26 @@ test("0.9.4: out of combat the bar and its texts fade at full mana, come back wh
   M.state.maxMana, M.state.time = 1000, nil
 end)
 
-test("0.9.4: settings: fading sits under 'Show only in combat', 0 to 100 %, greyed out with it", function()
+test("0.9.4: settings: fading sits under 'Out of combat', no fade to 0 %, greyed out with 'Nothing'", function()
   local ns = M.load(nil)
   ns.ToggleOptions(true)
-  local fade, full, combat
+  local fade, when, combat
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.minus and w.label and w.label.text == ns.L.optFade .. ":" then fade = w end
-    if w.label and w.label.text == ns.L.optFadeFull then full = w end
-    if w.label and w.label.text == ns.L.optCombat then combat = w end
+    if w.entries and w.entries[1].value == "full" then when = w end
+    if w.entries and w.entries[1].value == "all" then combat = w end
   end
-  ok(fade and full and combat, "settings not found")
-  ok(fade.label.points[1][5] < combat.points[1][5], "not under 'Show only in combat'")
-  eq(fade.value.text, ns.L.fadeOff, "default not off")
-  ok(not full:IsEnabled(), "'Only at full mana' usable while fading is off")
+  ok(fade and when and combat, "settings not found")
+  ok(fade.label.points[1][5] < combat.points[1][5], "not under 'Out of combat'")
+  eq(fade.value.text, ns.L.fadeOff, "default not 'no fade'")
+  ok(not when:IsEnabled(), "'When it fades' usable while fading is off")
   fade.minus.scripts.OnClick(fade.minus)
   eq(ns.db.fadeAlpha, 0.9); eq(fade.value.text, "90%")
-  ok(full:IsEnabled(), "'Only at full mana' grey while fading is on")
+  ok(when:IsEnabled(), "'When it fades' grey while fading is on")
   for _ = 1, 12 do fade.minus.scripts.OnClick(fade.minus) end
   eq(ns.db.fadeAlpha, 0, "not down to 0 %")
-  ns.db.onlyCombat = true; ns.RefreshOptions()
-  ok(not fade.plus:IsEnabled() and not full:IsEnabled(), "fading usable with 'Show only in combat'")
+  combat.Select("none")
+  ok(not fade.plus:IsEnabled() and not when:IsEnabled(), "fading usable with 'Nothing' out of combat")
 end)
 
 test("0.9.4: a failing fade shows the bar fully and fades again once it works", function()
@@ -2451,4 +2451,119 @@ test("0.9.4: a failing fade shows the bar fully and fades again once it works", 
   M.state.maxMana = 1000
   M.tick(); M.tick()
   ok(b.alpha < 1, "stuck at full after the error was gone")
+end)
+
+-- 0.9.5 ------------------------------------------------------------------------------------
+
+test("0.9.5: 'Icons only in combat' hides the icons and the potion sound out of combat, the bar stays", function()
+  local ns = M.load({ iconsCombat = true, potionSound = true }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.tick()
+  ok(not slotVisible(ns, 1), "potion lit out of combat")
+  ok(bar(ns).shown, "bar hidden out of combat")
+  M.state.combat = true; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit in combat")
+  M.state.combat = false
+  -- the sound follows the icons: a cooldown ending out of combat makes no sound
+  local real, t0 = GetTime, GetTime()
+  local function at(sec) _G.GetTime = function() return t0 + sec end; M.tick() end
+  M.state.cooldowns[3385] = { t0, 120 }
+  at(1); at(121)
+  eq(#M.sounds, 0, "sound out of combat with 'Icons only in combat'")
+  _G.GetTime = real
+  -- the unlocked frame still shows every icon
+  ns.db.locked = false; M.tick()
+  ok(buttons(ns)[1].outer.shown, "unlocked frame hides the icons")
+  M.state.manaPct = 1
+end)
+
+test("0.9.5: 'Also in combat' fades the bar at full mana in a fight too, back when mana is spent", function()
+  local ns = M.load({ fadeAlpha = 0.3, fadeCombat = true }, { bags = POT })
+  M.state.manaPct = 1
+  local b = bar(ns)
+  local function at(t) M.state.time = t; M.tick() end
+  at(100); eq(b.alpha, 0.3)
+  M.state.combat = true; at(101)
+  eq(b.alpha, 0.3, "not faded in combat at full mana")
+  M.state.manaPct = 0.8; at(102)
+  eq(b.alpha, 1, "not back in combat after mana was spent")
+  -- off: a fight shows the bar fully again
+  M.state.manaPct = 1; ns.db.fadeCombat = false; at(103)
+  eq(b.alpha, 1, "faded in combat without 'Also in combat'")
+  -- without "Only at full mana" a fight never hides the bar
+  ns.db.fadeCombat, ns.db.fadeFull = true, false; at(104)
+  eq(b.alpha, 1, "faded in combat with mana missing allowed")
+  M.state.combat, M.state.time = false, nil
+end)
+
+test("0.9.5: settings: one list for out of combat and one for when it fades, on the same saved keys", function()
+  local ns = M.load({ fadeAlpha = 0.5 })
+  ns.ToggleOptions(true)
+  local ooc, when
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "all" then ooc = w end
+    if w.entries and w.entries[1].value == "full" then when = w end
+  end
+  ok(ooc and when, "lists not found")
+  eq(ooc.text, ns.L.ooAll); eq(when.text, ns.L.fwFull, "defaults")
+  ooc.Select("icons"); eq(ns.db.iconsCombat, true); eq(ns.db.onlyCombat, false); eq(ooc.text, ns.L.ooNoIcons)
+  ooc.Select("none"); eq(ns.db.onlyCombat, true); eq(ooc.text, ns.L.ooNothing)
+  ooc.Select("all"); eq(ns.db.onlyCombat, false); eq(ns.db.iconsCombat, false)
+  when.Select("combat"); eq(ns.db.fadeFull, true); eq(ns.db.fadeCombat, true); eq(when.text, ns.L.fwFullCombat)
+  when.Select("after"); eq(ns.db.fadeFull, false); eq(ns.db.fadeCombat, false); eq(when.text, ns.L.fwAfter)
+  when.Select("full"); eq(ns.db.fadeFull, true); eq(ns.db.fadeCombat, false)
+  -- saved 0.9.4 settings show as they are
+  ns = M.load({ onlyCombat = true, fadeAlpha = 0.5, fadeFull = false })
+  ns.ToggleOptions(true)
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.entries and w.entries[1].value == "all" then ooc = w end
+    if w.entries and w.entries[1].value == "full" then when = w end
+  end
+  eq(ooc.text, ns.L.ooNothing); eq(when.text, ns.L.fwAfter, "old saved settings not shown")
+end)
+
+test("0.9.5: 'Show icons' off: no icons, no markers, no sound; the bar stays; the groups grey but kept", function()
+  local ns = M.load({ showIcons = false, potionSound = true }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.tick()
+  ok(not buttons(ns)[1].outer.shown, "potion icon with icons off")
+  ok(bar(ns).shown, "bar hidden with icons off")
+  for _, t in ipairs(bar(ns).ticks[1]) do ok(not t.front.shown, "potion marker with icons off") end
+  ns.db.locked = false; M.tick()
+  ok(not buttons(ns)[1].outer.shown, "unlocked frame shows icons that are off")
+  ns.db.locked = true
+  ns.ToggleOptions(true)
+  local grp, sw
+  for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
+    if w.label and w.label.text == ns.L.grp_potion then grp = w end
+    if w.label and w.label.text == ns.L.optShowIcons then sw = w end
+  end
+  ok(grp and sw, "switches not found")
+  ok(not grp:IsEnabled() and grp:GetChecked(), "potion group not grey-but-kept")
+  sw:SetChecked(true); sw.scripts.OnClick(sw)
+  eq(ns.db.showIcons, true); M.tick()
+  ok(slotVisible(ns, 1), "potion not back after switching icons on")
+  ok(grp:IsEnabled(), "group stays grey")
+  M.state.manaPct = 1
+end)
+
+test("0.9.5: /fmf probe is also kept in the saved variables (last 3 runs), without secrets", function()
+  local ns = M.load(nil)
+  _G.C_RestrictedActions = { GetAddOnRestrictionState = function(t) return t == 4 and 2 or 0 end }
+  _G.C_Secrets = { ShouldAurasBeSecret = function() return M.secret(true) end,
+    ShouldCooldownsBeSecret = function() return false end }
+  _G.IsInInstance = function() return true, "party" end
+  for _ = 1, 4 do SlashCmdList.FULLMANAFOREVER("probe") end
+  local saved = ns.acct.probe
+  eq(#saved, 3, "not the last 3 runs")
+  local all = table.concat(saved[1].lines, "\n")
+  ok(all:find("secretMana=true", 1, true), "mana line missing")
+  ok(all:find("instance=true type=party", 1, true), "instance missing")
+  ok(all:find("map=2", 1, true) and all:find("combat=0", 1, true), "restriction states missing")
+  ok(all:find("auras=SECRET", 1, true), "a secret answer not marked")
+  for _, run in ipairs(saved) do
+    for _, l in ipairs(run.lines) do ok(not M.isSecret or not M.isSecret(l), "secret stored") end
+  end
+  ok(ns.Profiles.ACCOUNT.probe, "probe not an account key (would go into a profile)")
+  _G.C_RestrictedActions, _G.C_Secrets, _G.IsInInstance = nil, nil, nil
 end)

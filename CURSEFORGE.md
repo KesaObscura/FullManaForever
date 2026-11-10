@@ -29,7 +29,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 ### Mana bar, five-second rule and live regen
 
 - **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons stand in the order they light up, so lit icons never leave a gap. Icons in a row or in a column, bar under, above, left or right; bar color, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable. Nothing is shown while you are dead or a ghost.
-- **Works with unit frame addons.** In four steps: tick *Only markers* (under the mana bar), unlock the frame and tick *Move the bar separately*, drag the bar onto your unit frame's mana bar and match length and thickness to it, then tick *Above other frames*. *Only markers* hides the bar's fill, background and border: lay the potion markers and the five-second strip over the mana bar of your unit frame. *Move the bar separately* gives the bar its own place apart from the icons, and *Above other frames* draws everything on top.
+- **Works with unit frame addons.** In four steps: set *Style* to *Only markers* (under the mana bar), unlock the frame and tick *Move the bar separately*, drag the bar onto your unit frame's mana bar and match length and thickness to it, then tick *Above other frames*. *Only markers* hides the bar's fill, background and border: lay the potion markers and the five-second strip over the mana bar of your unit frame. *Move the bar separately* gives the bar its own place apart from the icons, and *Above other frames* draws everything on top.
 - **Five-second rule.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it) — in whole seconds (5, 4, 3 ...) or with tenths, or just the strip without the number. The strip runs down smoothly.
 - **Live mana regen per second,** also in combat, including Spirit Tap and drinking. It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
@@ -46,7 +46,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Profiles per character.** All characters share one set of settings, or a character gets its own (a copy of the shared ones to start with). Copy the settings of another character in one click, reset a profile or delete the settings of characters you no longer play; one undo if you clicked the wrong one. Language and your own items stay the same for all.
 - **Sound when your potion is ready again** (optional): a short sound when the mana potion cooldown is over, also in combat; three sounds of the addon's own to choose from.
 - **Show only where you need it.** Solo, in a party, in a raid — any combination, and optionally only in combat.
-- **Fades out of combat if you like.** The bar and its texts fade to the opacity you choose, also only while your mana is full: spend mana and the bar is back at once, in combat it is always fully shown.
+- **Fades out of combat if you like.** The bar and its texts fade to the opacity you choose, at full mana (spend mana and the bar is back at once), also in combat if you like, or after every fight. *Out of combat: Without icons* hides the icons between pulls and keeps the bar; *Show icons* off leaves just the bar.
 - **9 languages:** English, Deutsch, Español (EU and AL), Français, Русский, 한국어, Português, 简体中文, 繁體中文.
 
 ## Looking for a mana tick or mp5 tracker?
@@ -77,7 +77,7 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |
 | `/fmf reset` | move the icons and the texts back to the default position |
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
-| `/fmf probe` | print API status for bug reports |
+| `/fmf probe` | print API status for bug reports (also kept in the settings file) |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap (left-click: settings, right-click: items and spells).
@@ -93,7 +93,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 ## Tested so far
 
-Works in combat. Tested in Forever at low level: priest 16–20 (also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat), Read Leyline on a Skyborne mage, the regen colours while drinking, with Spirit Tap and after Read Leyline, per-character profiles across several characters, `/fmf hold` in and out of combat, the red regen under Resurrection Sickness, the icon order without gaps, the bar laid over the mana bar of Forever Unit Frames (only markers, moved separately, above other frames), and the item list as priest, mage and druid. The supported items, their restore values and the shared potion cooldown were checked against the game's own item data. Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested in the beta yet. Please report anything odd — see *Bug reports* below.
+Works in combat and in dungeons. Tested in Forever at low level: priest 16–21 (also a full dungeon run) (also with Spirit Tap for the regen display; a mana potion comes back after its 2-minute cooldown in the same fight; wanding; own spells with the gnome's Eureka! and Inner Focus, in and out of combat), Read Leyline on a Skyborne mage, the regen colours while drinking, with Spirit Tap and after Read Leyline, per-character profiles across several characters, `/fmf hold` in and out of combat, the red regen under Resurrection Sickness, the icon order without gaps, the bar laid over the mana bar of Forever Unit Frames (only markers, moved separately, above other frames), and the item list as priest, mage and druid. The supported items, their restore values and the shared potion cooldown were checked against the game's own item data. Level-60 items (runes, raid trinkets) and the other own spells (Evocation, Innervate, Mana Tide, Life Tap) could not be tested in the beta yet. Please report anything odd — see *Bug reports* below.
 
 ## Planned
 
@@ -101,7 +101,7 @@ Pre-pull checklist (consumables, buffs), who in your group has Innervate / Mana 
 
 ## Bug reports
 
-Please include the output of `/fmf probe`, your class and level, and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
+Please include the output of `/fmf probe` (it is also kept in `FullManaForever.lua`, see below), your class and level, and what you expected. Lua errors are easiest to read with BugGrabber + BugSack.
 
 For the five-second rule or the regen display: `/fmf log on`, play until it happens, `/fmf log off`, `/reload`, and attach `WTF\Account\ACCOUNTNAME\SavedVariables\FullManaForever.lua` (class, level, casts and regen values, never other players' names; the file also holds your own characters' names and realms from the profiles — remove them before sharing if you like).
 

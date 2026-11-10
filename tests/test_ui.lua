@@ -139,19 +139,19 @@ test("options: -/+ are greyed out at the limits", function()
   ok(s.minus:IsEnabled(), "minus inactive below max")
 end)
 
-test("options: empty groups keep their status on the same line", function()
+test("options: every group keeps two lines, so the rows never jump (0.9.5)", function()
   local ns = M.load(nil, { bags = { [3385] = 2 } })
   ns.ToggleOptions(true)
   local rows = M.upvalue(ns.RefreshOptions, "groupRows")
   ok(#rows >= 4, "group rows")
   local potion, rune = rows[1], rows[2]
   eq(potion.st.points[1][2], potion.cb, "potion status not below its checkbox")
-  eq(rune.st.points[1][2], rune.cb.label, "empty rune status not next to the name")
-  -- the rune's own setting sits right under the (compact) rune row, the next group under it
-  eq(rune.extras[1].points[1][2], rune.cb, "rune health not under the rune group")
-  eq(rune.extras[1].points[1][5], -22, "rune health after an empty group is not compact")
-  eq(rows[3].cb.points[1][2], rune.extras[1], "next group not under the rune health")
-  -- the potion sound switch sits under the (full) potion row, the runes under it
+  eq(rune.st.points[1][2], rune.cb, "empty rune status not below its checkbox")
+  eq(rune.extras, nil, "health setting still under the runes")
+  local y = rows[3].cb.points[1][5]
+  ns.db.enabled.rune = false; ns.RefreshOptions()
+  eq(rows[3].cb.points[1][5], y, "rows moved when a group was switched off")
+  -- the potion sound switch sits under the potion row, the runes under it
   eq(potion.extras[1].points[1][5], -38, "sound switch after a full group")
   eq(potion.extras[2].points[1][2], potion.extras[1], "sound choice not under the sound switch")
   eq(rune.cb.points[1][2], potion.extras[2], "runes not under the sound choice")
@@ -290,9 +290,10 @@ test("options: an unknown saved colour or mana text still shows a choice", funct
   local texts = {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.entries then texts[w.entries[1].value] = w.text end
+    if w.entries and w.entries[2] and w.entries[2].value == "number" then texts.mana = w.text end
   end
   eq(texts.blue, ns.L.col_blue, "colour dropdown")
-  eq(texts.number, ns.L.mtNumber, "mana text dropdown")
+  eq(texts.mana, ns.L.mtNumber, "mana text dropdown")
 end)
 
 test("item list: equipped gear is recognised the same way as by the icons", function()
@@ -379,19 +380,19 @@ test("options: settings of a switched-off part stay in place, greyed out", funct
   local barDD, manaDD, sizes = nil, nil, {}
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.entries and w.entries[1] and w.entries[1].value == "below" then barDD = w end
-    if w.entries and w.entries[1] and w.entries[1].value == "number" then manaDD = w end
+    if w.entries and w.entries[2] and w.entries[2].value == "number" then manaDD = w end
     if w.minus and w.label and w.label.text == ns.L.optTextSize .. ":" then sizes[#sizes + 1] = w end
   end
   ok(barDD and barDD.shown, "bar position hidden instead of greyed out")
   ok(not barDD:IsEnabled(), "bar position usable with the bar off")
-  ok(not manaDD:IsEnabled(), "mana text list usable with the mana numbers off")
+  eq(manaDD.text, ns.L.mtOff, "mana text list does not say off")
   ok(not sizes[1].plus:IsEnabled() and not sizes[1].minus:IsEnabled(), "mana size usable while off")
   ok(not sizes[2].plus:IsEnabled(), "rule size usable while off")
   ok(sizes[3].plus:IsEnabled(), "regen size greyed out although the regen is on")
   eq(sizes[1].label.color[1], 0.5, "label of a switched-off size not grey")
   ns.db.showBar, ns.db.manaTextOn = true, true
   ns.RefreshOptions()
-  ok(barDD:IsEnabled() and manaDD:IsEnabled(), "settings stay grey after switching on")
+  ok(barDD:IsEnabled(), "settings stay grey after switching on")
   ok(sizes[1].plus:IsEnabled(), "mana size stays grey after switching on")
   eq(sizes[1].label.color[1], 1, "label stays grey after switching on")
 end)
@@ -467,7 +468,7 @@ test("options: switching the potion sound on plays it once; whole seconds greyed
   local snd, whole
   for _, w in ipairs(M.upvalue(ns.RefreshOptions, "widgets")) do
     if w.label and w.label.text == ns.L.optPotionSound then snd = w end
-    if w.label and w.label.text == ns.L.optFsrWhole then whole = w end
+    if w.entries and w.entries[2] and w.entries[2].value == "whole" then whole = w end
   end
   ok(snd and whole, "switches not found")
   snd:SetChecked(true); snd.scripts.OnClick(snd)

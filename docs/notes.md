@@ -238,6 +238,38 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Innervate 40, Life Tap 6-56). The Adventures talent "Thrill of Adventure" 1225472 gives 5 % of
   max health and mana over 10 s at max rank; a proc, not a button, so no icon.
 
+## From Full Health Forever (same owner; its in-game probe, 7 Nov 2026, one priest level 21, solo, open world)
+
+Facts that matter for this addon (the full list lives in that project):
+- Health (`UnitHealth`, `UnitHealthMissing`, `UnitHealthPercent`) is secret also out of combat, like
+  mana; `UnitHealthMax("player")` is readable. "Health below X %" only through a curve (as our rune
+  and Life Tap check already do).
+- A secret may not even be compared with `nil`: use `type(x) == "nil"` / `issecretvalue` first. Never
+  print a secret to chat or store it (another addon reports a broken chat history).
+- `UNIT_HEALTH_FREQUENT` cannot be registered; `UNIT_HEALTH` fires about once per hit. `UNIT_COMBAT`
+  amounts are always secret.
+- Restrictions: `C_RestrictedActions.GetAddOnRestrictionState(type)` (Combat 0, Encounter 1,
+  ChallengeMode 2, PvPMatch 3, Map 4, Chat 5); in the open world only Combat turns on. Dungeons and
+  raids add Map / Encounter rules: **this addon is not tested there yet** (max mana or item
+  cooldowns could become secret; the icons would then stay hidden, fail-closed).
+- `C_Secrets.ShouldAurasBeSecret()`, `ShouldCooldownsBeSecret()`, `ShouldUnitStatsBeSecret()`: false
+  out of combat, true in combat; the game says in advance what will be secret.
+- `C_Spell.GetSpellCooldown(id)` in combat: `isActive` / `isEnabled` readable, but `isActive` is true
+  during every global cooldown. `C_Spell.GetSpellCooldownDuration(id, true)` +
+  `EvaluateRemainingDuration(curve)` gives "ready" in combat with the GCD ignored; a spell's own
+  cooldown in combat not seen yet. If it works, our own spells could use it instead of own timers.
+- Dungeon (7 Nov, our `/fmf probe` 0.9.5, priest 21, party dungeon): Map restriction on the whole
+  time inside, Combat on only in a fight; max mana readable in and out of combat
+  (`secretMax=false`); the curve test and `UnitPowerPercent` with a curve work; auras / cooldowns /
+  stats secret only in combat, as in the open world. Owner: the addon worked there "like clockwork"
+  (icons, bar, regen, rule).
+- Boss fight (Full Health Forever log, same dungeon): Encounter=2 and **Chat=2** while the boss is
+  pulled. Addon messages are probably blocked then: the planned group features (who has Innervate /
+  Mana Tide ready) would not work in boss fights; `/fmf log chat` neither. Not tested by us.
+- Healing potion item cooldown readable (858: 120 s). Whether mana and healing potions share the
+  cooldown in Forever is not tested; our potion icon reads the mana potion's own item cooldown, so a
+  shared cooldown would simply show as its wait.
+
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 
 ManaMaster (CurseForge 1718932) tracks mana spent/saved per fight with a history panel and a
