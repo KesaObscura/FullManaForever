@@ -44,7 +44,7 @@ and `/fmf log` (kept in releases for bug reports).
 - GitHub release: the owner creates the tag `vX.Y.Z` (this session cannot push tags); not a
   pre-release; the same changelog text and zip `FullManaForever-X.Y.Z.zip` (no hash). Title
   "Full Mana Forever X.Y.Z – WoW Forever mana addon"; body = two-line pitch, install line
-  (CurseForge app or unzip into Interface/AddOns), the changelog, bug-report link.
+  ([CurseForge](https://www.curseforge.com/wow/addons/full-mana-forever) app or unzip into Interface/AddOns), the changelog, bug-report link.
 - Gallery: 1280x720 PNGs by `tools/gallery.py` from the owner's in-game screenshots (English
   addon texts); finished images in `docs/gallery/`. When a change alters what an image shows,
   ask the owner for screenshots. Source screenshots never go into the repo (names, chat).

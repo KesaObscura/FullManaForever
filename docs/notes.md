@@ -17,9 +17,22 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   five-second rule (5SR) and live mana regen, also in combat. 9 languages."; 16 topics incl.
   wow-forever, classic-plus, five-second-rule; social preview = docs/images/social-preview.png.
   Gallery image descriptions: also at most 256.
+- SEO review (three agents, 10 Nov 2026; reports kept privately): proposed, to be set by the owner
+  after 0.9.7 is out: CurseForge summary (254) "Never waste a mana potion in WoW Forever: the right
+  potion, rune, mana gem or mana spell (Evocation, Innervate, Mana Tide) lights up when it fits your
+  missing mana. Mana bar with five-second rule (5SR), live regen, time to full mana. For every mana
+  user."; GitHub About (294) "Mana addon for World of Warcraft: Forever (WoW Forever, Classic+): the
+  right mana potion, rune, mana gem or own mana spell (Evocation, Innervate, Mana Tide) lights up when
+  it is ready and fits your missing mana. Mana bar with the five-second rule, live regen and time to
+  full mana. 9 languages."; topics +4 (wow-forever-addon, warcraft, hud, healing; never wow-classic);
+  CurseForge Source / Issues fields -> GitHub; empty Wiki off. Not taken: renaming the project,
+  other categories, posts elsewhere. Done in the repo: CURSEFORGE.md (no H1, time to full mana in the
+  first paragraph, "Know when to drink", WoW Forever in headings, own spells image, two FAQ answers,
+  "Tested so far" as a list, the 9 TOC notes at the end), README (Download line, keywords in
+  headings), TOC notes with time to full mana, CurseForge link in the release install line.
 - GitHub release: tag `vX.Y.Z` on the release commit, not a pre-release, same changelog text
   and zip. Title "Full Mana Forever X.Y.Z – WoW Forever mana addon"; body = two-line pitch,
-  install line (CurseForge app or unzip into Interface/AddOns), the changelog, bug-report link.
+  install line ([CurseForge](https://www.curseforge.com/wow/addons/full-mana-forever) app or unzip into Interface/AddOns), the changelog, bug-report link.
   `docs/images` (README images, social preview) is not part of the addon zip. This session cannot push tags; the owner creates the tag with the release.
 
 
