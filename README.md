@@ -50,8 +50,9 @@ when the icon lights up.
   below); Life Tap when its mana fits.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons stand in the order they light up (highest
-  threshold first), so lit icons never leave a gap. Icons in a row or a column, bar on any side;
-  color, thickness, length, icon size and spacing are adjustable. For unit frame addons: *Only
+  threshold first), so lit icons never leave a gap. Icons in a row or a column, growing either way
+  (to the left: they start at the bar's far end), bar on any side; color, thickness, length, icon size
+  and spacing are adjustable (click a number to type it). For unit frame addons: *Only
   markers* (no fill, background or border: lay the markers and the five-second strip over your
   unit frame's mana bar), *Move the bar separately* (its own place, apart from the icons) and
   *Above other frames*. On a unit frame: *Style: Only markers*, unlock, *Move the bar separately*, drag the

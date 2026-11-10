@@ -1,5 +1,11 @@
 # Changelog
 
+**Full Mana Forever 0.9.6**
+
+Asked for in the comments:
+- **Icons grow: to the right / to the left** (in a column: down / up): to the left, the icons start at the far end of the bar and grow back, so they sit in the empty part of the bar as your mana drops
+- **Type a value**: click the number of any setting with - / + and type it (Enter applies, Esc cancels). Exact sizes, for example a bar length of 233 to match your unit frame
+
 **Full Mana Forever 0.9.5**
 
 New:

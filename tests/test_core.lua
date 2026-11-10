@@ -2567,3 +2567,28 @@ test("0.9.5: /fmf probe is also kept in the saved variables (last 3 runs), witho
   ok(ns.Profiles.ACCOUNT.probe, "probe not an account key (would go into a profile)")
   _G.C_RestrictedActions, _G.C_Secrets, _G.IsInInstance = nil, nil, nil
 end)
+
+-- 0.9.6 ------------------------------------------------------------------------------------
+
+test("0.9.6: icons can grow to the left (up) from the far end of the bar", function()
+  local ns = M.load({ iconGrow = "reverse", barLength = 300 }, { bags = POT })
+  M.state.manaPct = 0.2
+  M.tick()
+  local b = buttons(ns)[1]
+  ok(b.outer.shown, "potion not lit")
+  local p = b.outer.points[1]
+  eq(p[1], "RIGHT"); eq(p[3], "RIGHT"); eq(p[4], 0, "first icon not at the right end")
+  local anchor = M.upvalue(ns.Layout, "anchor")
+  eq(anchor.w, 300, "frame not as long as the bar (icons not at the bar's end)")
+  -- column: from the bottom up
+  ns.db.vertical = true; ns.Layout(true)
+  p = b.outer.points[1]
+  eq(p[1], "BOTTOM"); eq(p[5], 0, "first icon not at the bottom")
+  eq(anchor.h, 300)
+  -- back to normal: left to right, the frame as long as the icons
+  ns.db.vertical, ns.db.iconGrow = false, "normal"; ns.Layout(true)
+  p = b.outer.points[1]
+  eq(p[1], "LEFT"); eq(p[4], 0)
+  ok(anchor.w < 300, "normal growth keeps the fixed length")
+  M.state.manaPct = 1
+end)

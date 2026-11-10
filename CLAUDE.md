@@ -139,7 +139,10 @@ and `/fmf log` (kept in releases for bug reports).
   keep their switches, greyed); lists instead of sub-switches for mana text (off -> `manaTextOn`),
   rule seconds (`fsrNum`, `fsrWhole`), bar style (`barStyle`); "Keep health above" under "When to
   light up"; group rows always two lines (no jumping). Saved keys unchanged.
-  0.9.6 (owner, 7 Nov): the full regroup of the settings window in two columns (left: position /
+  0.9.6 (owner, 10 Nov: "grow direction and the rest"): "Icons grow" (`iconGrow` normal / reverse;
+  reverse: the frame keeps the bar's length, icons from the far end; asked in a comment); typing a
+  value by clicking a stepper's number (exact, clamped, % typed as percent; bar length 0 = auto).
+  Also 0.9.6 (owner, 7 Nov): the full regroup of the settings window in two columns (left: position /
   icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
   the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
   "Full mana in N s" while drinking: impossible as arithmetic (current mana secret also out of
@@ -203,7 +206,8 @@ and `/fmf log` (kept in releases for bug reports).
    (owner, 5 Nov: no time); 0.9.3 released on GitHub 5 Nov (PR #19, tag v0.9.3), CurseForge upload
    by the owner (description: log texts and regen line changed); 0.9.4 released on GitHub 6 Nov
    (PR #20, tag v0.9.4), CurseForge upload by the owner on 7 Nov (description: "Fades out of combat"
-   line new); reply to the commenter once it is live. SEO from the Full Health Forever session (7 Nov):
+   line new); 0.9.5 released on GitHub and CurseForge 10 Nov (PR #21, tag v0.9.5; 0.9.4 had 6.1K
+   downloads in two days). Reply to the commenter once it is live. SEO from the Full Health Forever session (7 Nov):
    once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
    GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a
    feature line "own spells ready in combat straight from the game" only once the duration-object

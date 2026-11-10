@@ -544,3 +544,34 @@ test("addon menu at the minimap: tooltip with name, version and both clicks; rig
   ns.ToggleLibrary = real
   ok(opened, "right-click did not open the item list")
 end)
+
+test("0.9.6: a click on a stepper's value lets you type it (exact, within limits; percent in %)", function()
+  local ns = M.load({ iconSize = 48 })
+  ns.ToggleOptions(true)
+  local st = steppers(ns)
+  local function typeIn(s, text)
+    s.valueBtn.scripts.OnClick(s.valueBtn)
+    ok(s.edit.shown, "no input field")
+    s.edit:SetText(text)
+    s.edit.scripts.OnEnterPressed(s.edit)
+    ok(not s.edit.shown, "input field stays open")
+  end
+  local len = st[ns.L.optBarLen .. ":"]
+  typeIn(len, "233"); eq(ns.db.barLength, 233, "exact bar length")
+  typeIn(len, "5"); eq(ns.db.barLength, 48, "bar shorter than one icon")
+  typeIn(len, "0"); eq(ns.db.barLength, 0, "0 is auto")
+  typeIn(len, "9999"); eq(ns.db.barLength, 800, "above the maximum")
+  local thick = st[ns.L.optBarThick .. ":"]
+  typeIn(thick, "13"); eq(ns.db.barThickness, 13)
+  typeIn(thick, "abc"); eq(ns.db.barThickness, 13, "text changed the value")
+  local fade = st[ns.L.optFade .. ":"]
+  typeIn(fade, "35"); eq(ns.db.fadeAlpha, 0.35, "percent not divided by 100")
+  -- Esc keeps the old value
+  thick.valueBtn.scripts.OnClick(thick.valueBtn)
+  eq(thick.edit.text, "13", "field does not start with the current value")
+  thick.edit:SetText("30"); thick.edit.scripts.OnEscapePressed(thick.edit)
+  eq(ns.db.barThickness, 13, "Esc applied the value")
+  -- a greyed-out stepper cannot be typed into either
+  ns.db.showBar = false; ns.RefreshOptions()
+  ok(not thick.valueBtn:IsEnabled(), "typing into a greyed-out setting")
+end)

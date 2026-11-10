@@ -175,6 +175,50 @@ local function Stepper(parent, x, text, get, set, o)
   end
   s.minus:SetScript("OnClick", function() change(-1) end)
   s.plus:SetScript("OnClick", function() change(1) end)
+  -- a click on the value lets you type it (0.9.6: a bar length matched to a unit frame took up
+  -- to 80 clicks). o.scale: 100 for percent values; o.input(n) for steppers with own rules;
+  -- otherwise the typed number is kept within lo..hi, exact (not rounded to the step: sizes
+  -- typed to match another addon's frame)
+  s.valueBtn = CreateFrame("Button", nil, parent)
+  s.valueBtn:SetPoint("TOPLEFT", s.value, "TOPLEFT", -4, 4)
+  s.valueBtn:SetSize(56, 22)
+  Tip(s.valueBtn, text, (o.tip and (o.tip .. "\n\n") or "") .. L.tipTypeValue)
+  s.edit = CreateFrame("EditBox", nil, parent)
+  s.edit:SetSize(56, 20)
+  s.edit:SetPoint("LEFT", s.value, "LEFT", -4, 0)
+  s.edit:SetAutoFocus(false)
+  s.edit:SetFontObject("ChatFontNormal")
+  s.edit:SetMaxLetters(6)
+  s.edit:SetTextInsets(4, 4, 0, 0)
+  local ebg = s.edit:CreateTexture(nil, "BACKGROUND")
+  ebg:SetAllPoints()
+  ebg:SetColorTexture(0, 0, 0, 0.8)
+  s.edit:Hide()
+  Tip(s.edit, text, L.tipTypeValue)
+  local function closeEdit()
+    s.edit:ClearFocus(); s.edit:Hide(); s.value:Show()
+  end
+  local function typed(n)
+    if o.input then return o.input(n) end
+    local v = math.floor(n + 0.5) / (o.scale or 1)
+    return tonumber(("%.2f"):format(math.min(o.hi, math.max(o.lo, v))))
+  end
+  s.edit:SetScript("OnEnterPressed", function(self)
+    local n = tonumber(((self:GetText() or ""):gsub(",", "."):gsub("[^%d%.%-]", "")))
+    closeEdit()
+    if n then
+      local v = typed(n)
+      if v ~= nil and v ~= get() then set(v) end
+    end
+    ns.RefreshOptions()
+  end)
+  s.edit:SetScript("OnEscapePressed", closeEdit)
+  s.edit:SetScript("OnEditFocusLost", closeEdit)
+  s.valueBtn:SetScript("OnClick", function()
+    local v = get() or 0
+    s.edit:SetText(tostring(math.floor(v * (o.scale or 1) + 0.5)))
+    s.value:Hide(); s.edit:Show(); s.edit:SetFocus(); s.edit:HighlightText()
+  end)
   s.Refresh = function()
     local v = get()
     s.value:SetText(o.fmt(v))
@@ -514,6 +558,7 @@ Build = function()
           if not on then
             for _, b in ipairs({ w.minus, w.plus }) do b:SetEnabled(false); b:SetAlpha(0.3) end
           end
+          if w.valueBtn then w.valueBtn:SetEnabled(on) end
         elseif w.SetEnabled then -- dropdown or button
           w:SetEnabled(on)
           w:SetAlpha(on and 1 or 0.5)
@@ -607,6 +652,14 @@ Build = function()
   c.Right(lay)
   c.Row(layLabel, PAD + 4, 30)
   TipBoth(col, layLabel, lay, L.optLayout, L.tipLayout)
+  -- which way the icons grow: from the start or back from the far end (0.9.6, asked for in a
+  -- comment: icons at the right end of the bar, more to the left)
+  local growText = db.vertical and { normal = L.growDown, reverse = L.growUp }
+    or { normal = L.growRight, reverse = L.growLeft }
+  LabeledDD(L.optGrow, PAD + 4, {
+    { value = "normal", text = growText.normal }, { value = "reverse", text = growText.reverse },
+  }, function() return growText[db.iconGrow == "reverse" and "reverse" or "normal"] end,
+  function(v) db.iconGrow = v; ns.Layout(true); ns.RefreshOptions() end, L.tipGrow)
 
   local function num(v) return tostring(v) end
   local size = Stepper(col, PAD + 4, L.optSize, function() return db.iconSize end,
@@ -662,6 +715,11 @@ Build = function()
     function(v) db.barLength = v; ns.Layout(true) end, {
       fmt = function(v) return v == 0 and L.lenAuto or tostring(v) end,
       tip = L.tipBarLen,
+      -- typed: 0 = auto, otherwise exact pixels, at least one icon long
+      input = function(n)
+        if n <= 0 then return 0 end
+        return math.min(LEN_MAX, math.max(db.iconSize, math.floor(n + 0.5)))
+      end,
       next = function(v, dir)
         if v == 0 then
           if dir < 0 then return 0 end
@@ -684,7 +742,7 @@ Build = function()
   local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
   local function SizeStepper(key)
     local st = Stepper(col, PAD + 30, L.optTextSize, function() return db[key] or 1 end,
-      function(v) db[key] = v; ns.Layout(true) end, { step = 0.1, lo = 0.6, hi = 2.0, fmt = pct, tip = L.tipTextSize })
+      function(v) db[key] = v; ns.Layout(true) end, { step = 0.1, lo = 0.6, hi = 2.0, fmt = pct, tip = L.tipTextSize, scale = 100 })
     c.Row(st.label, PAD + 30, 28)
     return st
   end
@@ -756,7 +814,7 @@ Build = function()
   -- the bar and its texts can fade (0.9.4, asked for in a comment): how far, then when; with
   -- "Nothing" out of combat they are hidden there anyway
   local fade = Stepper(col, PAD + 4, L.optFade, function() return db.fadeAlpha or 1 end,
-    function(v) db.fadeAlpha = v end, { step = 0.1, lo = 0, hi = 1, tip = L.tipFade,
+    function(v) db.fadeAlpha = v end, { step = 0.1, lo = 0, hi = 1, tip = L.tipFade, scale = 100,
       fmt = function(v) return v >= 1 and L.fadeOff or ("%d%%"):format(math.floor(v * 100 + 0.5)) end })
   c.Row(fade.label, PAD + 4, 30)
   ActiveIf(function() return not db.onlyCombat end, fade)
@@ -829,7 +887,7 @@ Build = function()
   local function pctM(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
   local margin = Stepper(col, PAD + 4, L.optMargin, function() return db.runeMargin end,
     function(v) db.runeMargin = v; ns.InvalidateCurves() end,
-    { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pctM })
+    { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pctM, scale = 100 })
   c.Row(margin.label, PAD + 4, 32)
   ActiveIf(IconsOn, stLabel, strat)
   ActiveIf(function() return IconsOn() and (db.enabled.rune or db.enabled.spell or db.enabled.herb) end, margin)
