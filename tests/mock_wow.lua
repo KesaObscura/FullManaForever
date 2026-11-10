@@ -10,7 +10,7 @@ function M.noop() end
 for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDrag", "SetAutoFocus",
   "SetBlendMode", "SetCheckedTexture", "SetDisabledCheckedTexture", "SetClampedToScreen", "SetColorTexture",
   "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
-  "SetHighlightFontObject", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
+  "SetHighlightFontObject", "HighlightText", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
   "SetMovable", "SetNormalFontObject", "SetNormalTexture", "SetNumeric", "SetOwner", "SetPushedTexture",
   "SetRotation", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
   "SetTextInsets", "SetThumbTexture", "SetToAlpha", "SetToplevel", "SetValueStep", "SetVertexColor",

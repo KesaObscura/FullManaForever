@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.5"
+ns.VERSION = "0.9.6"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -47,6 +47,7 @@ local DEFAULTS = {
   barPosition = "below", -- horizontal layout: "below" / "above" the icons
   vertical   = false,   -- icons in a column, mana bar standing next to them
   barSide    = "left",  -- vertical layout: bar "left" / "right" of the icons
+  iconGrow   = "normal", -- "normal": icons grow right (down); "reverse": left (up) from the far end (0.9.6)
   barThickness = 16,
   barLength  = 0,       -- 0 = auto: room for every group switched on (at least 3)
   barColor   = "blue",
@@ -952,17 +953,20 @@ local function PaintBar()
   local c = BarColor()
   local tex = bar:GetStatusBarTexture()
   local vertical = db.vertical
+  -- "only markers": the fill's colours are fully transparent as well, not only the texture (a
+  -- user saw the fill in a druid form; 0.9.6)
+  local fa = db.barStyle == "markers" and 0 or 1
   local ok = tex and pcall(function()
     -- horizontal bar: light on top; vertical bar: light on the left
     if vertical then
-      tex:SetGradient("HORIZONTAL", CreateColor(c.top[1], c.top[2], c.top[3], 1),
-        CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1))
+      tex:SetGradient("HORIZONTAL", CreateColor(c.top[1], c.top[2], c.top[3], fa),
+        CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], fa))
     else
-      tex:SetGradient("VERTICAL", CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1),
-        CreateColor(c.top[1], c.top[2], c.top[3], 1))
+      tex:SetGradient("VERTICAL", CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], fa),
+        CreateColor(c.top[1], c.top[2], c.top[3], fa))
     end
   end)
-  if not ok then bar:SetStatusBarColor(c.top[1], c.top[2], c.top[3]) end
+  if not ok then bar:SetStatusBarColor(c.top[1], c.top[2], c.top[3], fa) end
   -- "only markers": the fill, background, shadow, gloss and border vanish; the markers, the
   -- five-second strip and the texts stay (laid over another addon's mana bar)
   local full = db.barStyle ~= "markers"
@@ -1098,6 +1102,17 @@ function ns.Layout(force)
   end
   for k = #lastOrder, #order + 1, -1 do lastOrder[k] = nil end
   if same and not force then return end
+  -- "grow left / up" (0.9.6, asked for in a comment): the icons start at the far end and grow
+  -- back; the frame keeps one fixed length (the bar's length while the bar sits at the icons,
+  -- else room for every icon that can appear), so the first icon stays at the bar's end
+  local reverse = db.iconGrow == "reverse"
+  local fixed
+  if reverse then
+    fixed = math.max(Span(IconSlots()), size)
+    if bar and db.showBar and not BarPoint() then
+      fixed = math.max(fixed, db.barLength and db.barLength > 0 and db.barLength or ns.AutoBarLength())
+    end
+  end
   local pos, count = 0, 0
   for _, b in ipairs(buttons) do
     b.outer:SetSize(size, size)
@@ -1109,14 +1124,16 @@ function ns.Layout(force)
   for _, b in ipairs(order) do
     b.outer:ClearAllPoints()
     if vertical then
-      b.outer:SetPoint("TOP", anchor, "TOP", 0, -pos)
+      if reverse then b.outer:SetPoint("BOTTOM", anchor, "BOTTOM", 0, pos)
+      else b.outer:SetPoint("TOP", anchor, "TOP", 0, -pos) end
     else
-      b.outer:SetPoint("LEFT", anchor, "LEFT", pos, 0)
+      if reverse then b.outer:SetPoint("RIGHT", anchor, "RIGHT", -pos, 0)
+      else b.outer:SetPoint("LEFT", anchor, "LEFT", pos, 0) end
     end
     pos = pos + size + gap
     count = count + 1
   end
-  local span = math.max(pos - gap, size, count == 0 and size * 2 or 0)
+  local span = fixed or math.max(pos - gap, size, count == 0 and size * 2 or 0)
   if vertical then anchor:SetSize(size, span) else anchor:SetSize(span, size) end
   if bar then
     local len = db.barLength and db.barLength > 0 and db.barLength or ns.AutoBarLength()
@@ -1949,6 +1966,12 @@ local function UpdateBar(maxMana)
     -- unknown mana: show an empty bar rather than a full one
     bar:SetValue(0)
     WarnOnce("barvalue", L.warnPower)
+  end
+  -- "only markers": the game may give the fill texture back its alpha when the bar changes
+  -- (form change, a new texture); kept transparent on every update
+  if db.barStyle == "markers" then
+    local tex = bar:GetStatusBarTexture()
+    if tex and tex:GetAlpha() ~= 0 then tex:SetAlpha(0) end
   end
   UpdateFsrStrip()
   local vertical = db.vertical and true or false
