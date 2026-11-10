@@ -953,17 +953,20 @@ local function PaintBar()
   local c = BarColor()
   local tex = bar:GetStatusBarTexture()
   local vertical = db.vertical
+  -- "only markers": the fill's colours are fully transparent as well, not only the texture (a
+  -- user saw the fill in a druid form; 0.9.6)
+  local fa = db.barStyle == "markers" and 0 or 1
   local ok = tex and pcall(function()
     -- horizontal bar: light on top; vertical bar: light on the left
     if vertical then
-      tex:SetGradient("HORIZONTAL", CreateColor(c.top[1], c.top[2], c.top[3], 1),
-        CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1))
+      tex:SetGradient("HORIZONTAL", CreateColor(c.top[1], c.top[2], c.top[3], fa),
+        CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], fa))
     else
-      tex:SetGradient("VERTICAL", CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1),
-        CreateColor(c.top[1], c.top[2], c.top[3], 1))
+      tex:SetGradient("VERTICAL", CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], fa),
+        CreateColor(c.top[1], c.top[2], c.top[3], fa))
     end
   end)
-  if not ok then bar:SetStatusBarColor(c.top[1], c.top[2], c.top[3]) end
+  if not ok then bar:SetStatusBarColor(c.top[1], c.top[2], c.top[3], fa) end
   -- "only markers": the fill, background, shadow, gloss and border vanish; the markers, the
   -- five-second strip and the texts stay (laid over another addon's mana bar)
   local full = db.barStyle ~= "markers"
@@ -1963,6 +1966,12 @@ local function UpdateBar(maxMana)
     -- unknown mana: show an empty bar rather than a full one
     bar:SetValue(0)
     WarnOnce("barvalue", L.warnPower)
+  end
+  -- "only markers": the game may give the fill texture back its alpha when the bar changes
+  -- (form change, a new texture); kept transparent on every update
+  if db.barStyle == "markers" then
+    local tex = bar:GetStatusBarTexture()
+    if tex and tex:GetAlpha() ~= 0 then tex:SetAlpha(0) end
   end
   UpdateFsrStrip()
   local vertical = db.vertical and true or false

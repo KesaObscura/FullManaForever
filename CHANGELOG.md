@@ -5,6 +5,7 @@
 Asked for in the comments:
 - **Icons grow: to the right / to the left** (in a column: down / up): to the left, the icons start at the far end of the bar and grow back, so they sit in the empty part of the bar as your mana drops
 - **Type a value**: click the number of any setting with - / + and type it (Enter applies, Esc cancels). Exact sizes, for example a bar length of 233 to match your unit frame
+- *Style: Only markers* keeps the bar's fill fully transparent at all times (it could show up again, for example in a druid form, and cover the unit frame's energy bar)
 
 **Full Mana Forever 0.9.5**
 

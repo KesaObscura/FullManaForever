@@ -2592,3 +2592,15 @@ test("0.9.6: icons can grow to the left (up) from the far end of the bar", funct
   ok(anchor.w < 300, "normal growth keeps the fixed length")
   M.state.manaPct = 1
 end)
+
+test("0.9.6: 'Only markers' keeps the fill transparent, also when the game resets its alpha", function()
+  local ns = M.load({ barStyle = "markers" }, { bags = POT })
+  M.tick()
+  local tex = bar(ns):GetStatusBarTexture()
+  eq(tex.alpha, 0, "fill visible with only markers")
+  tex:SetAlpha(1) -- the game gives it back (form change, new texture)
+  M.tick()
+  eq(tex.alpha, 0, "fill came back with only markers")
+  ns.db.barStyle = "full"; ns.Layout(true); M.tick()
+  eq(tex.alpha, 1, "fill hidden with the full bar")
+end)
