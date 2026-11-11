@@ -150,7 +150,9 @@ and `/fmf log` (kept in releases for bug reports).
   Mindtap Talisman 18371 and Second Wind 11819 in the gear group (now loadable; their item
   cooldowns come from the game; not tested in game). Burst of Knowledge / Robes of Insight not
   taken (cost reduction, no refill). Goes to CurseForge instead of 0.9.7 with one changelog.
-  0.9.9 (owner, 10 Nov: release 0.9.6 first, the regroup next; planned 7 Nov): the full regroup of the settings window in two columns (left: position /
+  0.9.9 done (owner, 11 Nov "начинаем 0.9.9"): left Placement / Icons / Mana bar / Texts, right
+  When to show / Consumables (name kept: the owner's public replies point to it), footer with the
+  language and both resets; window 822 px high (790 before). Was planned as (10 Nov): the full regroup of the settings window in two columns (left: position /
   icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
   the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
   0.9.7 (owner, 10 Nov; players asked): "Time to full mana" (`fullTimer`, on) out of combat next to

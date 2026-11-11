@@ -344,7 +344,7 @@ test("options: regen settings stay when the bar is off; the free regen text can 
   ok(box.mouse, "regen text not draggable after the switch")
 end)
 
-test("options: 'Move texts freely' sits under unlock and only works while unlocked; resets side by side", function()
+test("options: 'Move texts freely' sits under unlock and only works while unlocked; resets side by side in the footer", function()
   local ns = M.load(nil)
   ns.ToggleOptions(true)
   local unlockCb, freeCb, reset, resetSize
@@ -368,11 +368,35 @@ test("options: 'Move texts freely' sits under unlock and only works while unlock
   eq(reset.w, resetSize.w, "reset buttons differ in width")
   eq(sp[5], rp[5], "reset size not on the row of reset position")
   eq(rp[4] + reset.w + 8, sp[4], "gap between the reset buttons")
-  eq(sp[4] + resetSize.w, 440 - rp[4], "reset buttons do not fill the row")
+  -- 0.9.9: in the footer under the right column, as wide as that column's content
+  eq(sp[4] + resetSize.w, 880 - (rp[4] - 440), "reset buttons do not fill the row")
   eq(freeCb.points[1][4], unlockCb.points[1][4] + 26, "free text switch not indented under unlock")
   ok(freeCb.points[1][5] < unlockCb.points[1][5] and rp[5] < freeCb.points[1][5], "order: unlock, free texts, resets")
 end)
 
+
+test("0.9.9: sections Position / Icons / Mana bar / Texts on the left, the footer under both columns", function()
+  local ns = M.load(nil)
+  ns.ToggleOptions(true)
+  local L, y = ns.L, {}
+  for _, f in ipairs(M.all) do
+    local t0 = f.text or (f.label and f.label.text)
+    if t0 and f.points and f.points[1] then
+      for _, k in ipairs({ "optDisplay", "optAppearance", "optBarHdr", "optTextsHdr", "optVisibility",
+        "optGroups", "optUnlock", "optLayout", "optBar", "optManaText", "optLang", "optItems" }) do
+        local t = L[k]
+        if (t0 == t or t0 == t .. ":") and (f.label or y[k] == nil) then y[k] = f.points[1][5] end
+      end
+    end
+  end
+  for _, k in ipairs({ "optDisplay", "optAppearance", "optBarHdr", "optTextsHdr", "optLang", "optItems" }) do
+    ok(y[k], k .. " not found")
+  end
+  ok(y.optDisplay > y.optUnlock and y.optUnlock > y.optAppearance and y.optAppearance > y.optLayout
+    and y.optLayout > y.optBarHdr and y.optBarHdr > y.optBar and y.optBar > y.optTextsHdr
+    and y.optTextsHdr > y.optManaText, "left column order " .. table.concat({ y.optDisplay, y.optUnlock, y.optAppearance, y.optLayout, y.optBarHdr, y.optBar, y.optTextsHdr, y.optManaText }, " "))
+  ok(y.optLang < y.optItems, "language not in the footer under the item list button")
+end)
 
 test("options: settings of a switched-off part stay in place, greyed out", function()
   local ns = M.load({ showBar = false, manaTextOn = false, fsr = false })
