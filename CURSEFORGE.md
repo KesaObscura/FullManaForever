@@ -59,7 +59,7 @@ Forever's mana regen is continuous: there are no 2-second mana ticks, and addons
 
 ## Built for WoW Forever's addon rules
 
-Forever hides your current mana, your buffs and your spell cooldowns from addons in combat. Full Mana Forever does not try to read them: it hands the mana check to the game itself (a step curve on `UnitPowerPercent`), and the game shows or hides the icon. It reads only what Forever allows (item cooldowns, maximum mana, your own casts). No automation: the addon never uses an item or casts for you, you press the button.
+Forever hides your current mana, your buffs and your spell cooldowns from addons in combat. Full Mana Forever is built for these rules: the right icon still lights up at the right moment. No automation: the addon never uses an item or casts for you, you press the button.
 
 ## Supported items (checked against the Forever database)
 

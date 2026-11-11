@@ -24,14 +24,10 @@ shows the **five-second rule (5SR)**, your **live mana regen per second, also in
 |---|---|
 | ![The mana potion shows up grey with a countdown, lights up, and is drunk](docs/images/see-it-coming-mana-potion.gif) | ![A spell starts the five-second rule: gold strip and seconds, regen 0.0/s, then 15.5/s again](docs/images/five-second-rule-live-regen.gif) |
 
-## How it works with WoW Forever's addon rules
+## Built for WoW Forever's addon rules
 
-In Forever your current mana is a *secret value*: addons cannot read or compare it.
-Full Mana Forever never tries to. It gives the game a step curve
-(`C_CurveUtil` + `UnitPowerPercent`), the game evaluates it and returns a secret alpha,
-and that alpha is applied straight to the icon. Nested frames multiply their alpha, which
-gives "ready **and** deficit big enough (**and** enough health for runes)".
-Item cooldowns, item counts and maximum mana are readable and handled normally.
+Forever hides your current mana, your buffs and your spell cooldowns from addons in combat.
+Full Mana Forever is built for these rules: the right icon still lights up at the right moment.
 
 The addon never uses an item for you. Put your potions on the action bar and press them
 when the icon lights up.

@@ -2142,7 +2142,7 @@ end
 
 -- out of combat the bar and its texts can fade (0.9.4): to db.fadeAlpha, and with db.fadeFull
 -- only while the mana is full, so they come back as soon as mana is spent. The current mana is
--- secret in Forever also out of combat (docs/notes.md), so "full" is decided by the game: a step
+-- secret in Forever also out of combat, so "full" is decided by the game: a step
 -- curve through UnitPowerPercent gives alpha 1 below full and the faded alpha at full, like the
 -- icons. In combat and while the frame is unlocked (the way to set up the bar at 0 %) everything
 -- is fully shown; with the settings open the fading shows as it is (owner, 6 Nov: a change of
