@@ -922,7 +922,7 @@ Build = function()
     local cb = Check(col, text, function() return db[key] ~= false end, function(v) db[key] = v end, tip, OomOn)
     o.fmt, o.tip, o.title, o.scale = pct, tip, text, 100
     local st = Stepper(col, PAD + 26, "", function() return db[atKey] end, function(v) db[atKey] = v end, o)
-    st.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 26, c.y - 5)
+    st.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 26, c.y - 13) -- on the line of the switch text
     c.Row(cb, PAD + 26, 28)
     ActiveIf(function() return OomOn() and db[key] ~= false end, st)
   end
