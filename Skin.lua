@@ -44,8 +44,8 @@ function Skin.Edge(f, c, a, layer)
   return out
 end
 
--- the metal frame of the game's windows: the game's own nine-slice layout when it exists,
--- else the corners and edges by hand, else a bronze line
+-- the metal frame of the game's windows: drawn by hand from the game's corners and edges,
+-- else the game's nine-slice layout, else a bronze line
 local CORNER = 0.42 -- the metal corners are 95 px in the atlas: scaled to about 40 px
 local function MetalByHand(f)
   if not (Has("UI-Frame-Metal-CornerTopLeft") and Has("_UI-Frame-Metal-EdgeTop")) then return false end
