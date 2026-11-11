@@ -135,18 +135,27 @@ end
 
 -- seconds of drinking left, out of combat (auras are readable there), and the normal rate that
 -- follows (the lowest regen of the last minutes); nil when not drinking. The drink is found by
--- the name the game gives the drink spells (430 "Drink" in the client's language; seen in game
--- 10 Nov: 430, 431, 432, 1133, 1135, 1137, 22734 all carry it), so new drink IDs match too.
-local DRINK_IDS = { [430] = true, [431] = true, [432] = true, [1133] = true, [1135] = true,
-  [1137] = true, [22734] = true }
-local drinkName
+-- the names the game gives the drink spells (430 "Drink" and 1249914 "Nutritious Drink" in the
+-- client's language), so new drink IDs with these names match too, or by the spell IDs below:
+-- 430, 431, 432, 1133, 1135, 1137, 22734 (seen in game 10 Nov); the Forever teas (Nutritious
+-- Drink 1249914-1249925), rations, biscuits and other drinks with mana (scan 11 Nov).
+local DRINK_IDS = {}
+for _, id in ipairs({ 430, 431, 432, 833, 1133, 1135, 1137, 2639, 18140, 22734, 23540, 23541,
+  23542, 23692, 23698, 24384, 24409, 24410, 24411, 25692, 25693, 29029, 461632, 1226814,
+  1269354, 1290859, 1290860, 1290861, 1291782 }) do DRINK_IDS[id] = true end
+for id = 1249914, 1249925 do DRINK_IDS[id] = true end
+local DRINK_NAME_IDS = { 430, 1249914 }
+local drinkNames
 function ns.DrinkLeft()
   if InCombatLockdown and InCombatLockdown() then return nil end
   local get = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
   if not get then return nil end
-  if drinkName == nil and C_Spell and C_Spell.GetSpellName then
-    local ok, n = pcall(C_Spell.GetSpellName, 430)
-    drinkName = ok and type(n) == "string" and not IsSecret(n) and n or false
+  if drinkNames == nil and C_Spell and C_Spell.GetSpellName then
+    drinkNames = {}
+    for _, sid in ipairs(DRINK_NAME_IDS) do
+      local ok, n = pcall(C_Spell.GetSpellName, sid)
+      if ok and type(n) == "string" and not IsSecret(n) then drinkNames[n] = true end
+    end
   end
   local now = GetTime()
   for i = 1, 40 do
@@ -154,7 +163,7 @@ function ns.DrinkLeft()
     if not ok or a == nil or IsSecret(a) then break end
     local id, name, exp = a.spellId, a.name, a.expirationTime
     if not IsSecret(id) and not IsSecret(name) and not IsSecret(exp)
-      and (DRINK_IDS[id] or (drinkName and name == drinkName))
+      and (DRINK_IDS[id] or (drinkNames and type(name) == "string" and drinkNames[name]))
       and type(exp) == "number" and exp > now then
       return exp - now, Normal()
     end

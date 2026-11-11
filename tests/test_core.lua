@@ -2642,6 +2642,38 @@ test("0.9.7: time to full mana out of combat, through a numeric curve; rule and 
   noRegenApis()
 end)
 
+test("0.9.8: the Forever teas (Nutritious Drink) count as drinking, by ID and by name", function()
+  for _, case in ipairs({ { 1249920, "Something" }, { 1300000, "Nutritious Drink" }, { 23698, "Alterac Spring Water" } }) do
+    local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+    M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
+    local base = 15
+    _G.GetPowerRegen = function() return base, 0 end
+    _G.C_Spell = { GetSpellPowerCost = function() return {} end, GetSpellName = function(id)
+      return id == 430 and "Drink" or id == 1249914 and "Nutritious Drink" or nil end }
+    local aura
+    _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return aura end end }
+    local b = bar(ns)
+    M.tick()
+    base, M.state.time = 51, 101
+    aura = { spellId = case[1], name = case[2], expirationTime = 111 }
+    M.tick()
+    eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 510) / 15), "drink " .. case[1] .. " not counted")
+    -- food without mana is no drink
+    aura = { spellId = 1300001, name = "Well Fed", expirationTime = 111 }
+    M.tick()
+    eq(b.fullIn.text, ns.L.fullIn:format(1364 / 51), "a buff taken for a drink")
+    _G.C_UnitAuras = nil
+    M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+    _G.GetPowerRegen, _G.C_Spell = nil, nil
+  end
+end)
+
+test("0.9.8: Mindtap Talisman and Second Wind are in the gear group", function()
+  local ns = M.load()
+  ok(listed(ns, "gear", 18371), "Mindtap Talisman missing")
+  ok(listed(ns, "gear", 11819), "Second Wind missing")
+end)
+
 test("0.9.7: time to full mana counts the end of drinking (drink aura out of combat)", function()
   local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
   M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100

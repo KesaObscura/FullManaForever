@@ -66,7 +66,7 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 - **Runes:** Demonic Rune, Dark Rune.
 - **Mana gems (mage):** Ruby, Citrine, Jade, Agate.
 - **Other:** Night Dragon's Breath, Scroll of Minor Evocation (mage), Forever's Power Recycler (20 % of your max health into 20 % of your max mana, with the health check of the runes).
-- **Gear:** Warmth of Forgiveness, Energy Cloak, Earthen Sigil, Major/Minor Recombobulator; for druids the Veildust Medicine Bag; for mages Robe of the Archmage, Celestial Orb, Arcane Orb and Ley Orb.
+- **Gear:** Mindtap Talisman, Second Wind, Warmth of Forgiveness, Energy Cloak, Earthen Sigil, Major/Minor Recombobulator; for druids the Veildust Medicine Bag; for mages Robe of the Archmage, Celestial Orb, Arcane Orb and Ley Orb.
 
 ## Commands
 

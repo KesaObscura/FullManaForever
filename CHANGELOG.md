@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.9.8**
+
+- **Time to full mana** now knows the Forever teas (Peace Tea, Royal Tea, ... "Nutritious Drink") and the other drinks, rations and biscuits with mana: the end of the drink is counted for them too
+- New in the gear group: **Mindtap Talisman** (1250 mana over 10 s) and **Second Wind** (630 mana over 10 s), both trinkets that the game hands out since the launch
+
 **Full Mana Forever 0.9.7**
 
 Asked for by players:
