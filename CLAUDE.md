@@ -69,8 +69,9 @@ and `/fmf log` (kept in releases for bug reports).
   alpha by the game (`UnitPowerPercent` with a curve, `CurveConstants.ScaleTo100` exists);
   `Curve:Evaluate` refuses secrets, arithmetic and comparisons fail.
   Reading it back fails too (probe, owner 11 Nov): `GetAlpha` of that alpha, the text and
-  `GetStringWidth` of the formatted percent are SECRET: no "mana below X" test, no automatic
-  "out of mana" warning (players: the built-in /oom emote).
+  `GetStringWidth` of the formatted percent are SECRET. The one working mana test is per spell:
+  `C_Spell.IsSpellUsable(id)` gives plain (usable, noMana), also in combat (owner's test, 11 Nov):
+  "mana below the cost of spell X" (0.9.10 mana warnings).
 - Text with letters must use the game's "...Outline" font objects (a single font file breaks
   Cyrillic/Asian letters).
 - Wands put a weapon-speed cooldown (~1.8 s) on all items after each shot: item cooldowns of
