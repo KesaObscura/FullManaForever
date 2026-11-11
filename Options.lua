@@ -923,6 +923,21 @@ Build = function()
     { value = "raid", text = L.oomRaid }, { value = "auto", text = L.oomAuto },
   }, function() return oomText[db.oomChat] or L.mtOff end,
   function(v) db.oomChat = v; ns.RefreshOptions() end, L.tipOom)
+  -- at how much mana the two warnings come for this character (from the spell book)
+  local oomSt = Label(col, "", "GameFontHighlightSmall")
+  oomSt:SetTextColor(0.74, 0.78, 0.88)
+  c.y = c.y + 6
+  c.Row(oomSt, PAD + 4, 20)
+  registry[#registry + 1] = { Refresh = function()
+    local low, out = nil, nil
+    if ns.OomInfo then low, out = ns.OomInfo() end
+    local parts = {}
+    if low then parts[#parts + 1] = L.oomLowAt:format(math.floor(low * 100 + 0.5)) end
+    if out then parts[#parts + 1] = L.oomOutAt:format(math.floor(out * 100 + 0.5)) end
+    oomSt:SetText(#parts > 0 and table.concat(parts, "   ") or L.oomNoSpell)
+    local on = db.oomChat == "party" or db.oomChat == "raid" or db.oomChat == "auto"
+    oomSt:SetAlpha(on and 1 or 0.5)
+  end }
   PlaceGroups(true)
 
   -- footer across both columns (0.9.9): what belongs to the whole window or the account, not to

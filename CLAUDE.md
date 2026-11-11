@@ -169,9 +169,12 @@ and `/fmf log` (kept in releases for bug reports).
   low mana and out of mana"; asked in a comment): mana warnings to chat (`oomChat` off / party /
   raid / auto, off by default: nothing is written in the player's name unasked). Mana cannot be
   read, but `C_Spell.IsSpellUsable` (usable, noMana) is readable in combat and so are the costs:
-  spells are learned from the player's casts of the session; "out" = the most cast spell cannot
-  be paid (or `UI_ERROR_MESSAGE` type 358 = `ERR_OUT_OF_MANA`), "low" = the dearest spell of at
-  most a quarter of the max mana, dearer than the main one, cannot be paid. 30 s pause each, reset
+  two spells of the spell book (all ranks) are the measures (owner, 11 Nov: not the cast spells),
+  the one costing nearest to 20 % of the max mana ("low") and nearest to 5 % ("out"), each within
+  half to one and a half of its mark, picked again when the book or the max mana changes; the
+  marks are shown under the setting (`ns.OomInfo`). Without an "out" measure a cast failing for
+  lack of mana (`UI_ERROR_MESSAGE` type 358 = `ERR_OUT_OF_MANA`) says "out". The whole block is
+  in a `do ... end` in Core.lua: the chunk was at Lua's limit of 200 locals. 30 s pause each, reset
   after a fight. Chat sent without a key press: SAY and EMOTE are dropped silently (owner's test),
   PARTY / RAID not tested yet. Owner, 11 Nov: no macro solution for players. So a warning waits
   (8 s at most) for the player's next key press: a frame with the keyboard on that passes every

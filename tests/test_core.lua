@@ -2415,20 +2415,29 @@ test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to 
   M.state.group, M.state.raid, M.state.combat, M.state.time = false, false, false, nil
 end)
 
-test("0.9.10: 'Low mana!' and 'Out of mana!' from the spells the game says cannot be paid", function()
+test("0.9.10: 'Low mana!' and 'Out of mana!' from two spells of the spell book that cost about 20 % and 5 % of the mana", function()
   local ns = M.load({ oomChat = "auto" })
   local sent = {}
   _G.SendChatMessage = function(msg, ch) sent[#sent + 1] = ch .. ":" .. msg end
-  local cost = { [1] = 95, [2] = 400, [3] = 1500 } -- main spell, a dearer one, one above the share
-  local mana = 1000
+  -- costs: 20 (1 %, too cheap), 95 (4.75 %: out), 215, 400 (20 %: low), 1500 (too dear), a passive
+  local cost = { [1] = 20, [2] = 95, [3] = 215, [4] = 400, [5] = 1500, [6] = 100, [7] = 110 }
+  local mana = 2000
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { itemIndexOffset = 0, numSpellBookItems = 7 } end,
+    GetSpellBookItemInfo = function(k) return { spellID = k, name = "s" .. k, isPassive = k == 6 } end,
+  }
   _G.C_Spell = { GetSpellPowerCost = function(id) return { { type = 0, cost = cost[id] } } end,
-    IsSpellUsable = function(id) return mana >= cost[id], mana < cost[id] end }
+    IsSpellUsable = function(id)
+      if id == 7 then return false, false end -- blocked by something else: no measure
+      return mana >= cost[id], mana < cost[id]
+    end }
   M.state.maxMana, M.state.group, M.state.combat, M.state.time = 2000, true, true, 100
-  local function cast(id) M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "x", id) end
+  M.Fire("SPELLS_CHANGED")
   local function tick(t) M.state.time = t; ns.OomTick(1); ns.OomKey() end
-  eq(ns.ManaWarning(), nil, "a warning before any spell is known")
-  cast(1); cast(1); cast(1); cast(2); cast(3)
-  tick(101); eq(#sent, 0, "a warning with enough mana (1500 is above a quarter of the mana: no measure)")
+  local low, out = ns.OomInfo()
+  eq(low, 0.2, "low mark"); eq(out, 95 / 2000, "out mark (not the passive 100, not the blocked 110)")
+  tick(101); eq(#sent, 0, "a warning with enough mana")
   mana = 300; eq(ns.ManaWarning(), "low")
   tick(102); eq(sent[1], "PARTY:" .. ns.L.lowMsg)
   tick(103); eq(#sent, 1, "low said twice")
@@ -2436,17 +2445,26 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from the spells the game says canno
   tick(104); eq(sent[2], "PARTY:" .. ns.L.oomMsg)
   mana = 300; tick(110); eq(#sent, 2, "low right after out")
   mana = 1000; tick(111); mana = 300; tick(140); eq(sent[3], "PARTY:" .. ns.L.lowMsg, "low again after the pause")
-  -- nothing goes out without a key press; a warning older than 8 s is dropped
+  -- a failed cast adds nothing while there is a measure for "out"
   M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  _G.ERR_OUT_OF_MANA = "Not enough mana"
+  M.state.time = 150; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); ns.OomKey(); eq(#sent, 3, "failed cast at 15 % said as out")
+  -- nothing goes out without a key press; a warning older than 8 s is dropped
+  mana = 1000; ns.OomTick(1)
   mana = 50; M.state.time = 200; ns.OomTick(1); eq(#sent, 3, "sent without a key press")
   M.state.time = 203; ns.OomKey(); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "not sent with the key press")
   ns.OomKey(); eq(#sent, 4, "sent twice")
   mana = 1000; ns.OomTick(1); M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
   mana = 50; M.state.time = 300; ns.OomTick(1); M.state.time = 320; ns.OomKey(); eq(#sent, 4, "an old warning sent")
+  -- more maximum mana: other measures (400 is now 10 %: the low mark moves to 1500 of 6000)
+  M.state.maxMana = 6000; mana = 6000
+  low, out = ns.OomInfo(); eq(low, 0.25, "low mark not picked again"); eq(out, 215 / 6000)
   -- a secret answer is no warning
-  _G.C_Spell.IsSpellUsable = function() return M.secret and M.secret(true), M.secret and M.secret(true) end
-  if M.secret then eq(ns.ManaWarning(), nil, "secret answer taken as no mana") end
-  _G.SendChatMessage, _G.C_Spell = nil, nil
+  if M.secret then
+    _G.C_Spell.IsSpellUsable = function() return M.secret(true), M.secret(true) end
+    eq(ns.ManaWarning(), nil, "secret answer taken as no mana")
+  end
+  _G.SendChatMessage, _G.C_Spell, _G.C_SpellBook, _G.ERR_OUT_OF_MANA = nil, nil, nil, nil
   M.state.maxMana, M.state.group, M.state.combat, M.state.time = 1000, false, false, nil
 end)
 

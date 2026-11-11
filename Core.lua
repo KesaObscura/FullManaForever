@@ -802,6 +802,7 @@ function ns.SetHold(on)
   heldFightSeen = held and InCombatLockdown() and true or false
 end
 
+do -- mana warnings to chat: own scope (a Lua chunk holds 200 locals at most)
 -- "Out of mana!" to the group chat (0.9.10, asked for in a comment). The mana itself is secret
 -- and cannot be tested (probe, 11 Nov), but the game says so itself: a cast that fails for lack
 -- of mana fires UI_ERROR_MESSAGE with ERR_OUT_OF_MANA. In a fight that message goes to the party
@@ -835,25 +836,75 @@ local function OomChannel(mode)
 end
 -- Which mana warning is due, without reading the mana: the game says for every spell whether
 -- the mana is enough for it (C_Spell.IsSpellUsable, readable in combat: owner's test 11 Nov),
--- and the costs are readable. Spells are learned from the player's own casts of this session.
--- "out": the spell cast most often cannot be paid. "low": a dearer spell (the dearest one that
--- costs at most LOW_SHARE of the maximum mana) cannot be paid while the main one still can.
-local LOW_SHARE = 0.25
-local oomSpells = {} -- [spellID] = { cost = n, n = casts }
-local function LearnSpell(spellID)
-  if IsSecret(spellID) or type(spellID) ~= "number" then return end
-  local e = oomSpells[spellID]
-  if e then e.n = e.n + 1 return end
-  if not (C_Spell and C_Spell.GetSpellPowerCost) then return end
-  local ok, costs = pcall(C_Spell.GetSpellPowerCost, spellID)
-  if not ok or type(costs) ~= "table" then return end
-  for _, c in ipairs(costs) do
-    if type(c) == "table" and not IsSecret(c.type) and c.type == MANA and not IsSecret(c.cost)
-      and type(c.cost) == "number" and c.cost > 0 then
-      oomSpells[spellID] = { cost = c.cost, n = 1 }
-      return
+-- and the costs are readable. Two spells from the player's spell book (all ranks) serve as
+-- measures: the one whose cost is nearest to LOW_AT of the maximum mana and the one nearest to
+-- OUT_AT. "low" / "out" = the game says the mana is not enough for it. No spell near a mark
+-- (within half to one and a half of it): that warning is not available ("out" then comes from
+-- a cast that fails for lack of mana).
+local LOW_AT, OUT_AT = 0.20, 0.05
+local oomBook, oomBookDirty = {}, true -- { { id = spellID, cost = mana }, ... }
+local oomLow, oomOut, oomMax -- the two measures { id, cost } and the max mana they were picked for
+local function ReadBook()
+  local list = {}
+  local book = C_SpellBook
+  if not (book and book.GetNumSpellBookSkillLines and book.GetSpellBookSkillLineInfo
+    and book.GetSpellBookItemInfo and C_Spell and C_Spell.GetSpellPowerCost) then
+    return list
+  end
+  local future = Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.FutureSpell
+  local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
+  for i = 1, book.GetNumSpellBookSkillLines() do
+    local line = book.GetSpellBookSkillLineInfo(i)
+    if line and type(line.itemIndexOffset) == "number" and type(line.numSpellBookItems) == "number" then
+      for k = line.itemIndexOffset + 1, line.itemIndexOffset + line.numSpellBookItems do
+        local it = book.GetSpellBookItemInfo(k, bank)
+        if it and type(it.spellID) == "number" and not it.isPassive and not (future and it.itemType == future) then
+          local ok, costs = pcall(C_Spell.GetSpellPowerCost, it.spellID)
+          if ok and type(costs) == "table" then
+            for _, c in ipairs(costs) do
+              if type(c) == "table" and not IsSecret(c.type) and c.type == MANA and not IsSecret(c.cost)
+                and type(c.cost) == "number" and c.cost > 0 then
+                list[#list + 1] = { id = it.spellID, cost = c.cost }
+                break
+              end
+            end
+          end
+        end
+      end
     end
   end
+  return list
+end
+-- usable, or unusable only for lack of mana: a spell blocked by something else (a form, a
+-- reagent) would never report the mana
+local function Measures(id)
+  if not (C_Spell and C_Spell.IsSpellUsable) then return false end
+  local ok, usable, noMana = pcall(C_Spell.IsSpellUsable, id)
+  if not ok or IsSecret(usable) or IsSecret(noMana) then return false end
+  return usable == true or noMana == true
+end
+local function Nearest(max, share, above)
+  local target, best = max * share, nil
+  for _, e in ipairs(oomBook) do
+    if e.cost >= target * 0.5 and e.cost <= target * 1.5 and (not above or e.cost > above)
+      and (not best or math.abs(e.cost - target) < math.abs(best.cost - target)) and Measures(e.id) then
+      best = e
+    end
+  end
+  return best
+end
+local function PickMeasures()
+  local max = UnitPowerMax("player", MANA)
+  if IsSecret(max) or type(max) ~= "number" or max <= 0 then oomLow, oomOut, oomMax = nil, nil, nil return end
+  if not oomBookDirty and max == oomMax then return end
+  if oomBookDirty then
+    local ok, list = pcall(ReadBook)
+    oomBook = ok and list or {}
+    oomBookDirty = false
+  end
+  oomMax = max
+  oomOut = Nearest(max, OUT_AT)
+  oomLow = Nearest(max, LOW_AT, oomOut and oomOut.cost)
 end
 local function NoMana(spellID)
   if not (C_Spell and C_Spell.IsSpellUsable) then return false end
@@ -861,20 +912,16 @@ local function NoMana(spellID)
   return ok and not IsSecret(noMana) and noMana == true
 end
 function ns.ManaWarning()
-  local main, mainE
-  for id, e in pairs(oomSpells) do
-    if not mainE or e.n > mainE.n or (e.n == mainE.n and e.cost < mainE.cost) then main, mainE = id, e end
-  end
-  if not main then return nil end
-  if NoMana(main) then return "out" end
-  local max = UnitPowerMax("player", MANA)
-  if IsSecret(max) or type(max) ~= "number" or max <= 0 then return nil end
-  local low, lowE
-  for id, e in pairs(oomSpells) do
-    if e.cost > mainE.cost and e.cost <= max * LOW_SHARE and (not lowE or e.cost > lowE.cost) then low, lowE = id, e end
-  end
-  if low and NoMana(low) then return "low" end
+  PickMeasures()
+  if oomOut and NoMana(oomOut.id) then return "out" end
+  if oomLow and NoMana(oomLow.id) then return "low" end
   return nil
+end
+-- for the settings: the shares of the maximum mana the two warnings come at (nil = not available)
+function ns.OomInfo()
+  local ok = pcall(PickMeasures)
+  if not ok or not oomMax then return nil, nil end
+  return oomLow and oomLow.cost / oomMax or nil, oomOut and oomOut.cost / oomMax or nil
 end
 
 -- kind: "out" (default) or "low". manual: typed by the player (/fmf oom): no pause, hints shown.
@@ -948,17 +995,10 @@ end
 keyFrame:SetScript("OnKeyDown", function() pcall(ns.OomKey) end)
 local oomFrame = CreateFrame("Frame")
 pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
-if oomFrame.RegisterUnitEvent then
-  pcall(oomFrame.RegisterUnitEvent, oomFrame, "UNIT_SPELLCAST_SUCCEEDED", "player")
-else
-  pcall(oomFrame.RegisterEvent, oomFrame, "UNIT_SPELLCAST_SUCCEEDED")
-end
+pcall(oomFrame.RegisterEvent, oomFrame, "SPELLS_CHANGED")
 oomFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
-  if event == "UNIT_SPELLCAST_SUCCEEDED" then
-    if not IsSecret(a1) and a1 == "player" then pcall(LearnSpell, a3) end
-    return
-  end
+  if event == "SPELLS_CHANGED" then oomBookDirty = true return end
   -- a new fight is a new situation for the group: its first warning is said at once
   if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil; pcall(ns.OomKeys) return end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end
@@ -969,7 +1009,8 @@ oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if not hit and LE_GAME_ERR_OUT_OF_MANA and not IsSecret(errType) and errType == LE_GAME_ERR_OUT_OF_MANA then
     hit = true
   end
-  if hit then pcall(ns.AnnounceOom, false, "out") end
+  -- only without a measure for "out": a dear spell failing at 15 % mana is not "out of mana"
+  if hit and not oomOut then pcall(ns.AnnounceOom, false, "out") end
 end)
 -- in a fight the state is looked at twice a second: a warning when it turns to "low" or "out"
 local oomAcc, oomState = 0, nil
@@ -985,6 +1026,7 @@ function ns.OomTick(dt)
   oomState = st
 end
 oomFrame:SetScript("OnUpdate", function(_, dt) ns.OomTick(dt) end)
+end
 
 local holdFrame = CreateFrame("Frame")
 holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
