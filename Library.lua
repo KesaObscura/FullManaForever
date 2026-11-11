@@ -339,7 +339,7 @@ local function Build(point)
   ns.EscListed(lib, "FullManaForeverItems")
   ns.RegisterPopup(lib, "items") -- over the settings when they are open
 
-  ns.Skin.Window(lib, 38)
+  ns.Skin.Window(lib, 0)
 
   local title = ui.Label(lib, L.libTitle, "GameFontNormalLarge")
   ns.Skin.PlaceTitle(title, lib, PAD)
@@ -350,7 +350,9 @@ local function Build(point)
 
   -- scrolling list
   scroll = CreateFrame("ScrollFrame", nil, lib)
-  scroll:SetPoint("TOPLEFT", PAD, -44)
+  -- the title sits in the band above the window: the list starts at the top (0.9.11)
+  local top = (lib.skinBand or 0) > 0 and -14 or -44
+  scroll:SetPoint("TOPLEFT", PAD, top)
   scroll:SetPoint("BOTTOMRIGHT", -PAD - 14, 128)
   scroll:EnableMouseWheel(true)
   local sbg = lib:CreateTexture(nil, "BORDER")

@@ -116,6 +116,12 @@ function Skin.Window(f, titleH)
   -- over the title and the top row (owner's test 11 Nov); by hand it sits above the window
   if not MetalByHand(f) and not MetalNineSlice(f) then
     Skin.Edge(f, Skin.EDGE, 1, "ARTWORK")
+  elseif (f.skinBand or 0) > 0 then
+    -- the metal sits 6 px outside the window and is open on its inner side: the fill goes under
+    -- it, so no strip of the world shows between the window and the gold edge (owner, 11 Nov)
+    bg:ClearAllPoints()
+    bg:SetPoint("TOPLEFT", f, "TOPLEFT", -6, 0)
+    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 6, -6)
   end
   if titleH and titleH > 0 then
     local line = f:CreateTexture(nil, "ARTWORK")

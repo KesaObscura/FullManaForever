@@ -1196,7 +1196,8 @@ local function BuildProfiles()
   -- in game a new frame does not take over a name an older one already has (the language
   -- change builds the windows anew): the name is set here, else Esc looks at the old frame
   EscListed(pwin, "FullManaForeverProfiles")
-  Skin.Window(pwin, 38)
+  Skin.Window(pwin, 0)
+  local T0 = (pwin.skinBand or 0) > 0 and 30 or 0 -- the title row moved into the band
   local title = Label(pwin, L.profTitle, "GameFontNormalLarge")
   Skin.PlaceTitle(title, pwin, PAD)
   local close = CloseButton(pwin)
@@ -1205,9 +1206,9 @@ local function BuildProfiles()
   Tip(close, L.optClose, L.tipClose)
 
   local uses = Label(pwin, "")
-  uses:SetPoint("TOPLEFT", PAD, -44)
+  uses:SetPoint("TOPLEFT", PAD, -44 + T0)
   local header = Header(pwin, L.profCopyFrom)
-  header:SetPoint("TOPLEFT", PAD, -72)
+  header:SetPoint("TOPLEFT", PAD, -72 + T0)
   local none = Label(pwin, L.profNone, "GameFontDisableSmall")
   none:SetPoint("TOPLEFT", PAD + 4, -98)
 
@@ -1286,7 +1287,7 @@ local function BuildProfiles()
     for i, o in ipairs(list) do
       local r = Row(i)
       r:ClearAllPoints()
-      r:SetPoint("TOPLEFT", PAD, -96 - (i - 1) * 28)
+      r:SetPoint("TOPLEFT", PAD, -96 + T0 - (i - 1) * 28)
       if o.shared then
         r.name:SetText("|cffffd100" .. L.profShared .. "|r")
         r.info:SetText("")
@@ -1308,7 +1309,7 @@ local function BuildProfiles()
     end
     for i = #list + 1, #rows do rows[i]:Hide() end
     none:SetShown(#list == 0)
-    local y = -96 - math.max(1, #list) * 28 - 12
+    local y = -96 + T0 - math.max(1, #list) * 28 - 12
     reset:ClearAllPoints()
     reset:SetPoint("TOPLEFT", PAD, y)
     undoBtn:ClearAllPoints()
