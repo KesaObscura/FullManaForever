@@ -159,9 +159,10 @@ local function Stepper(parent, x, text, get, set, o)
   s.minus:SetPoint("LEFT", s.label, "LEFT", BTN_X - x, 0)
   s.plus:SetPoint("LEFT", s.minus, "RIGHT", 4, 0)
   if o.tip then
-    TipArea(parent, s.label, text, o.tip)
-    Tip(s.minus, text, o.tip)
-    Tip(s.plus, text, o.tip)
+    local title = o.title or text
+    TipArea(parent, s.label, title, o.tip)
+    Tip(s.minus, title, o.tip)
+    Tip(s.plus, title, o.tip)
   end
   local function step(v, dir)
     if o.next then return o.next(v, dir) end
@@ -915,21 +916,18 @@ Build = function()
     { value = "raid", text = L.oomRaid }, { value = "auto", text = L.oomAuto },
   }, function() return oomText[db.oomChat] or L.mtOff end,
   function(v) db.oomChat = v; ns.RefreshOptions() end, L.tipOom)
-  -- at how much mana the two warnings come for this character (from the spell book)
-  local oomSt = Label(col, "", "GameFontHighlightSmall")
-  oomSt:SetTextColor(0.74, 0.78, 0.88)
-  c.y = c.y + 6
-  c.Row(oomSt, PAD + 4, 20)
-  registry[#registry + 1] = { Refresh = function()
-    local low, out = nil, nil
-    if ns.OomInfo then low, out = ns.OomInfo() end
-    local parts = {}
-    if low then parts[#parts + 1] = L.oomLowAt:format(math.floor(low * 100 + 0.5)) end
-    if out then parts[#parts + 1] = L.oomOutAt:format(math.floor(out * 100 + 0.5)) end
-    oomSt:SetText(#parts > 0 and table.concat(parts, "   ") or L.oomNoSpell)
-    local on = db.oomChat == "party" or db.oomChat == "raid" or db.oomChat == "auto"
-    oomSt:SetAlpha(on and 1 or 0.5)
-  end }
+  -- each warning has its own switch and its own mark
+  local function OomOn() return db.oomChat == "party" or db.oomChat == "raid" or db.oomChat == "auto" end
+  local function OomRow(text, tip, key, atKey, o)
+    local cb = Check(col, text, function() return db[key] ~= false end, function(v) db[key] = v end, tip, OomOn)
+    o.fmt, o.tip, o.title, o.scale = pct, tip, text, 100
+    local st = Stepper(col, PAD + 26, "", function() return db[atKey] end, function(v) db[atKey] = v end, o)
+    st.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 26, c.y - 5)
+    c.Row(cb, PAD + 26, 28)
+    ActiveIf(function() return OomOn() and db[key] ~= false end, st)
+  end
+  OomRow(L.optOomLow, L.tipOomLow, "oomLow", "oomLowAt", { step = 0.05, lo = 0.10, hi = 0.60 })
+  OomRow(L.optOomOut, L.tipOomOut, "oomOut", "oomOutAt", { step = 0.01, lo = 0.02, hi = 0.20 })
   PlaceGroups(true)
 
   -- footer across both columns (0.9.9): what belongs to the whole window or the account, not to

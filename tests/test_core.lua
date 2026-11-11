@@ -2492,6 +2492,24 @@ test("0.9.10: the marks also come from the ruler spells, the same for every clas
   local low, out = ns.OomInfo()
   eq(low, 0.32, "low mark from the ruler"); eq(out, 0.045, "out mark from the ruler")
   ok(ns.OomProbe():find("withCost=4", 1, true), "ruler and book not merged: " .. ns.OomProbe())
+  -- own marks and a switch for each warning
+  ns.db.oomLowAt, ns.db.oomOutAt = 0.05, 0.07
+  low, out = ns.OomInfo(); eq(out, 0.07, "own out mark"); eq(low, nil, "low mark not above the out mark")
+  ns.db.oomLowAt, ns.db.oomOutAt = 0.30, 0.05
+  ns.db.oomLow = false; low, out = ns.OomInfo(); eq(low, nil, "low switched off"); eq(out, 0.045)
+  ns.db.oomLow, ns.db.oomOut = true, false; low, out = ns.OomInfo(); eq(low, 0.32); eq(out, nil, "out switched off")
+  local sent = {}
+  _G.SendChatMessage = function(msg) sent[#sent + 1] = msg end
+  _G.ERR_OUT_OF_MANA = "Not enough mana"
+  M.state.group, M.state.combat, M.state.time = true, true, 500
+  M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(sent[1], ns.L.lowMsg, "failed cast with 'out' off")
+  ns.db.oomLow, ns.db.oomOut = false, false
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(#sent, 1, "a warning with both switched off")
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[2], ns.L.oomMsg, "/fmf oom with both switched off")
+  ns.db.oomLow, ns.db.oomOut = true, true
+  _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
+  M.state.group, M.state.combat, M.state.time = false, false, nil
   -- a big mana pool: the dearest ruler spell is the low mark while it is at least 10 %
   M.state.maxMana = 10000; low = ns.OomInfo(); eq(low, 0.14)
   M.state.maxMana = 20000; low = ns.OomInfo(); eq(low, nil, "low below a tenth of the mana")

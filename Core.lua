@@ -33,7 +33,11 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,
-  oomChat    = "off",   -- "Out of mana!" to the group chat: off / party / raid / auto (0.9.10)
+  oomChat    = "off",   -- mana warnings to the group chat: off / party / raid / auto (0.9.10)
+  oomLow     = true,    -- "Low mana!" below oomLowAt of the mana
+  oomLowAt   = 0.30,
+  oomOut     = true,    -- "Out of mana!" below oomOutAt, or when a cast fails for lack of mana
+  oomOutAt   = 0.05,
   fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
@@ -836,10 +840,12 @@ end
 -- measures, one for "out" (cost nearest to OUT_AT of the maximum mana, within half to one and a
 -- half of it) and one for "low" (below). No fitting spell: that warning is not available.
 -- The measures come from the spell book and from ns.MANA_RULER (Data.lua).
-local LOW_AT, OUT_AT = 0.30, 0.05
-local LOW_MIN = 0.10 -- "low" is never said below this share: too close to "out"
+-- The marks are the player's (oomLowAt, oomOutAt); each warning has its own switch.
+local function LowAt() local v = db.oomLowAt; return type(v) == "number" and v > 0 and v or 0.30 end
+local function OutAt() local v = db.oomOutAt; return type(v) == "number" and v > 0 and v or 0.05 end
 local oomBook, oomBookDirty = {}, true -- { { id = spellID, cost = mana }, ... }
 local oomLow, oomOut, oomMax -- the two measures { id, cost } and the max mana they were picked for
+local oomKey -- the settings they were picked for
 local oomSeen, oomRead = 0, 0 -- spell book entries seen at the last read, and when (for the probe)
 local function ReadBook()
   local list = {}
@@ -906,7 +912,10 @@ local function PickMeasures()
   -- an empty book is read again (every 2 s at most): at login the costs may not be there yet
   local now = GetTime()
   if #oomBook == 0 and now - oomRead >= 2 then oomBookDirty = true end
-  if not oomBookDirty and max == oomMax then return end
+  local lowAt, outAt = LowAt(), OutAt()
+  local key = ("%s:%.3f:%s:%.3f"):format(tostring(db.oomLow ~= false), lowAt, tostring(db.oomOut ~= false), outAt)
+  if not oomBookDirty and max == oomMax and key == oomKey then return end
+  oomKey = key
   if oomBookDirty then
     local ok, list = pcall(ReadBook)
     oomBook = ok and list or {}
@@ -914,8 +923,10 @@ local function PickMeasures()
     oomRead = now
   end
   oomMax = max
-  oomOut = Nearest(max, OUT_AT, OUT_AT * 0.5, OUT_AT * 1.5)
-  oomLow = Nearest(max, LOW_AT, LOW_MIN, LOW_AT * 1.2, oomOut and oomOut.cost)
+  -- "out": within half to one and a half of its mark; "low": down to a third of its mark (a
+  -- big mana pool has no spell dear enough), and above the out measure
+  oomOut = db.oomOut ~= false and Nearest(max, outAt, outAt * 0.5, outAt * 1.5) or nil
+  oomLow = db.oomLow ~= false and Nearest(max, lowAt, lowAt / 3, lowAt * 1.2, oomOut and oomOut.cost) or nil
 end
 local function NoMana(spellID)
   if not (C_Spell and C_Spell.IsSpellUsable) then return false end
@@ -970,6 +981,7 @@ local function OomSend(text, channel, manual)
 end
 function ns.AnnounceOom(manual, kind)
   kind = kind == "low" and "low" or "out"
+  if not manual and db[kind == "low" and "oomLow" or "oomOut"] == false then return false end
   local mode = db.oomChat
   if mode ~= "party" and mode ~= "raid" and mode ~= "auto" then
     if not manual then return false end
@@ -1015,7 +1027,8 @@ oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   -- "low": mana is left, but not for what the player needs
   if hit then
     PickMeasures()
-    pcall(ns.AnnounceOom, false, (not oomOut or NoMana(oomOut.id)) and "out" or "low")
+    local out = db.oomOut ~= false and (not oomOut or NoMana(oomOut.id))
+    pcall(ns.AnnounceOom, false, out and "out" or "low")
   end
 end)
 -- in a fight the state is looked at twice a second: a warning when it turns to "low" or "out"
