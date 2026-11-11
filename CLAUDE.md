@@ -213,7 +213,9 @@ and `/fmf log` (kept in releases for bug reports).
    by the owner (description: log texts and regen line changed); 0.9.4 released on GitHub 6 Nov
    (PR #20, tag v0.9.4), CurseForge upload by the owner on 7 Nov (description: "Fades out of combat"
    line new); 0.9.5 released on GitHub and CurseForge 10 Nov (PR #21, tag v0.9.5; 0.9.4 had 6.1K
-   downloads in two days); 0.9.6 merged 10 Nov (PR #22, tag v0.9.6, CurseForge by the owner).
+   downloads in two days); 0.9.6 merged 10 Nov (PR #22, tag v0.9.6, CurseForge 11 Nov); 0.9.7 on GitHub
+   11 Nov (PR #23, tag v0.9.7; CurseForge and the SEO settings from docs/notes.md next). After the
+   11 Nov game update: still Interface 16001, not out of date (owner).
    Reply to the commenters once it is live. SEO from the Full Health Forever session (7 Nov):
    once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
    GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a
