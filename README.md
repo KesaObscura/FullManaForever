@@ -24,14 +24,10 @@ shows the **five-second rule (5SR)**, your **live mana regen per second, also in
 |---|---|
 | ![The mana potion shows up grey with a countdown, lights up, and is drunk](docs/images/see-it-coming-mana-potion.gif) | ![A spell starts the five-second rule: gold strip and seconds, regen 0.0/s, then 15.5/s again](docs/images/five-second-rule-live-regen.gif) |
 
-## How it works with WoW Forever's addon rules
+## Built for WoW Forever's addon rules
 
-In Forever your current mana is a *secret value*: addons cannot read or compare it.
-Full Mana Forever never tries to. It gives the game a step curve
-(`C_CurveUtil` + `UnitPowerPercent`), the game evaluates it and returns a secret alpha,
-and that alpha is applied straight to the icon. Nested frames multiply their alpha, which
-gives "ready **and** deficit big enough (**and** enough health for runes)".
-Item cooldowns, item counts and maximum mana are readable and handled normally.
+Forever hides your current mana, your buffs and your spell cooldowns from addons in combat.
+Full Mana Forever is built for these rules: the right icon still lights up at the right moment.
 
 The addon never uses an item for you. Put your potions on the action bar and press them
 when the icon lights up.
@@ -123,6 +119,7 @@ otherwise the game does not load it.
 | `/fmf` | open the settings (also in Options → AddOns and the addon menu at the minimap: left-click settings, right-click items and spells) |
 | `/fmf items` | open the list of items and spells |
 | `/fmf profile` | profile in use and characters with own settings; `/fmf profile shared` / `own` switches, `copy <name>` takes over another character's settings (first name and surname, or the first name alone when it is unique), `undo` takes back the last copy |
+| `/fmf oom` | say "Out of mana!" to your party or raid now; the setting *Mana to chat* says "Low mana!" and "Out of mana!" by itself in a fight |
 | `/fmf hold` | hold mana potions until the end of the next fight (grey "HOLD" icon); again releases them. Tip: put it in a macro |
 | `/fmf unlock` / `/fmf lock` | move the icons |
 | `/fmf test` | same as `/fmf unlock`: show everything that is switched on, to place the frame |

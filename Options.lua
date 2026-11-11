@@ -7,7 +7,7 @@ local L = ns.L
 local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or false end
 local win, panelButton
 local widgets = {}        -- options widgets that need Refresh()
-local groupRows = {}      -- consumable groups in the window: { cb, st, i, compact, placed }
+local groupRows = {}      -- consumable groups in the window: { cb, st, i, placed }
 local groupTail           -- { frame, dx }: what follows the last group (rune margin)
 local registry = widgets  -- where the widget helpers register (see WithRegistry)
 local openList            -- the dropdown list that is open right now (only one at a time)
@@ -159,9 +159,10 @@ local function Stepper(parent, x, text, get, set, o)
   s.minus:SetPoint("LEFT", s.label, "LEFT", BTN_X - x, 0)
   s.plus:SetPoint("LEFT", s.minus, "RIGHT", 4, 0)
   if o.tip then
-    TipArea(parent, s.label, text, o.tip)
-    Tip(s.minus, text, o.tip)
-    Tip(s.plus, text, o.tip)
+    local title = o.title or text
+    TipArea(parent, s.label, title, o.tip)
+    Tip(s.minus, title, o.tip)
+    Tip(s.plus, title, o.tip)
   end
   local function step(v, dir)
     if o.next then return o.next(v, dir) end
@@ -344,28 +345,23 @@ ns.UI = {
 ------------------------------------------------------------------------
 local Build
 
--- A group with a status to show ("Major Mana Potion x5: ...") takes two lines; one with
--- nothing in the bags (or switched off) keeps the short status next to its name.
--- Each row hangs on the one above, so only the anchors change, never the frames.
-local GROUP_FULL, GROUP_COMPACT = 42, 26
+-- Every group takes two lines: its switch and the status under it ("Major Mana Potion x5: ...",
+-- "none in bags"); rows do not jump when a group is switched off (0.9.5).
+-- Each row hangs on the one above.
+local GROUP_FULL = 42
 local EXTRA_H = 30 -- a group's own setting (rune health, spell mana) on the row under it
 local function PlaceGroups(force)
   local changed = force
   for _, r in ipairs(groupRows) do
-    if r.placed ~= (r.compact or false) then changed = true end
+    if not r.placed then changed = true end
   end
   if not changed then return end
   for k, r in ipairs(groupRows) do
-    r.placed = r.compact or false
+    r.placed = true
     r.st:ClearAllPoints()
-    if r.compact then
-      r.st:SetPoint("LEFT", r.cb.label, "RIGHT", 8, 0)
-      r.st:SetWidth(math.max(40, W - 2 * PAD - 36 - math.ceil(r.cb.label:GetStringWidth() or 0)))
-    else
-      r.st:SetPoint("TOPLEFT", r.cb, "TOPLEFT", 30, -20)
-      r.st:SetWidth(W - 2 * PAD - 30)
-    end
-    local below, bx, gap = r.cb, 0, (r.compact and GROUP_COMPACT or GROUP_FULL)
+    r.st:SetPoint("TOPLEFT", r.cb, "TOPLEFT", 30, -20)
+    r.st:SetWidth(W - 2 * PAD - 30)
+    local below, bx, gap = r.cb, 0, GROUP_FULL
     -- the group's own settings sit right under it, indented like a status line, one per row
     for n, e in ipairs(r.extras or {}) do
       e:ClearAllPoints()
@@ -854,18 +850,15 @@ Build = function()
   registry[#registry + 1] = { Refresh = function() desc:SetText(stratDesc[Strategy()]) end }
   -- health kept after runes, Life Tap and the Power Recycler: one setting for all three, so it
   -- sits with "When to light up", not under the runes (0.9.5)
-  local function pctM(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
   local margin = Stepper(col, PAD + 4, L.optMargin, function() return db.runeMargin end,
     function(v) db.runeMargin = v; ns.InvalidateCurves() end,
-    { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pctM, scale = 100 })
+    { step = 0.05, lo = 0.10, hi = 0.80, tip = L.tipMargin, fmt = pct, scale = 100 })
   c.Row(margin.label, PAD + 4, 32)
   ActiveIf(IconsOn, stLabel, strat)
   ActiveIf(function() return IconsOn() and (db.enabled.rune or db.enabled.spell or db.enabled.herb) end, margin)
 
-  -- groups are chained: a group with nothing to report keeps its status on the same
-  -- line and takes less room (see PlaceGroups); the first one sits at a fixed spot.
-  -- Runes and own spells have one setting each: it sits right under the group.
-  local function pct(v) return ("%d%%"):format(math.floor(v * 100 + 0.5)) end
+  -- groups are chained (see PlaceGroups); the first one sits at a fixed spot. A group's own
+  -- settings (the potion sound) sit right under it.
   -- each returns the frames to place, one per row
   local soundText = { drop = L.sndDrop, crystal = L.sndCrystal, glass = L.sndGlass }
   local extras = {
@@ -915,6 +908,27 @@ Build = function()
   groupTail = { frame = items, dx = 0 }
   if #groupRows == 0 then items:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y) end
   c.y = c.y - 34
+  -- mana warnings to the group chat (0.9.10): its own section like the others; off by default,
+  -- nothing is written in the player's name unasked
+  c.Row(Header(col, L.optOomHdr), PAD, 26)
+  local oomText = { off = L.mtOff, party = L.oomParty, raid = L.oomRaid, auto = L.oomAuto }
+  LabeledDD(L.optOom, PAD + 4, {
+    { value = "off", text = L.mtOff }, { value = "party", text = L.oomParty },
+    { value = "raid", text = L.oomRaid }, { value = "auto", text = L.oomAuto },
+  }, function() return oomText[db.oomChat] or L.mtOff end,
+  function(v) db.oomChat = v; ns.RefreshOptions() end, L.tipOom)
+  -- each warning has its own switch and its own mark
+  local function OomOn() return db.oomChat == "party" or db.oomChat == "raid" or db.oomChat == "auto" end
+  local function OomRow(text, tip, key, atKey, o)
+    local cb = Check(col, text, function() return db[key] ~= false end, function(v) db[key] = v end, tip, OomOn)
+    o.fmt, o.tip, o.title, o.scale = pct, tip, text, 100
+    local st = Stepper(col, PAD, "", function() return db[atKey] end, function(v) db[atKey] = v end, o)
+    st.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y - 13) -- on the line of the switch text
+    c.Row(cb, PAD, 28)
+    ActiveIf(function() return OomOn() and db[key] ~= false end, st)
+  end
+  OomRow(L.optOomLow, L.tipOomLow, "oomLow", "oomLowAt", { step = 0.05, lo = 0.10, hi = 0.60 })
+  OomRow(L.optOomOut, L.tipOomOut, "oomOut", "oomOutAt", { step = 0.01, lo = 0.02, hi = 0.20 })
   PlaceGroups(true)
 
   -- footer across both columns (0.9.9): what belongs to the whole window or the account, not to
@@ -986,11 +1000,10 @@ end
 ------------------------------------------------------------------------
 -- refresh
 ------------------------------------------------------------------------
--- text, compact (nothing to report: fits next to the group name)
 -- own spells: the one that would light up, or the first one and its cooldown
 local function SpellStatus()
   local S = ns.Spells
-  if not S.FirstKnown() then return "|cff888888" .. L.stSpellNone .. "|r", true end
+  if not S.FirstKnown() then return "|cff888888" .. L.stSpellNone .. "|r" end
   local maxMana = UnitPowerMax("player", 0)
   if IsSecret(maxMana) or not maxMana or maxMana <= 0 then maxMana = nil end
   local sp, id = S.Candidate()
@@ -1006,24 +1019,24 @@ local function SpellStatus()
     return text .. "|r"
   end
   -- none ready: the one that comes back first (unknown wait: Inner Focus, or not read yet)
-  local soon, soonID, left = S.Soonest()
+  local _, soonID, left = S.Soonest()
   if not left then return "|cffffaa33" .. L.stSpellWait:format(S.Name(soonID) or "?") .. "|r" end
   return "|cffffaa33" .. L.stSpellCd:format(S.Name(soonID) or "?", math.ceil(left)) .. "|r"
 end
 
 local function StatusText(i, group)
   local db = ns.db
-  if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r", true end
+  if not db.enabled[group.key] then return "|cff888888" .. L.stDisabled .. "|r" end
   if group.spells then return SpellStatus() end
   if group.key == "potion" and ns.IsHeld and ns.IsHeld() then
-    return "|cffffaa33" .. L.stHold .. "|r", true
+    return "|cffffaa33" .. L.stHold .. "|r"
   end
   local item, n, ready, left, thr, hpThr = ns.GetStatus(i)
   if not item then
     -- in the bags, but above your level: say so instead of "none in bags" (0.9.1)
     local need = not group.equipped and ns.BlockedLevel and ns.BlockedLevel(i)
-    if need then return "|cff888888" .. L.libLevel:format(need) .. "|r", true end
-    return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r", true
+    if need then return "|cff888888" .. L.libLevel:format(need) .. "|r" end
+    return "|cff888888" .. (group.equipped and L.stNoneGear or L.stNone) .. "|r"
   end
   if not ready then
     return "|cffffaa33" .. L.stCooldown:format(ItemName(item.id), n, math.ceil(left)) .. "|r"
@@ -1045,8 +1058,6 @@ function ns.RefreshOptions()
   for _, r in ipairs(groupRows) do
     local text = StatusText(r.i, ns.GROUPS[r.i])
     if text ~= r.st.text then r.st.text = text; r.st:SetText(text) end
-    -- every group keeps two lines: rows no longer jump when a group is switched off (0.9.5)
-    r.compact = false
   end
   PlaceGroups()
 end

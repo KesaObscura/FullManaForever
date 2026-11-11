@@ -17,6 +17,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Read Leyline (Skyborne) light up when the spell is ready and your mana is at or below its own threshold (a sensible default per spell, changeable in the list). Two spells ready at once? Each gets its own icon. Life Tap lights up like a potion when its mana fits, with the same health check as runes. Forever hides spell cooldowns from addons in combat, so the addon counts them from your cast — never too early.
 - **See it coming.** Potions, runes, gems, gear and your own spells already show in the last seconds of their cooldown — grey, counting down like your action bar — so you are ready the moment they light up. 5 seconds by default, up to 120 (the whole potion cooldown), or off.
 - **Made for wanding.** Each wand shot blocks potions and spells for a moment. The icon stays lit and shows that short wait as a sweep, like the action bar: the potion fits, stop shooting and drink.
+- **"Low mana!" and "Out of mana!" to your group.** Switch it on (party chat, raid chat or both) and the addon warns your group in a fight, at most every 30 seconds each. Each warning has its own switch and its own mark (30 % and 5 % of your mana by default). `/fmf oom` says "Out of mana!" at once. Off by default.
 - **Hold potions.** `/fmf hold` (best in a macro) holds mana potions until the end of the next fight, for when you want the potion cooldown for something else. The potion icon turns grey with "HOLD"; after the fight it releases by itself.
 - **Only what you can use:** items above your level, other classes' items and battleground-only items outside battlegrounds are skipped.
 
@@ -58,7 +59,7 @@ Forever's mana regen is continuous: there are no 2-second mana ticks, and addons
 
 ## Built for WoW Forever's addon rules
 
-Forever hides your current mana, your buffs and your spell cooldowns from addons in combat. Full Mana Forever does not try to read them: it hands the mana check to the game itself (a step curve on `UnitPowerPercent`), and the game shows or hides the icon. It reads only what Forever allows (item cooldowns, maximum mana, your own casts). No automation: the addon never uses an item or casts for you, you press the button.
+Forever hides your current mana, your buffs and your spell cooldowns from addons in combat. Full Mana Forever is built for these rules: the right icon still lights up at the right moment. No automation: the addon never uses an item or casts for you, you press the button.
 
 ## Supported items (checked against the Forever database)
 

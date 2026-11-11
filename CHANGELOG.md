@@ -1,5 +1,12 @@
 # Changelog
 
+**Full Mana Forever 0.9.10**
+
+Asked for in the comments:
+- **Mana to chat** (new section in the settings: Off / Party chat / Raid chat / Party or raid): in a fight the addon tells your group **"Low mana!"** and **"Out of mana!"**, each at most every 30 seconds. Off by default
+- Each warning has its own switch and its own mark: "Low mana!" under 30 % and "Out of mana!" under 5 % of your mana by default (click the number to type another)
+- `/fmf oom` says "Out of mana!" at once, for a macro
+
 **Full Mana Forever 0.9.9**
 
 Settings window, easier to find things:

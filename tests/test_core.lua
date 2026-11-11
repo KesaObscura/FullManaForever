@@ -2372,6 +2372,151 @@ test("0.9.9: /fmf probe reads the curve's alpha and the percent text back, sends
   _G.SendChatMessage = nil
 end)
 
+test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to the chosen chat, throttled", function()
+  local ns = M.load({ oomChat = "auto" })
+  local sent = {}
+  _G.SendChatMessage = function(msg, ch) sent[#sent + 1] = ch .. ":" .. msg end
+  _G.ERR_OUT_OF_MANA = "Not enough mana"
+  local function fail(t) M.state.time = t; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana") end
+  M.state.group, M.state.raid, M.state.combat = true, false, false
+  fail(100); eq(#sent, 0, "sent out of combat")
+  M.state.combat = true
+  M.Fire("UI_ERROR_MESSAGE", 50, "Out of range"); eq(#sent, 0, "another error sent")
+  fail(101); eq(sent[1], "PARTY:" .. ns.L.oomMsg)
+  fail(110); eq(#sent, 1, "not throttled")
+  fail(132); eq(#sent, 2, "no second message after 30 s")
+  -- the fight ends: the next fight's first failed cast is said at once
+  fail(140); eq(#sent, 2)
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  M.state.raid = true
+  fail(145); eq(sent[3], "RAID:" .. ns.L.oomMsg, "auto in a raid, new fight")
+  ns.db.oomChat = "party"; fail(210); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "party chat in a raid")
+  M.state.raid = false
+  ns.db.oomChat = "raid"; fail(250); eq(#sent, 4, "raid chat chosen, only in a party")
+  M.state.group = false
+  ns.db.oomChat = "auto"; fail(290); eq(#sent, 4, "sent while solo")
+  ns.db.oomChat = "off"; M.state.group = true; fail(330); eq(#sent, 4, "sent while off")
+  -- the command works with the setting off, and tells when there is no group
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[5], "PARTY:" .. ns.L.oomMsg, "/fmf oom")
+  M.state.group = false; M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(#sent, 5)
+  ok(table.concat(M.printed, "\n"):find(ns.L.oomNoGroup, 1, true), "no hint without a group")
+  -- the game locks addon chat: nothing is sent, the player is told once
+  M.state.group = true; ns.db.oomChat = "auto"; M.printed = {}
+  _G.C_RestrictedActions = { GetAddOnRestrictionState = function(i) return i == 5 and 2 or 0 end }
+  fail(400); fail(440); eq(#sent, 5, "sent during a chat lockdown")
+  local n = 0
+  for _, p in ipairs(M.printed) do if p:find(ns.L.oomBlocked, 1, true) then n = n + 1 end end
+  eq(n, 1, "the lockdown hint not shown exactly once")
+  -- a secret error text is never compared
+  _G.C_RestrictedActions = nil
+  M.Fire("UI_ERROR_MESSAGE", 51, M.secret and M.secret("x") or "other"); eq(#sent, 5)
+  _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
+  M.state.group, M.state.raid, M.state.combat, M.state.time = false, false, false, nil
+end)
+
+test("0.9.10: 'Low mana!' and 'Out of mana!' from two spells of the spell book that cost about 20 % and 5 % of the mana", function()
+  local ns = M.load({ oomChat = "auto" })
+  local sent = {}
+  _G.SendChatMessage = function(msg, ch) sent[#sent + 1] = ch .. ":" .. msg end
+  -- costs: 20 (1 %, too cheap), 95 (4.75 %: out), 215, 400 (20 %: low), 1500 (too dear), a passive
+  local cost = { [1] = 20, [2] = 95, [3] = 215, [4] = 400, [5] = 1500, [6] = 100, [7] = 110 }
+  local mana = 2000
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { itemIndexOffset = 0, numSpellBookItems = 7 } end,
+    GetSpellBookItemInfo = function(k) return { spellID = k, name = "s" .. k, isPassive = k == 6 } end,
+  }
+  _G.C_Spell = { GetSpellPowerCost = function(id) return { { type = 0, cost = cost[id] } } end,
+    IsSpellUsable = function(id)
+      if id == 7 then return false, false end -- blocked by something else: no measure
+      return mana >= cost[id], mana < cost[id]
+    end }
+  M.state.maxMana, M.state.group, M.state.combat, M.state.time = 2000, true, true, 100
+  M.Fire("SPELLS_CHANGED")
+  local function tick(t) M.state.time = t; ns.OomTick(1) end
+  local low, out = ns.OomInfo()
+  eq(low, 0.2, "low mark"); eq(out, 95 / 2000, "out mark (not the passive 100, not the blocked 110)")
+  tick(101); eq(#sent, 0, "a warning with enough mana")
+  mana = 300; eq(ns.ManaWarning(), "low")
+  tick(102); eq(sent[1], "PARTY:" .. ns.L.lowMsg)
+  tick(103); eq(#sent, 1, "low said twice")
+  mana = 50; eq(ns.ManaWarning(), "out")
+  tick(104); eq(sent[2], "PARTY:" .. ns.L.oomMsg)
+  mana = 300; tick(110); eq(#sent, 2, "low right after out")
+  mana = 1000; tick(111); mana = 300; tick(140); eq(sent[3], "PARTY:" .. ns.L.lowMsg, "low again after the pause")
+  -- a cast failing for lack of mana: "low" while the out measure can still be paid, else "out"
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  _G.ERR_OUT_OF_MANA = "Not enough mana"
+  mana = 1000
+  M.state.time = 150; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(sent[4], "PARTY:" .. ns.L.lowMsg, "failed dear cast")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  mana = 50
+  M.state.time = 160; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(sent[5], "PARTY:" .. ns.L.oomMsg, "failed cast without mana")
+  -- more maximum mana: other measures (400 is now 10 %: the low mark moves to 1500 of 6000)
+  M.state.maxMana = 6000; mana = 6000
+  low, out = ns.OomInfo(); eq(low, 0.25, "low mark not picked again"); eq(out, 215 / 6000)
+  -- a measure that the game blocks in a fight (it says nothing about the mana there) is dropped:
+  -- the next nearest spell takes its place
+  M.state.maxMana = 2000; mana = 2000
+  low = ns.OomInfo(); eq(low, 0.2)
+  local inFight = true
+  _G.C_Spell.IsSpellUsable = function(id)
+    if id == 7 or (id == 4 and inFight) then return false, false end
+    return mana >= cost[id], mana < cost[id]
+  end
+  mana = 150; eq(ns.ManaWarning(), "low", "low not taken over by the next spell")
+  low = ns.OomInfo(); eq(low, 215 / 2000, "blocked measure kept")
+  inFight = false; low = ns.OomInfo(); eq(low, 215 / 2000, "blocked measure back after the fight")
+  -- a secret answer is no warning
+  if M.secret then
+    _G.C_Spell.IsSpellUsable = function() return M.secret(true), M.secret(true) end
+    eq(ns.ManaWarning(), nil, "secret answer taken as no mana")
+  end
+  _G.SendChatMessage, _G.C_Spell, _G.C_SpellBook, _G.ERR_OUT_OF_MANA = nil, nil, nil, nil
+  M.state.maxMana, M.state.group, M.state.combat, M.state.time = 1000, false, false, nil
+end)
+
+test("0.9.10: the marks also come from the ruler spells, the same for every class (about 30 % and 5 %)", function()
+  local ns = M.load({ oomChat = "auto" })
+  local cost = { [133] = 45, [10] = 320, [10187] = 1400, [1245] = 70 }
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { itemIndexOffset = 0, numSpellBookItems = 1 } end,
+    GetSpellBookItemInfo = function() return { spellID = 1245, name = "own" } end, -- also in the ruler: once
+  }
+  _G.C_Spell = { GetSpellPowerCost = function(id) return cost[id] and { { type = 0, cost = cost[id] } } or {} end,
+    IsSpellUsable = function() return true, false end }
+  M.state.maxMana = 1000
+  M.Fire("SPELLS_CHANGED")
+  local low, out = ns.OomInfo()
+  eq(low, 0.32, "low mark from the ruler"); eq(out, 0.045, "out mark from the ruler")
+  ok(ns.OomProbe():find("withCost=4", 1, true), "ruler and book not merged: " .. ns.OomProbe())
+  -- own marks and a switch for each warning
+  ns.db.oomLowAt, ns.db.oomOutAt = 0.05, 0.07
+  low, out = ns.OomInfo(); eq(out, 0.07, "own out mark"); eq(low, nil, "low mark not above the out mark")
+  ns.db.oomLowAt, ns.db.oomOutAt = 0.30, 0.05
+  ns.db.oomLow = false; low, out = ns.OomInfo(); eq(low, nil, "low switched off"); eq(out, 0.045)
+  ns.db.oomLow, ns.db.oomOut = true, false; low, out = ns.OomInfo(); eq(low, 0.32); eq(out, nil, "out switched off")
+  local sent = {}
+  _G.SendChatMessage = function(msg) sent[#sent + 1] = msg end
+  _G.ERR_OUT_OF_MANA = "Not enough mana"
+  M.state.group, M.state.combat, M.state.time = true, true, 500
+  M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(sent[1], ns.L.lowMsg, "failed cast with 'out' off")
+  ns.db.oomLow, ns.db.oomOut = false, false
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(#sent, 1, "a warning with both switched off")
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[2], ns.L.oomMsg, "/fmf oom with both switched off")
+  ns.db.oomLow, ns.db.oomOut = true, true
+  _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
+  M.state.group, M.state.combat, M.state.time = false, false, nil
+  -- a big mana pool: the dearest ruler spell is the low mark while it is at least 10 %
+  M.state.maxMana = 10000; low = ns.OomInfo(); eq(low, 0.14)
+  M.state.maxMana = 20000; low = ns.OomInfo(); eq(low, nil, "low below a tenth of the mana")
+  _G.C_Spell, _G.C_SpellBook = nil, nil
+  M.state.maxMana = 1000
+end)
+
 -- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
 
 test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()

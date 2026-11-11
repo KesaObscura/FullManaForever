@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.9"
+ns.VERSION = "0.9.10"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -33,6 +33,11 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,
+  oomChat    = "off",   -- mana warnings to the group chat: off / party / raid / auto (0.9.10)
+  oomLow     = true,    -- "Low mana!" below oomLowAt of the mana
+  oomLowAt   = 0.30,
+  oomOut     = true,    -- "Out of mana!" below oomOutAt, or when a cast fails for lack of mana
+  oomOutAt   = 0.05,
   fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
@@ -800,6 +805,247 @@ function ns.SetHold(on)
   held = on and true or false
   heldFightSeen = held and InCombatLockdown() and true or false
 end
+
+do -- mana warnings to chat: own scope (a Lua chunk holds 200 locals at most)
+-- "Low mana!" and "Out of mana!" to the party or raid chat (0.9.10, asked for in a comment),
+-- at most every OOM_GAP seconds each; /fmf oom says "Out of mana!" at once. While the game
+-- locks addon chat nothing is sent: the player is told once to use the game's /oom emote.
+local OOM_GAP = 30
+local oomLast, oomToldBlocked
+local function ChatLocked()
+  local CI = C_ChatInfo
+  if CI and CI.InChatMessagingLockdown then
+    local ok, v = pcall(CI.InChatMessagingLockdown)
+    if ok and not IsSecret(v) and v then return true end
+  end
+  local RA = C_RestrictedActions and C_RestrictedActions.GetAddOnRestrictionState
+  if RA then
+    local ok, st = pcall(RA, 5) -- Enum.AddOnRestrictionType: chat
+    if ok and not IsSecret(st) and type(st) == "number" and st > 0 then return true end
+  end
+  return false
+end
+-- party: the party chat (in a raid: the own subgroup); raid: only in a raid; auto: raid chat in a
+-- raid, else party chat
+local function OomChannel(mode)
+  local okR, raid = pcall(IsInRaid)
+  local okG, group = pcall(IsInGroup)
+  if not okR or not okG or IsSecret(raid) or IsSecret(group) then return nil end
+  if mode == "raid" then return raid and "RAID" or nil end
+  if mode == "party" then return (raid or group) and "PARTY" or nil end
+  if raid then return "RAID" end
+  return group and "PARTY" or nil
+end
+-- Which mana warning is due: two spells of the player's spell book (all ranks) are the
+-- measures, one for "out" (cost nearest to OUT_AT of the maximum mana, within half to one and a
+-- half of it) and one for "low" (below). No fitting spell: that warning is not available.
+-- The measures come from the spell book and from ns.MANA_RULER (Data.lua).
+-- The marks are the player's (oomLowAt, oomOutAt); each warning has its own switch.
+local function LowAt() local v = db.oomLowAt; return type(v) == "number" and v > 0 and v or 0.30 end
+local function OutAt() local v = db.oomOutAt; return type(v) == "number" and v > 0 and v or 0.05 end
+local oomBook, oomBookDirty = {}, true -- { { id = spellID, cost = mana }, ... }
+local oomLow, oomOut, oomMax -- the two measures { id, cost } and the max mana they were picked for
+local oomKey -- the settings they were picked for
+local oomSeen, oomRead = 0, 0 -- spell book entries seen at the last read, and when (for the probe)
+local function ReadBook()
+  local list = {}
+  oomSeen = 0
+  local book = C_SpellBook
+  if not (book and book.GetNumSpellBookSkillLines and book.GetSpellBookSkillLineInfo
+    and book.GetSpellBookItemInfo and C_Spell and C_Spell.GetSpellPowerCost) then
+    return list
+  end
+  local seen = {}
+  local function Add(id)
+    if seen[id] then return end
+    seen[id] = true
+    local ok, costs = pcall(C_Spell.GetSpellPowerCost, id)
+    if not ok or type(costs) ~= "table" then return end
+    for _, c in ipairs(costs) do
+      if type(c) == "table" and not IsSecret(c.type) and c.type == MANA and not IsSecret(c.cost)
+        and type(c.cost) == "number" and c.cost > 0 then
+        list[#list + 1] = { id = id, cost = c.cost }
+        return
+      end
+    end
+  end
+  for _, id in ipairs(ns.MANA_RULER or {}) do Add(id) end
+  local future = Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.FutureSpell
+  local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
+  for i = 1, book.GetNumSpellBookSkillLines() do
+    local line = book.GetSpellBookSkillLineInfo(i)
+    if line and type(line.itemIndexOffset) == "number" and type(line.numSpellBookItems) == "number" then
+      for k = line.itemIndexOffset + 1, line.itemIndexOffset + line.numSpellBookItems do
+        local it = book.GetSpellBookItemInfo(k, bank)
+        if it and type(it.spellID) == "number" and not it.isPassive and not (future and it.itemType == future) then
+          oomSeen = oomSeen + 1
+          Add(it.spellID)
+        end
+      end
+    end
+  end
+  return list
+end
+-- usable, or unusable only for lack of mana: a spell blocked by something else (a form, a
+-- reagent) would never report the mana
+local function Measures(id)
+  if not (C_Spell and C_Spell.IsSpellUsable) then return false end
+  local ok, usable, noMana = pcall(C_Spell.IsSpellUsable, id)
+  if not ok or IsSecret(usable) or IsSecret(noMana) then return false end
+  return usable == true or noMana == true
+end
+local oomBad = {} -- spells that turned out to be blocked in a fight: no measures
+-- the measure whose cost is nearest to share of the maximum mana, within lo..hi of the maximum
+local function Nearest(max, share, lo, hi, above)
+  local target, best = max * share, nil
+  for _, e in ipairs(oomBook) do
+    if not oomBad[e.id] and e.cost >= max * lo and e.cost <= max * hi and (not above or e.cost > above)
+      and (not best or math.abs(e.cost - target) < math.abs(best.cost - target)) and Measures(e.id) then
+      best = e
+    end
+  end
+  return best
+end
+local function PickMeasures()
+  local max = UnitPowerMax("player", MANA)
+  if IsSecret(max) or type(max) ~= "number" or max <= 0 then oomLow, oomOut, oomMax = nil, nil, nil return end
+  -- an empty book is read again (every 2 s at most): at login the costs may not be there yet
+  local now = GetTime()
+  if #oomBook == 0 and now - oomRead >= 2 then oomBookDirty = true end
+  local lowAt, outAt = LowAt(), OutAt()
+  local key = ("%s:%.3f:%s:%.3f"):format(tostring(db.oomLow ~= false), lowAt, tostring(db.oomOut ~= false), outAt)
+  if not oomBookDirty and max == oomMax and key == oomKey then return end
+  oomKey = key
+  if oomBookDirty then
+    local ok, list = pcall(ReadBook)
+    oomBook = ok and list or {}
+    oomBookDirty = false
+    oomRead = now
+  end
+  oomMax = max
+  -- "out": within half to one and a half of its mark; "low": down to a third of its mark (a
+  -- big mana pool has no spell dear enough), and above the out measure
+  oomOut = db.oomOut ~= false and Nearest(max, outAt, outAt * 0.5, outAt * 1.5) or nil
+  oomLow = db.oomLow ~= false and Nearest(max, lowAt, lowAt / 3, lowAt * 1.2, oomOut and oomOut.cost) or nil
+end
+local function NoMana(spellID)
+  if not (C_Spell and C_Spell.IsSpellUsable) then return false end
+  local ok, _, noMana = pcall(C_Spell.IsSpellUsable, spellID)
+  return ok and not IsSecret(noMana) and noMana == true
+end
+-- a measure picked out of combat may be a spell the game blocks in a fight (it then reports
+-- nothing about the mana): it is dropped for good and the next nearest spell takes its place
+local function DropBlocked()
+  if not InCombatLockdown() then return end
+  for _ = 1, 20 do
+    local bad
+    if oomOut and not Measures(oomOut.id) then bad = oomOut
+    elseif oomLow and not Measures(oomLow.id) then bad = oomLow end
+    if not bad then return end
+    oomBad[bad.id] = true
+    oomMax = nil -- pick again
+    PickMeasures()
+  end
+end
+function ns.ManaWarning()
+  PickMeasures()
+  DropBlocked()
+  if oomOut and NoMana(oomOut.id) then return "out" end
+  if oomLow and NoMana(oomLow.id) then return "low" end
+  return nil
+end
+-- for /fmf probe: numbers only
+function ns.OomProbe()
+  pcall(PickMeasures)
+  local usable = 0
+  for _, e in ipairs(oomBook) do if Measures(e.id) then usable = usable + 1 end end
+  return ("warnings: book=%d withCost=%d usable=%d max=%s low=%s out=%s API=%s"):format(oomSeen, #oomBook, usable,
+    tostring(oomMax), oomLow and (oomLow.cost .. "/" .. oomLow.id) or "-", oomOut and (oomOut.cost .. "/" .. oomOut.id) or "-",
+    tostring(C_Spell and C_Spell.IsSpellUsable ~= nil))
+end
+-- for the settings: the shares of the maximum mana the two warnings come at (nil = not available)
+function ns.OomInfo()
+  local ok = pcall(PickMeasures)
+  if not ok or not oomMax then return nil, nil end
+  return oomLow and oomLow.cost / oomMax or nil, oomOut and oomOut.cost / oomMax or nil
+end
+
+-- kind: "out" (default) or "low". manual: typed by the player (/fmf oom): no pause, hints shown.
+local lowLast
+local function OomSend(text, channel, manual)
+  local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+  if not send then return false end
+  local ok = pcall(send, text, channel)
+  if not ok and (manual or not oomToldBlocked) then Print(L.oomBlocked); oomToldBlocked = true end
+  return ok
+end
+function ns.AnnounceOom(manual, kind)
+  kind = kind == "low" and "low" or "out"
+  if not manual and db[kind == "low" and "oomLow" or "oomOut"] == false then return false end
+  local mode = db.oomChat
+  if mode ~= "party" and mode ~= "raid" and mode ~= "auto" then
+    if not manual then return false end
+    mode = "auto" -- the command also works with the setting off
+  end
+  local now = GetTime()
+  if not manual then
+    if oomLast and now - oomLast < OOM_GAP then return false end -- nothing right after "out"
+    if kind == "low" and lowLast and now - lowLast < OOM_GAP then return false end
+  end
+  local channel = OomChannel(mode)
+  if not channel then
+    if manual then Print(L.oomNoGroup) end
+    return false
+  end
+  if ChatLocked() then
+    if manual or not oomToldBlocked then Print(L.oomBlocked) end
+    oomToldBlocked = true
+    return false
+  end
+  if kind == "low" then lowLast = now else oomLast = now end
+  -- party and raid chat take addon messages without a key press (quest addons write there;
+  -- only SAY, EMOTE and the like need one: owner's test, 11 Nov)
+  return OomSend(kind == "low" and L.lowMsg or L.oomMsg, channel, manual)
+end
+local oomFrame = CreateFrame("Frame")
+pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
+pcall(oomFrame.RegisterEvent, oomFrame, "SPELLS_CHANGED")
+oomFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
+  if event == "SPELLS_CHANGED" then oomBookDirty = true return end
+  -- a new fight is a new situation for the group: its first warning is said at once
+  if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil return end
+  if not db or db.oomChat == nil or db.oomChat == "off" then return end
+  if not InCombatLockdown() then return end
+  local errType, msg = a1, a2
+  local hit = false
+  if not IsSecret(msg) and type(msg) == "string" and ERR_OUT_OF_MANA and msg == ERR_OUT_OF_MANA then hit = true end
+  if not hit and LE_GAME_ERR_OUT_OF_MANA and not IsSecret(errType) and errType == LE_GAME_ERR_OUT_OF_MANA then
+    hit = true
+  end
+  -- a cast failed for lack of mana: "out" when the measure says so (or there is none), else
+  -- "low": mana is left, but not for what the player needs
+  if hit then
+    PickMeasures()
+    local out = db.oomOut ~= false and (not oomOut or NoMana(oomOut.id))
+    pcall(ns.AnnounceOom, false, out and "out" or "low")
+  end
+end)
+-- in a fight the state is looked at twice a second: a warning when it turns to "low" or "out"
+local oomAcc, oomState = 0, nil
+function ns.OomTick(dt)
+  oomAcc = oomAcc + (dt or 0)
+  if oomAcc < 0.5 then return end
+  oomAcc = 0
+  if not db or db.oomChat == nil or db.oomChat == "off" or not InCombatLockdown() then oomState = nil return end
+  local ok, st = pcall(ns.ManaWarning)
+  if not ok then return end
+  if st and st ~= oomState then pcall(ns.AnnounceOom, false, st) end
+  oomState = st
+end
+oomFrame:SetScript("OnUpdate", function(_, dt) ns.OomTick(dt) end)
+end
+
 local holdFrame = CreateFrame("Frame")
 holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -1930,7 +2176,7 @@ end
 
 -- out of combat the bar and its texts can fade (0.9.4): to db.fadeAlpha, and with db.fadeFull
 -- only while the mana is full, so they come back as soon as mana is spent. The current mana is
--- secret in Forever also out of combat (docs/notes.md), so "full" is decided by the game: a step
+-- secret in Forever also out of combat, so "full" is decided by the game: a step
 -- curve through UnitPowerPercent gives alpha 1 below full and the faded alpha at full, like the
 -- icons. In combat and while the frame is unlocked (the way to set up the bar at 0 %) everything
 -- is fully shown; with the settings open the fading shows as it is (owner, 6 Nov: a change of
@@ -2282,6 +2528,10 @@ local function Probe()
       CS.ShouldCooldownsBeSecret and q(CS.ShouldCooldownsBeSecret) or "-",
       CS.ShouldUnitStatsBeSecret and q(CS.ShouldUnitStatsBeSecret) or "-")
   end
+  if ns.OomProbe then
+    local okO, line = pcall(ns.OomProbe)
+    P("%s", okO and line or "warnings: error")
+  end
   P("scale100=%s locked=%s onlyCombat=%s iconsCombat=%s showIcons=%s custom=%d", tostring(acct.scale100),
     tostring(db.locked), tostring(db.onlyCombat), tostring(db.iconsCombat), tostring(db.showIcons ~= false),
     #acct.custom)
@@ -2343,6 +2593,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     ns.SetHold(not held)
     Print(held and L.holdOn or L.holdOff)
     if ns.RefreshOptions then ns.RefreshOptions() end
+  elseif cmd == "oom" then
+    ns.AnnounceOom(true)
   elseif cmd == "unlock" then
     db.locked = false; ns.ApplyLock(); Print(L.unlocked)
   elseif cmd == "lock" then
