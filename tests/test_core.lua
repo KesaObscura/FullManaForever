@@ -2456,6 +2456,18 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from two spells of the spell book t
   -- more maximum mana: other measures (400 is now 10 %: the low mark moves to 1500 of 6000)
   M.state.maxMana = 6000; mana = 6000
   low, out = ns.OomInfo(); eq(low, 0.25, "low mark not picked again"); eq(out, 215 / 6000)
+  -- a measure that the game blocks in a fight (it says nothing about the mana there) is dropped:
+  -- the next nearest spell takes its place
+  M.state.maxMana = 2000; mana = 2000
+  low = ns.OomInfo(); eq(low, 0.2)
+  local inFight = true
+  _G.C_Spell.IsSpellUsable = function(id)
+    if id == 7 or (id == 4 and inFight) then return false, false end
+    return mana >= cost[id], mana < cost[id]
+  end
+  mana = 150; eq(ns.ManaWarning(), "low", "low not taken over by the next spell")
+  low = ns.OomInfo(); eq(low, 215 / 2000, "blocked measure kept")
+  inFight = false; low = ns.OomInfo(); eq(low, 215 / 2000, "blocked measure back after the fight")
   -- a secret answer is no warning
   if M.secret then
     _G.C_Spell.IsSpellUsable = function() return M.secret(true), M.secret(true) end

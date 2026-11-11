@@ -884,10 +884,11 @@ local function Measures(id)
   if not ok or IsSecret(usable) or IsSecret(noMana) then return false end
   return usable == true or noMana == true
 end
+local oomBad = {} -- spells that turned out to be blocked in a fight: no measures
 local function Nearest(max, share, above)
   local target, best = max * share, nil
   for _, e in ipairs(oomBook) do
-    if e.cost >= target * 0.5 and e.cost <= target * 1.5 and (not above or e.cost > above)
+    if not oomBad[e.id] and e.cost >= target * 0.5 and e.cost <= target * 1.5 and (not above or e.cost > above)
       and (not best or math.abs(e.cost - target) < math.abs(best.cost - target)) and Measures(e.id) then
       best = e
     end
@@ -916,8 +917,23 @@ local function NoMana(spellID)
   local ok, _, noMana = pcall(C_Spell.IsSpellUsable, spellID)
   return ok and not IsSecret(noMana) and noMana == true
 end
+-- a measure picked out of combat may be a spell the game blocks in a fight (it then reports
+-- nothing about the mana): it is dropped for good and the next nearest spell takes its place
+local function DropBlocked()
+  if not InCombatLockdown() then return end
+  for _ = 1, 20 do
+    local bad
+    if oomOut and not Measures(oomOut.id) then bad = oomOut
+    elseif oomLow and not Measures(oomLow.id) then bad = oomLow end
+    if not bad then return end
+    oomBad[bad.id] = true
+    oomMax = nil -- pick again
+    PickMeasures()
+  end
+end
 function ns.ManaWarning()
   PickMeasures()
+  DropBlocked()
   if oomOut and NoMana(oomOut.id) then return "out" end
   if oomLow and NoMana(oomLow.id) then return "low" end
   return nil
@@ -928,7 +944,7 @@ function ns.OomProbe()
   local usable = 0
   for _, e in ipairs(oomBook) do if Measures(e.id) then usable = usable + 1 end end
   return ("warnings: book=%d withCost=%d usable=%d max=%s low=%s out=%s API=%s"):format(oomSeen, #oomBook, usable,
-    tostring(oomMax), oomLow and tostring(oomLow.cost) or "-", oomOut and tostring(oomOut.cost) or "-",
+    tostring(oomMax), oomLow and (oomLow.cost .. "/" .. oomLow.id) or "-", oomOut and (oomOut.cost .. "/" .. oomOut.id) or "-",
     tostring(C_Spell and C_Spell.IsSpellUsable ~= nil))
 end
 -- for the settings: the shares of the maximum mana the two warnings come at (nil = not available)
