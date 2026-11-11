@@ -67,6 +67,8 @@ ns.GROUPS = {
     key = "gear", -- use effects of equipped items, each with its own cooldown
     equipped = true,
     items = {
+      { id = 18371, min = 1250, max = 1250 }, -- Mindtap Talisman (trinket, 1250 over 10 s, costs 60 Intellect for 2 min; scan 11 Nov)
+      { id = 11819, min = 630, max = 630 },   -- Second Wind (trinket, 63 mana a second for 10 s; scan 11 Nov)
       { id = 14152, min = 375, max = 625, class = "MAGE" }, -- Robe of the Archmage (mage chest, 375-625, 5 min)
       { id = 23027, min = 500, max = 500 },   -- Warmth of Forgiveness (trinket, 500, 3 min)
       { id = 7515, min = 400, max = 1200, class = "MAGE" }, -- Celestial Orb (off-hand, 400-1200, "Classes: Mage")

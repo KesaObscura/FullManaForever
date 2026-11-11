@@ -144,7 +144,13 @@ and `/fmf log` (kept in releases for bug reports).
   0.9.6 (owner, 10 Nov: "grow direction and the rest"): "Icons grow" (`iconGrow` normal / reverse;
   reverse: the frame keeps the bar's length, icons from the far end; asked in a comment); typing a
   value by clicking a stepper's number (exact, clamped, % typed as percent; bar length 0 = auto).
-  0.9.8 (owner, 10 Nov: release 0.9.6 first, the regroup next; planned 7 Nov): the full regroup of the settings window in two columns (left: position /
+  0.9.8 (owner, 11 Nov: "2, делай 0.9.8"; from the English scan of 11 Nov, build 70888): drink
+  detection of the time to full mana by name (spells 430 "Drink" and 1249914 "Nutritious Drink")
+  and by the use spells of all drinks with mana (Forever teas 1249914-1249925, rations, biscuits);
+  Mindtap Talisman 18371 and Second Wind 11819 in the gear group (now loadable; their item
+  cooldowns come from the game; not tested in game). Burst of Knowledge / Robes of Insight not
+  taken (cost reduction, no refill). Goes to CurseForge instead of 0.9.7 with one changelog.
+  0.9.9 (owner, 10 Nov: release 0.9.6 first, the regroup next; planned 7 Nov): the full regroup of the settings window in two columns (left: position /
   icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
   the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
   0.9.7 (owner, 10 Nov; players asked): "Time to full mana" (`fullTimer`, on) out of combat next to
@@ -153,7 +159,7 @@ and `/fmf log` (kept in releases for bug reports).
   casting). Drinking: the drink aura (by the name of spell 430 in the client's language, or IDs
   430/431/432/1133/1135/1137/22734, owner's scan 10 Nov) gives its end; then the learned normal rate.
   Mana and healing potions share the cooldown (owner's scan 10 Nov).
-  The settings regroup moves to 0.9.8.
+  The settings regroup moves to 0.9.9 (11 Nov).
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.
@@ -213,7 +219,9 @@ and `/fmf log` (kept in releases for bug reports).
    by the owner (description: log texts and regen line changed); 0.9.4 released on GitHub 6 Nov
    (PR #20, tag v0.9.4), CurseForge upload by the owner on 7 Nov (description: "Fades out of combat"
    line new); 0.9.5 released on GitHub and CurseForge 10 Nov (PR #21, tag v0.9.5; 0.9.4 had 6.1K
-   downloads in two days); 0.9.6 merged 10 Nov (PR #22, tag v0.9.6, CurseForge by the owner).
+   downloads in two days); 0.9.6 merged 10 Nov (PR #22, tag v0.9.6, CurseForge 11 Nov); 0.9.7 on GitHub
+   11 Nov (PR #23, tag v0.9.7; CurseForge and the SEO settings from docs/notes.md next). After the
+   11 Nov game update: still Interface 16001, not out of date (owner).
    Reply to the commenters once it is live. SEO from the Full Health Forever session (7 Nov):
    once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
    GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a

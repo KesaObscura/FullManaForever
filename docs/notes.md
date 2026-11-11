@@ -294,9 +294,13 @@ Facts that matter for this addon (the full list lives in that project):
 - Healing potion item cooldown readable (858: 120 s). **Mana and healing potions share the
   cooldown** (owner's scan 10 Nov, priest 25: after a Minor Mana Potion the same 120 s showed on 17
   potions incl. Minor Healing Potion 858). Drink auras "Drink" (ruRU "Питье"): 430, 431, 432,
-  1133, 1135, 1137, 22734 (18-30 s); FMF finds the drink by that name, so new drink IDs match too. Whether mana and healing potions share the
-  cooldown in Forever is not tested; our potion icon reads the mana potion's own item cooldown, so a
-  shared cooldown would simply show as its wait.
+  1133, 1135, 1137, 22734 (18-30 s); FMF finds the drink by that name, so new drink IDs match too.
+  English scan 11 Nov (build 70888): the Forever teas (Peace Tea, Royal Tea, ...) use "Nutritious
+  Drink" 1249914-1249925, not "Drink"; other drinks with mana use their own spells (rations,
+  biscuits, Alterac Spring Water, ...): 0.9.8 matches both names and all these use spells. Whether
+  the aura carries the use spell's ID is not tested in game. Second Wind 11819 (63 mana/s for 10 s,
+  doubled in mountains) and Mindtap Talisman 18371 (1250 over 10 s, -60 Intellect for 2 min) load
+  since launch.
 
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 
