@@ -83,11 +83,15 @@ local function MetalByHand(f)
   -- the middle and the windows behind showed through)
   local bandBg = f:CreateTexture(nil, "BACKGROUND", nil, -7)
   -- as wide as the metal (it sits o px outside the window), so it reaches the gold edges
-  bandBg:SetPoint("BOTTOMLEFT", f, "TOPLEFT", -o, 0)
-  bandBg:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", o, 0)
+  bandBg:SetPoint("BOTTOMLEFT", f, "TOPLEFT", -o - 3, 0)
+  bandBg:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", o + 3, 0)
   bandBg:SetHeight(up - 4)
   bandBg:SetColorTexture(Skin.BG[1] * 0.7, Skin.BG[2] * 0.7, Skin.BG[3] * 0.7, 1)
   f.skinBandBg = bandBg
+  -- the band is part of the window for the mouse (drag the window by its title, owner 11 Nov)
+  -- and for the screen edge (the band and the metal never leave the screen)
+  if f.SetHitRectInsets then f:SetHitRectInsets(0, 0, -up, 0) end
+  if f.SetClampRectInsets then f:SetClampRectInsets(-o, o, up, -o) end
   f.skinMetal = holder
   f.skinBand = up
   return true
@@ -120,8 +124,8 @@ function Skin.Window(f, titleH)
     -- the metal sits 6 px outside the window and is open on its inner side: the fill goes under
     -- it, so no strip of the world shows between the window and the gold edge (owner, 11 Nov)
     bg:ClearAllPoints()
-    bg:SetPoint("TOPLEFT", f, "TOPLEFT", -6, 0)
-    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 6, -6)
+    bg:SetPoint("TOPLEFT", f, "TOPLEFT", -9, 0)
+    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 9, -9)
   end
   if titleH and titleH > 0 then
     local line = f:CreateTexture(nil, "ARTWORK")
