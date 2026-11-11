@@ -803,11 +803,9 @@ function ns.SetHold(on)
 end
 
 do -- mana warnings to chat: own scope (a Lua chunk holds 200 locals at most)
--- "Out of mana!" to the group chat (0.9.10, asked for in a comment). The mana itself is secret
--- and cannot be tested (probe, 11 Nov), but the game says so itself: a cast that fails for lack
--- of mana fires UI_ERROR_MESSAGE with ERR_OUT_OF_MANA. In a fight that message goes to the party
--- or raid, at most every OOM_GAP seconds. /fmf oom says it at once (macro). While the game
--- locks addon chat (boss fights may) nothing is sent: the player is told once to use /oom.
+-- "Low mana!" and "Out of mana!" to the party or raid chat (0.9.10, asked for in a comment),
+-- at most every OOM_GAP seconds each; /fmf oom says "Out of mana!" at once. While the game
+-- locks addon chat nothing is sent: the player is told once to use the game's /oom emote.
 local OOM_GAP = 30
 local oomLast, oomToldBlocked
 local function ChatLocked()
