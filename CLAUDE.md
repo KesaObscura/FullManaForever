@@ -227,6 +227,9 @@ and `/fmf log` (kept in releases for bug reports).
    downloads in two days); 0.9.6 merged 10 Nov (PR #22, tag v0.9.6, CurseForge 11 Nov); 0.9.7 on GitHub
    11 Nov (PR #23, tag v0.9.7; CurseForge and the SEO settings from docs/notes.md next). After the
    11 Nov game update: still Interface 16001, not out of date (owner).
+   0.9.8 on GitHub 11 Nov (PR #24, tag v0.9.8). Owner, 11 Nov: one CurseForge release per day to
+   show activity, not several versions at once: 12 Nov 0.9.8 (changelog 0.9.7 + 0.9.8: 0.9.7 alone
+   would ship the tea bug of the timer), 13 Nov 0.9.9.
    Reply to the commenters once it is live. SEO from the Full Health Forever session (7 Nov):
    once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
    GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a
