@@ -2205,6 +2205,7 @@ end
 -- report can send the file instead of a screenshot (0.9.5, like the Full Health Forever probe).
 -- Only booleans, numbers and API names: never a secret, never a name.
 local PROBE_KEEP = 3
+local probeFrame
 local function Probe()
   local lines = {}
   local function P(msg, ...)
@@ -2230,6 +2231,35 @@ local function Probe()
     P("UnitPowerPercent+curve: %s (variant %s)", r and "ok" or "FAILED", tostring(powerVariant))
   end)
   if not ok then P("curve probe error: %s", S(err)) end
+  -- can the game's answer be read back? (0.9.9, asked in a comment: "say in chat when out of
+  -- mana"). The alpha a curve gives is put on a hidden texture and read again, and the mana
+  -- percentage is put into a hidden text and its width measured. A plain number here would let
+  -- the addon test "mana below X"; a secret means it stays a picture only. Nothing is sent.
+  local okB, errB = pcall(function()
+    local r = PowerColor(ManaCurve(0.5))
+    if not r then P("readback: no curve result") return end
+    local a = select(4, r:GetRGBA())
+    probeFrame = probeFrame or CreateFrame("Frame", nil, UIParent)
+    probeFrame:Hide()
+    local tex = probeFrame.tex or probeFrame:CreateTexture()
+    probeFrame.tex = tex
+    local okA = pcall(tex.SetAlpha, tex, a)
+    local got = okA and tex:GetAlpha()
+    P("readback alpha: set=%s get=%s (mana %s 50%%)", yn(okA), okA and S(got) or "-",
+      okA and not IsSecret(got) and (got > 0.5 and "below" or "above") or "?")
+    local fs = probeFrame.fs or probeFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    probeFrame.fs = fs
+    local pctV = ManaPercent()
+    if IsSecret(pctV) or type(pctV) == "number" then
+      local okT = pcall(function() fs:SetText(string.format("%.0f", pctV)) end)
+      local okW, w = pcall(fs.GetStringWidth, fs)
+      local okG, t = pcall(fs.GetText, fs)
+      P("readback text: set=%s text=%s width=%s", yn(okT), okG and S(t) or "?", okW and S(w) or "?")
+    else
+      P("readback text: no percent")
+    end
+  end)
+  if not okB then P("readback error: %s", S(errB)) end
   -- where we are and which rules are on: dungeons and raids add restrictions (Map, Encounter)
   local okI, inInst, kind = pcall(function() return IsInInstance() end)
   P("instance=%s type=%s", okI and S(inInst) or "?", okI and S(kind) or "?")

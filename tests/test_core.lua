@@ -2358,6 +2358,20 @@ test("0.9.3: help, probe and the first warning say where to report bugs", functi
   ok(ns.BUG_URL:find("^https://github%.com/KesaObscura/FullManaForever/issues$"), "wrong link")
 end)
 
+test("0.9.9: /fmf probe reads the curve's alpha and the percent text back, sends nothing", function()
+  local ns = M.load(nil)
+  local sent = false
+  _G.SendChatMessage = function() sent = true end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("probe")
+  local all = table.concat(M.printed, "\n")
+  ok(all:find("readback alpha:", 1, true), "no alpha readback line")
+  ok(all:find("readback text:", 1, true) or all:find("readback error", 1, true) == nil, "no text readback line")
+  ok(not all:find("readback error", 1, true), "readback raised an error: " .. all)
+  ok(not sent, "the probe sent a chat message")
+  _G.SendChatMessage = nil
+end)
+
 -- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
 
 test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()
