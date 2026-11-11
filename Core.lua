@@ -943,10 +943,9 @@ local function NoMana(spellID)
   return ok and not IsSecret(noMana) and noMana == true
 end
 -- a measure picked out of combat may be a spell the game blocks in a fight (it then reports
--- nothing about the mana): it is dropped for good and the next nearest spell takes its place
--- One per check, and only for this fight: in a druid's cat or bear form every spell is
--- blocked, and dropping them for the whole session left the druid without warnings for good
--- (review, 11 Nov); after the fight all spells are measures again.
+-- nothing about the mana): it is dropped and the next nearest spell takes its place. One per
+-- check, and only for this fight: in a druid's cat or bear form every spell is blocked, and
+-- dropping them for the session left the druid without warnings for good (review, 11 Nov).
 local function DropBlocked()
   if not InCombatLockdown() then return end
   local bad
