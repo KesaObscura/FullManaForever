@@ -342,9 +342,9 @@ local function Build(point)
   ns.Skin.Window(lib, 38)
 
   local title = ui.Label(lib, L.libTitle, "GameFontNormalLarge")
-  title:SetPoint("TOPLEFT", PAD, -12)
+  ns.Skin.PlaceTitle(title, lib, PAD)
   local close = ui.CloseButton(lib)
-  close:SetPoint("TOPRIGHT", -8, -8)
+  ns.Skin.PlaceClose(close, lib)
   close:SetScript("OnClick", function() lib:Hide() end)
   ui.Tip(close, L.optClose, L.tipClose)
 

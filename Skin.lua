@@ -62,8 +62,11 @@ local function MetalByHand(f)
     if h then t:SetHeight(h) end
     return t
   end
-  local tl = T("UI-Frame-Metal-CornerTopLeft", c, c); tl:SetPoint("TOPLEFT", -o, o)
-  local tr = T("UI-Frame-Metal-CornerTopRight", c, c); tr:SetPoint("TOPRIGHT", o, o)
+  -- the thick top of the metal is the title band: it sits above the window, so nothing inside
+  -- the window moves (owner's test 11 Nov: inside it covered the title and the top row)
+  local up = c + 2
+  local tl = T("UI-Frame-Metal-CornerTopLeft", c, c); tl:SetPoint("TOPLEFT", -o, up)
+  local tr = T("UI-Frame-Metal-CornerTopRight", c, c); tr:SetPoint("TOPRIGHT", o, up)
   local bl = T("UI-Frame-Metal-CornerBottomLeft", c, cb); bl:SetPoint("BOTTOMLEFT", -o, -o)
   local br = T("UI-Frame-Metal-CornerBottomRight", c, cb); br:SetPoint("BOTTOMRIGHT", o, -o)
   local top = T("_UI-Frame-Metal-EdgeTop", nil, c)
@@ -77,6 +80,7 @@ local function MetalByHand(f)
   for _, t in ipairs({ top, bottom }) do if t.SetHorizTile then t:SetHorizTile(true) end end
   for _, t in ipairs({ left, right }) do if t.SetVertTile then t:SetVertTile(true) end end
   f.skinMetal = holder
+  f.skinBand = up
   return true
 end
 local function MetalNineSlice(f)
@@ -87,6 +91,7 @@ local function MetalNineSlice(f)
     n:SetFrameLevel((f:GetFrameLevel() or 1) + 40)
     NineSliceUtil.ApplyLayoutByName(n, "ButtonFrameTemplateNoPortrait")
     f.skinMetal = n
+    f.skinBand = 0
   end)
   return ok
 end
@@ -111,6 +116,25 @@ function Skin.Window(f, titleH)
     f.skinTitleLine = line
   end
   return f
+end
+
+-- the window title: centred in the metal band above the window, else at the top left inside
+function Skin.PlaceTitle(fs, f, pad)
+  fs:ClearAllPoints()
+  if (f.skinBand or 0) > 0 then
+    fs:SetPoint("CENTER", f, "TOP", 0, f.skinBand / 2 - 1)
+  else
+    fs:SetPoint("TOPLEFT", f, "TOPLEFT", pad or 16, -12)
+  end
+end
+-- the close button: in the right end of the band, else at the top right inside
+function Skin.PlaceClose(b, f)
+  b:ClearAllPoints()
+  if (f.skinBand or 0) > 0 then
+    b:SetPoint("CENTER", f, "TOPRIGHT", -14, f.skinBand / 2 - 1)
+  else
+    b:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -8)
+  end
 end
 
 -- the red close button of the game's windows; nil when the client lacks it

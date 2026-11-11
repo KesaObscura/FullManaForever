@@ -528,16 +528,22 @@ Build = function()
   win:SetScript("OnHide", function() ask:Hide(); winHiddenAt = GetTime(); UpdateShade() end)
 
   local title = Label(win, "Full Mana Forever  |cff888888v" .. ns.VERSION .. "|r", "GameFontNormalLarge")
-  title:SetPoint("TOPLEFT", PAD, -12)
+  Skin.PlaceTitle(title, win, PAD)
   local close = CloseButton(win)
-  close:SetPoint("TOPRIGHT", -8, -8)
+  Skin.PlaceClose(close, win)
   close:SetScript("OnClick", function() win:Hide() end)
   Tip(close, L.optClose, L.tipClose)
 
   -- profile in use: Shared or this character's own; rare actions in "Profiles..."
   local P = ns.Profiles
   local profBtn = Button(win, L.optProfiles, 120)
-  profBtn:SetPoint("RIGHT", close, "LEFT", -12, 0)
+  -- the profile row has the top of the window to itself; the title and the close button sit
+  -- in the metal band above it (0.9.11)
+  if (win.skinBand or 0) > 0 then
+    profBtn:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -9)
+  else
+    profBtn:SetPoint("RIGHT", close, "LEFT", -12, 0)
+  end
   profBtn:SetScript("OnClick", function() ns.ToggleProfiles(true) end)
   Tip(profBtn, L.optProfiles, L.tipProfiles)
   local prof = Dropdown(win, 190, {
@@ -1192,9 +1198,9 @@ local function BuildProfiles()
   EscListed(pwin, "FullManaForeverProfiles")
   Skin.Window(pwin, 38)
   local title = Label(pwin, L.profTitle, "GameFontNormalLarge")
-  title:SetPoint("TOPLEFT", PAD, -12)
+  Skin.PlaceTitle(title, pwin, PAD)
   local close = CloseButton(pwin)
-  close:SetPoint("TOPRIGHT", -8, -8)
+  Skin.PlaceClose(close, pwin)
   close:SetScript("OnClick", function() pwin:Hide() end)
   Tip(close, L.optClose, L.tipClose)
 
