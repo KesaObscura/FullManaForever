@@ -82,8 +82,9 @@ local function MetalByHand(f)
   -- the band itself is solid like the window (owner's test 11 Nov: the metal art is open in
   -- the middle and the windows behind showed through)
   local bandBg = f:CreateTexture(nil, "BACKGROUND", nil, -7)
-  bandBg:SetPoint("BOTTOMLEFT", f, "TOPLEFT", 0, 0)
-  bandBg:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", 0, 0)
+  -- as wide as the metal (it sits o px outside the window), so it reaches the gold edges
+  bandBg:SetPoint("BOTTOMLEFT", f, "TOPLEFT", -o, 0)
+  bandBg:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", o, 0)
   bandBg:SetHeight(up - 4)
   bandBg:SetColorTexture(Skin.BG[1] * 0.7, Skin.BG[2] * 0.7, Skin.BG[3] * 0.7, 1)
   f.skinBandBg = bandBg
