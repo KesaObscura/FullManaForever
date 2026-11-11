@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.9"
+ns.VERSION = "0.9.10"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -33,6 +33,7 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,
+  oomChat    = "off",   -- "Out of mana!" to the group chat: off / party / raid / auto (0.9.10)
   fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
@@ -800,6 +801,76 @@ function ns.SetHold(on)
   held = on and true or false
   heldFightSeen = held and InCombatLockdown() and true or false
 end
+
+-- "Out of mana!" to the group chat (0.9.10, asked for in a comment). The mana itself is secret
+-- and cannot be tested (probe, 11 Nov), but the game says so itself: a cast that fails for lack
+-- of mana fires UI_ERROR_MESSAGE with ERR_OUT_OF_MANA. In a fight that message goes to the party
+-- or raid, at most every OOM_GAP seconds. /fmf oom says it at once (macro). While the game
+-- locks addon chat (boss fights may) nothing is sent: the player is told once to use /oom.
+local OOM_GAP = 30
+local oomLast, oomToldBlocked
+local function ChatLocked()
+  local CI = C_ChatInfo
+  if CI and CI.InChatMessagingLockdown then
+    local ok, v = pcall(CI.InChatMessagingLockdown)
+    if ok and not IsSecret(v) and v then return true end
+  end
+  local RA = C_RestrictedActions and C_RestrictedActions.GetAddOnRestrictionState
+  if RA then
+    local ok, st = pcall(RA, 5) -- Enum.AddOnRestrictionType: chat
+    if ok and not IsSecret(st) and type(st) == "number" and st > 0 then return true end
+  end
+  return false
+end
+-- party: the party chat (in a raid: the own subgroup); raid: only in a raid; auto: raid chat in a
+-- raid, else party chat
+local function OomChannel(mode)
+  local okR, raid = pcall(IsInRaid)
+  local okG, group = pcall(IsInGroup)
+  if not okR or not okG or IsSecret(raid) or IsSecret(group) then return nil end
+  if mode == "raid" then return raid and "RAID" or nil end
+  if mode == "party" then return (raid or group) and "PARTY" or nil end
+  if raid then return "RAID" end
+  return group and "PARTY" or nil
+end
+function ns.AnnounceOom(manual)
+  local mode = db.oomChat
+  if mode ~= "party" and mode ~= "raid" and mode ~= "auto" then
+    if not manual then return false end
+    mode = "auto" -- the command also works with the setting off
+  end
+  local now = GetTime()
+  if not manual and oomLast and now - oomLast < OOM_GAP then return false end
+  local channel = OomChannel(mode)
+  if not channel then
+    if manual then Print(L.oomNoGroup) end
+    return false
+  end
+  if ChatLocked() then
+    if manual or not oomToldBlocked then Print(L.oomBlocked) end
+    oomToldBlocked = true
+    return false
+  end
+  local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+  if not send then return false end
+  oomLast = now -- also after a failed try: no retry on every key press
+  local ok = pcall(send, L.oomMsg, channel)
+  if not ok and (manual or not oomToldBlocked) then Print(L.oomBlocked); oomToldBlocked = true end
+  return ok
+end
+local oomFrame = CreateFrame("Frame")
+pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
+oomFrame:SetScript("OnEvent", function(_, _, errType, msg)
+  if not db or db.oomChat == nil or db.oomChat == "off" then return end
+  if not InCombatLockdown() then return end
+  local hit = false
+  if not IsSecret(msg) and type(msg) == "string" and ERR_OUT_OF_MANA and msg == ERR_OUT_OF_MANA then hit = true end
+  if not hit and LE_GAME_ERR_OUT_OF_MANA and not IsSecret(errType) and errType == LE_GAME_ERR_OUT_OF_MANA then
+    hit = true
+  end
+  if hit then pcall(ns.AnnounceOom, false) end
+end)
+
 local holdFrame = CreateFrame("Frame")
 holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -2343,6 +2414,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     ns.SetHold(not held)
     Print(held and L.holdOn or L.holdOff)
     if ns.RefreshOptions then ns.RefreshOptions() end
+  elseif cmd == "oom" then
+    ns.AnnounceOom(true)
   elseif cmd == "unlock" then
     db.locked = false; ns.ApplyLock(); Print(L.unlocked)
   elseif cmd == "lock" then

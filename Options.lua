@@ -915,6 +915,14 @@ Build = function()
   groupTail = { frame = items, dx = 0 }
   if #groupRows == 0 then items:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y) end
   c.y = c.y - 34
+  -- "Out of mana!" to the group chat when a cast fails for lack of mana (0.9.10); off by
+  -- default: nothing is written in the player's name unasked
+  local oomText = { off = L.mtOff, party = L.oomParty, raid = L.oomRaid, auto = L.oomAuto }
+  LabeledDD(L.optOom, PAD + 4, {
+    { value = "off", text = L.mtOff }, { value = "party", text = L.oomParty },
+    { value = "raid", text = L.oomRaid }, { value = "auto", text = L.oomAuto },
+  }, function() return oomText[db.oomChat] or L.mtOff end,
+  function(v) db.oomChat = v; ns.RefreshOptions() end, L.tipOom)
   PlaceGroups(true)
 
   -- footer across both columns (0.9.9): what belongs to the whole window or the account, not to

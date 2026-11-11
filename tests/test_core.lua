@@ -2372,6 +2372,46 @@ test("0.9.9: /fmf probe reads the curve's alpha and the percent text back, sends
   _G.SendChatMessage = nil
 end)
 
+test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to the chosen chat, throttled", function()
+  local ns = M.load({ oomChat = "auto" })
+  local sent = {}
+  _G.SendChatMessage = function(msg, ch) sent[#sent + 1] = ch .. ":" .. msg end
+  _G.ERR_OUT_OF_MANA = "Not enough mana"
+  local function fail(t) M.state.time = t; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana") end
+  M.state.group, M.state.raid, M.state.combat = true, false, false
+  fail(100); eq(#sent, 0, "sent out of combat")
+  M.state.combat = true
+  M.Fire("UI_ERROR_MESSAGE", 50, "Out of range"); eq(#sent, 0, "another error sent")
+  fail(101); eq(sent[1], "PARTY:" .. ns.L.oomMsg)
+  fail(110); eq(#sent, 1, "not throttled")
+  fail(132); eq(#sent, 2, "no second message after 30 s")
+  M.state.raid = true
+  fail(170); eq(sent[3], "RAID:" .. ns.L.oomMsg, "auto in a raid")
+  ns.db.oomChat = "party"; fail(210); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "party chat in a raid")
+  M.state.raid = false
+  ns.db.oomChat = "raid"; fail(250); eq(#sent, 4, "raid chat chosen, only in a party")
+  M.state.group = false
+  ns.db.oomChat = "auto"; fail(290); eq(#sent, 4, "sent while solo")
+  ns.db.oomChat = "off"; M.state.group = true; fail(330); eq(#sent, 4, "sent while off")
+  -- the command works with the setting off, and tells when there is no group
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[5], "PARTY:" .. ns.L.oomMsg, "/fmf oom")
+  M.state.group = false; M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(#sent, 5)
+  ok(table.concat(M.printed, "\n"):find(ns.L.oomNoGroup, 1, true), "no hint without a group")
+  -- the game locks addon chat: nothing is sent, the player is told once
+  M.state.group = true; ns.db.oomChat = "auto"; M.printed = {}
+  _G.C_RestrictedActions = { GetAddOnRestrictionState = function(i) return i == 5 and 2 or 0 end }
+  fail(400); fail(440); eq(#sent, 5, "sent during a chat lockdown")
+  local n = 0
+  for _, p in ipairs(M.printed) do if p:find(ns.L.oomBlocked, 1, true) then n = n + 1 end end
+  eq(n, 1, "the lockdown hint not shown exactly once")
+  -- a secret error text is never compared
+  _G.C_RestrictedActions = nil
+  M.Fire("UI_ERROR_MESSAGE", 51, M.secret and M.secret("x") or "other"); eq(#sent, 5)
+  _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
+  M.state.group, M.state.raid, M.state.combat, M.state.time = false, false, false, nil
+end)
+
 -- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
 
 test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()

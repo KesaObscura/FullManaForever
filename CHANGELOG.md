@@ -1,5 +1,12 @@
 # Changelog
 
+**Full Mana Forever 0.9.10**
+
+Asked for in the comments:
+- **"Out of mana!" to chat** (bottom of the right column: Off / Party chat / Raid chat / Party or raid): when a spell fails for lack of mana in a fight, the addon writes it to your group, at most every 30 seconds. Off by default
+- `/fmf oom` says it at once, for a macro (also with the setting off)
+- Forever hides your mana from addons, so the warning cannot come earlier than the failed cast. If the game blocks addon chat in a boss fight, the addon says so once: use the game's own `/oom` emote there
+
 **Full Mana Forever 0.9.9**
 
 Settings window, easier to find things:

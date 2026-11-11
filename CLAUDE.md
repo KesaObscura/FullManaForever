@@ -165,6 +165,12 @@ and `/fmf log` (kept in releases for bug reports).
   430/431/432/1133/1135/1137/22734, owner's scan 10 Nov) gives its end; then the learned normal rate.
   Mana and healing potions share the cooldown (owner's scan 10 Nov).
   The settings regroup moves to 0.9.9 (11 Nov).
+  0.9.10 (owner, 11 Nov: "find a solution for the oom message, party or raid"; asked in a comment):
+  "Out of mana!" to chat (`oomChat` off / party / raid / auto, off by default: nothing is written
+  in the player's name unasked): mana cannot be tested, so the trigger is the game's own error
+  (`UI_ERROR_MESSAGE` = `ERR_OUT_OF_MANA` / `LE_GAME_ERR_OUT_OF_MANA`) in combat, every 30 s at
+  most; `/fmf oom` sends at once; nothing is sent while addon chat is locked
+  (`C_ChatInfo.InChatMessagingLockdown`, restriction type 5), the player is told once (/oom).
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.
