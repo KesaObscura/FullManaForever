@@ -604,6 +604,7 @@ Build = function()
   c.Row(Check(col, L.optOnTop, function() return db.onTop end,
     function(v) db.onTop = v; ns.PositionBar() end, L.tipOnTop))
   -- the icons (0.9.9: one section per thing on the HUD: position, icons, bar, texts)
+  c.y = c.y - 8 -- the last switch of Placement sits closer than the steppers above the other headers
   c.Row(Header(col, L.optAppearance), PAD, 26)
   local layLabel = Label(col, L.optLayout .. ":")
   local lay = Dropdown(col, DD_W, {
