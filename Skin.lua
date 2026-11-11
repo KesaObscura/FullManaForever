@@ -103,7 +103,9 @@ function Skin.Window(f, titleH)
   bg:SetAllPoints()
   bg:SetColorTexture(Skin.BG[1], Skin.BG[2], Skin.BG[3], 0.98)
   f.skinBg = bg
-  if not MetalNineSlice(f) and not MetalByHand(f) then
+  -- by hand first: the game's own nine-slice layout puts the thick band inside the window,
+  -- over the title and the top row (owner's test 11 Nov); by hand it sits above the window
+  if not MetalByHand(f) and not MetalNineSlice(f) then
     Skin.Edge(f, Skin.EDGE, 1, "ARTWORK")
   end
   if titleH and titleH > 0 then
