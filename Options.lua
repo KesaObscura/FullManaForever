@@ -1211,7 +1211,7 @@ local function BuildProfiles()
   local header = Header(pwin, L.profCopyFrom)
   header:SetPoint("TOPLEFT", PAD, -72 + T0)
   local none = Label(pwin, L.profNone, "GameFontDisableSmall")
-  none:SetPoint("TOPLEFT", PAD + 4, -98 + T0)
+  none:SetPoint("TOPLEFT", PAD + 4, -104 + T0) -- below the header and its divider
 
   -- a small question over the window before anything is replaced or deleted
   local confirm = CreateFrame("Frame", nil, pwin)
