@@ -312,6 +312,13 @@ Facts that matter for this addon (the full list lives in that project):
   text `ERR_OUT_OF_MANA`, also in combat (not secret). `SendChatMessage` from that event handler
   works in combat, even to SAY outdoors; `C_ChatInfo.InChatMessagingLockdown` false, chat
   restriction 0 on a normal mob. Not tested: party / raid chat, dungeon bosses, battlegrounds.
+  Later tests the same day: chat sent WITHOUT a key press (timer or event handler) to SAY and to
+  EMOTE returns no error but never arrives, in and out of combat; with a key press (slash command)
+  both arrive, also in combat. `DoEmote("OOM")` from a timer worked out of combat. Whisper to
+  oneself failed (name with a space not found), so PARTY / RAID without a key press is still open.
+  `C_Spell.IsSpellUsable(id)` returns plain (usable, noMana) in combat and flips with the mana
+  (cost 400 of 2023 max flipped first, then the 95-215 ones): a real "mana below the cost of spell
+  X" test; `C_Spell.GetSpellPowerCost` readable in combat.
   The game's scrolling "Low mana" text (`MANA_LOW`) cannot be watched: `CombatText_AddMessage`
   does not exist as a global, also after Blizzard_CombatText has loaded.
 

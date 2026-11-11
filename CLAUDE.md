@@ -165,12 +165,16 @@ and `/fmf log` (kept in releases for bug reports).
   430/431/432/1133/1135/1137/22734, owner's scan 10 Nov) gives its end; then the learned normal rate.
   Mana and healing potions share the cooldown (owner's scan 10 Nov).
   The settings regroup moves to 0.9.9 (11 Nov).
-  0.9.10 (owner, 11 Nov: "find a solution for the oom message, party or raid"; asked in a comment):
-  "Out of mana!" to chat (`oomChat` off / party / raid / auto, off by default: nothing is written
-  in the player's name unasked): mana cannot be tested, so the trigger is the game's own error
-  (`UI_ERROR_MESSAGE` = `ERR_OUT_OF_MANA` / `LE_GAME_ERR_OUT_OF_MANA`) in combat, every 30 s at
-  most; `/fmf oom` sends at once; nothing is sent while addon chat is locked
-  (`C_ChatInfo.InChatMessagingLockdown`, restriction type 5), the player is told once (/oom).
+  0.9.10 (owner, 11 Nov: "find a solution for the oom message, party or raid", then "two warnings,
+  low mana and out of mana"; asked in a comment): mana warnings to chat (`oomChat` off / party /
+  raid / auto, off by default: nothing is written in the player's name unasked). Mana cannot be
+  read, but `C_Spell.IsSpellUsable` (usable, noMana) is readable in combat and so are the costs:
+  spells are learned from the player's casts of the session; "out" = the most cast spell cannot
+  be paid (or `UI_ERROR_MESSAGE` type 358 = `ERR_OUT_OF_MANA`), "low" = the dearest spell of at
+  most a quarter of the max mana, dearer than the main one, cannot be paid. 30 s pause each, reset
+  after a fight. Chat sent without a key press: SAY and EMOTE are dropped silently (owner's test),
+  PARTY / RAID not tested yet; `/fmf oom check` (spell macros, a key press) always gets through,
+  `/fmf oom` says it at once. Nothing is sent while addon chat is locked.
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.

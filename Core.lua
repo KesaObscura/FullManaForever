@@ -833,14 +833,64 @@ local function OomChannel(mode)
   if raid then return "RAID" end
   return group and "PARTY" or nil
 end
-function ns.AnnounceOom(manual)
+-- Which mana warning is due, without reading the mana: the game says for every spell whether
+-- the mana is enough for it (C_Spell.IsSpellUsable, readable in combat: owner's test 11 Nov),
+-- and the costs are readable. Spells are learned from the player's own casts of this session.
+-- "out": the spell cast most often cannot be paid. "low": a dearer spell (the dearest one that
+-- costs at most LOW_SHARE of the maximum mana) cannot be paid while the main one still can.
+local LOW_SHARE = 0.25
+local oomSpells = {} -- [spellID] = { cost = n, n = casts }
+local function LearnSpell(spellID)
+  if IsSecret(spellID) or type(spellID) ~= "number" then return end
+  local e = oomSpells[spellID]
+  if e then e.n = e.n + 1 return end
+  if not (C_Spell and C_Spell.GetSpellPowerCost) then return end
+  local ok, costs = pcall(C_Spell.GetSpellPowerCost, spellID)
+  if not ok or type(costs) ~= "table" then return end
+  for _, c in ipairs(costs) do
+    if type(c) == "table" and not IsSecret(c.type) and c.type == MANA and not IsSecret(c.cost)
+      and type(c.cost) == "number" and c.cost > 0 then
+      oomSpells[spellID] = { cost = c.cost, n = 1 }
+      return
+    end
+  end
+end
+local function NoMana(spellID)
+  if not (C_Spell and C_Spell.IsSpellUsable) then return false end
+  local ok, _, noMana = pcall(C_Spell.IsSpellUsable, spellID)
+  return ok and not IsSecret(noMana) and noMana == true
+end
+function ns.ManaWarning()
+  local main, mainE
+  for id, e in pairs(oomSpells) do
+    if not mainE or e.n > mainE.n or (e.n == mainE.n and e.cost < mainE.cost) then main, mainE = id, e end
+  end
+  if not main then return nil end
+  if NoMana(main) then return "out" end
+  local max = UnitPowerMax("player", MANA)
+  if IsSecret(max) or type(max) ~= "number" or max <= 0 then return nil end
+  local low, lowE
+  for id, e in pairs(oomSpells) do
+    if e.cost > mainE.cost and e.cost <= max * LOW_SHARE and (not lowE or e.cost > lowE.cost) then low, lowE = id, e end
+  end
+  if low and NoMana(low) then return "low" end
+  return nil
+end
+
+-- kind: "out" (default) or "low". manual: typed by the player (/fmf oom): no pause, hints shown.
+local lowLast
+function ns.AnnounceOom(manual, kind)
+  kind = kind == "low" and "low" or "out"
   local mode = db.oomChat
   if mode ~= "party" and mode ~= "raid" and mode ~= "auto" then
     if not manual then return false end
     mode = "auto" -- the command also works with the setting off
   end
   local now = GetTime()
-  if not manual and oomLast and now - oomLast < OOM_GAP then return false end
+  if not manual then
+    if oomLast and now - oomLast < OOM_GAP then return false end -- nothing right after "out"
+    if kind == "low" and lowLast and now - lowLast < OOM_GAP then return false end
+  end
   local channel = OomChannel(mode)
   if not channel then
     if manual then Print(L.oomNoGroup) end
@@ -853,26 +903,57 @@ function ns.AnnounceOom(manual)
   end
   local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
   if not send then return false end
-  oomLast = now -- also after a failed try: no retry on every key press
-  local ok = pcall(send, L.oomMsg, channel)
+  -- also after a failed try: no retry on every key press
+  if kind == "low" then lowLast = now else oomLast = now end
+  local ok = pcall(send, kind == "low" and L.lowMsg or L.oomMsg, channel)
   if not ok and (manual or not oomToldBlocked) then Print(L.oomBlocked); oomToldBlocked = true end
   return ok
 end
+-- /fmf oom check, for spell macros: says "Low mana!" or "Out of mana!" only when it is so, with
+-- the pauses of the automatic warning. A key press, so the game delivers it to any chat.
+function ns.OomCheck()
+  local st = ns.ManaWarning()
+  if st then return ns.AnnounceOom(false, st) end
+  return false
+end
 local oomFrame = CreateFrame("Frame")
 pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
+if oomFrame.RegisterUnitEvent then
+  pcall(oomFrame.RegisterUnitEvent, oomFrame, "UNIT_SPELLCAST_SUCCEEDED", "player")
+else
+  pcall(oomFrame.RegisterEvent, oomFrame, "UNIT_SPELLCAST_SUCCEEDED")
+end
 oomFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-oomFrame:SetScript("OnEvent", function(_, event, errType, msg)
-  -- a new fight is a new situation for the group: its first failed cast is said at once
-  if event == "PLAYER_REGEN_ENABLED" then oomLast = nil return end
+oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
+  if event == "UNIT_SPELLCAST_SUCCEEDED" then
+    if not IsSecret(a1) and a1 == "player" then pcall(LearnSpell, a3) end
+    return
+  end
+  -- a new fight is a new situation for the group: its first warning is said at once
+  if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil return end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end
   if not InCombatLockdown() then return end
+  local errType, msg = a1, a2
   local hit = false
   if not IsSecret(msg) and type(msg) == "string" and ERR_OUT_OF_MANA and msg == ERR_OUT_OF_MANA then hit = true end
   if not hit and LE_GAME_ERR_OUT_OF_MANA and not IsSecret(errType) and errType == LE_GAME_ERR_OUT_OF_MANA then
     hit = true
   end
-  if hit then pcall(ns.AnnounceOom, false) end
+  if hit then pcall(ns.AnnounceOom, false, "out") end
 end)
+-- in a fight the state is looked at twice a second: a warning when it turns to "low" or "out"
+local oomAcc, oomState = 0, nil
+function ns.OomTick(dt)
+  oomAcc = oomAcc + (dt or 0)
+  if oomAcc < 0.5 then return end
+  oomAcc = 0
+  if not db or db.oomChat == nil or db.oomChat == "off" or not InCombatLockdown() then oomState = nil return end
+  local ok, st = pcall(ns.ManaWarning)
+  if not ok then return end
+  if st and st ~= oomState then pcall(ns.AnnounceOom, false, st) end
+  oomState = st
+end
+oomFrame:SetScript("OnUpdate", function(_, dt) ns.OomTick(dt) end)
 
 local holdFrame = CreateFrame("Frame")
 holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
@@ -2417,6 +2498,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     ns.SetHold(not held)
     Print(held and L.holdOn or L.holdOff)
     if ns.RefreshOptions then ns.RefreshOptions() end
+  elseif cmd == "oom" and args[2] == "check" then
+    ns.OomCheck()
   elseif cmd == "oom" then
     ns.AnnounceOom(true)
   elseif cmd == "unlock" then

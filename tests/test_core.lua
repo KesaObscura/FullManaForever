@@ -2415,6 +2415,41 @@ test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to 
   M.state.group, M.state.raid, M.state.combat, M.state.time = false, false, false, nil
 end)
 
+test("0.9.10: 'Low mana!' and 'Out of mana!' from the spells the game says cannot be paid", function()
+  local ns = M.load({ oomChat = "auto" })
+  local sent = {}
+  _G.SendChatMessage = function(msg, ch) sent[#sent + 1] = ch .. ":" .. msg end
+  local cost = { [1] = 95, [2] = 400, [3] = 1500 } -- main spell, a dearer one, one above the share
+  local mana = 1000
+  _G.C_Spell = { GetSpellPowerCost = function(id) return { { type = 0, cost = cost[id] } } end,
+    IsSpellUsable = function(id) return mana >= cost[id], mana < cost[id] end }
+  M.state.maxMana, M.state.group, M.state.combat, M.state.time = 2000, true, true, 100
+  local function cast(id) M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "x", id) end
+  local function tick(t) M.state.time = t; ns.OomTick(1) end
+  eq(ns.ManaWarning(), nil, "a warning before any spell is known")
+  cast(1); cast(1); cast(1); cast(2); cast(3)
+  tick(101); eq(#sent, 0, "a warning with enough mana (1500 is above a quarter of the mana: no measure)")
+  mana = 300; eq(ns.ManaWarning(), "low")
+  tick(102); eq(sent[1], "PARTY:" .. ns.L.lowMsg)
+  tick(103); eq(#sent, 1, "low said twice")
+  mana = 50; eq(ns.ManaWarning(), "out")
+  tick(104); eq(sent[2], "PARTY:" .. ns.L.oomMsg)
+  mana = 300; tick(110); eq(#sent, 2, "low right after out")
+  mana = 1000; tick(111); mana = 300; tick(140); eq(sent[3], "PARTY:" .. ns.L.lowMsg, "low again after the pause")
+  -- the macro line: silent with enough mana, speaks when low or out, never solo
+  mana = 1000; SlashCmdList.FULLMANAFOREVER("oom check"); eq(#sent, 3)
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  mana = 50; SlashCmdList.FULLMANAFOREVER("oom check"); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "/fmf oom check")
+  M.state.group = false; M.printed = {}
+  M.Fire("PLAYER_REGEN_ENABLED"); SlashCmdList.FULLMANAFOREVER("oom check"); eq(#sent, 4)
+  eq(#M.printed, 0, "the macro line talks to the player")
+  -- a secret answer is no warning
+  _G.C_Spell.IsSpellUsable = function() return M.secret and M.secret(true), M.secret and M.secret(true) end
+  if M.secret then eq(ns.ManaWarning(), nil, "secret answer taken as no mana") end
+  _G.SendChatMessage, _G.C_Spell = nil, nil
+  M.state.maxMana, M.state.group, M.state.combat, M.state.time = 1000, false, false, nil
+end)
+
 -- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
 
 test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()
