@@ -2467,7 +2467,11 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from two spells of the spell book t
   end
   mana = 150; eq(ns.ManaWarning(), "low", "low not taken over by the next spell")
   low = ns.OomInfo(); eq(low, 215 / 2000, "blocked measure kept")
-  inFight = false; low = ns.OomInfo(); eq(low, 215 / 2000, "blocked measure back after the fight")
+  low = ns.OomInfo(); eq(low, 215 / 2000, "blocked measure taken back within the fight")
+  -- after the fight it is a measure again (a druid leaving cat form must get warnings back)
+  inFight = false; M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  low = ns.OomInfo(); eq(low, 0.2, "blocked measure not back after the fight")
+  M.state.combat = true
   -- a secret answer is no warning
   if M.secret then
     _G.C_Spell.IsSpellUsable = function() return M.secret(true), M.secret(true) end

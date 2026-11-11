@@ -934,18 +934,18 @@ local function NoMana(spellID)
   return ok and not IsSecret(noMana) and noMana == true
 end
 -- a measure picked out of combat may be a spell the game blocks in a fight (it then reports
--- nothing about the mana): it is dropped for good and the next nearest spell takes its place
+-- nothing about the mana): it is dropped and the next nearest spell takes its place. One per
+-- check, and only for this fight: in a druid's cat or bear form every spell is blocked, and
+-- dropping them for the session left the druid without warnings for good (review, 11 Nov).
 local function DropBlocked()
   if not InCombatLockdown() then return end
-  for _ = 1, 20 do
-    local bad
-    if oomOut and not Measures(oomOut.id) then bad = oomOut
-    elseif oomLow and not Measures(oomLow.id) then bad = oomLow end
-    if not bad then return end
-    oomBad[bad.id] = true
-    oomMax = nil -- pick again
-    PickMeasures()
-  end
+  local bad
+  if oomOut and not Measures(oomOut.id) then bad = oomOut
+  elseif oomLow and not Measures(oomLow.id) then bad = oomLow end
+  if not bad then return end
+  oomBad[bad.id] = true
+  oomMax = nil -- pick again
+  PickMeasures()
 end
 function ns.ManaWarning()
   PickMeasures()
@@ -1014,7 +1014,11 @@ oomFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if event == "SPELLS_CHANGED" then oomBookDirty = true return end
   -- a new fight is a new situation for the group: its first warning is said at once
-  if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil return end
+  if event == "PLAYER_REGEN_ENABLED" then
+    oomLast, lowLast = nil, nil
+    if next(oomBad) then wipe(oomBad); oomMax = nil end -- blocked spells count again
+    return
+  end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end
   if not InCombatLockdown() then return end
   local errType, msg = a1, a2
