@@ -832,14 +832,14 @@ local function OomChannel(mode)
   if raid then return "RAID" end
   return group and "PARTY" or nil
 end
--- Which mana warning is due, without reading the mana: the game says for every spell whether
--- the mana is enough for it (C_Spell.IsSpellUsable, readable in combat: owner's test 11 Nov),
--- and the costs are readable. Two spells from the player's spell book (all ranks) serve as
--- measures: the one whose cost is nearest to LOW_AT of the maximum mana and the one nearest to
--- OUT_AT. "low" / "out" = the game says the mana is not enough for it. No spell near a mark
--- (within half to one and a half of it): that warning is not available ("out" then comes from
--- a cast that fails for lack of mana).
-local LOW_AT, OUT_AT = 0.20, 0.05
+-- Which mana warning is due: two spells of the player's spell book (all ranks) are the
+-- measures, one for "out" (cost nearest to OUT_AT of the maximum mana, within half to one and a
+-- half of it) and one for "low" (below). No fitting spell: that warning is not available.
+local OUT_AT = 0.05
+-- "low" comes as early as a spell can tell: the dearest spell that costs at least LOW_MIN and at
+-- most LOW_MAX of the maximum mana (owner's group test, 11 Nov: the one nearest to 20 % came
+-- only two casts before "out")
+local LOW_MIN, LOW_MAX = 0.10, 0.35
 local oomBook, oomBookDirty = {}, true -- { { id = spellID, cost = mana }, ... }
 local oomLow, oomOut, oomMax -- the two measures { id, cost } and the max mana they were picked for
 local oomSeen, oomRead = 0, 0 -- spell book entries seen at the last read, and when (for the probe)
@@ -885,11 +885,21 @@ local function Measures(id)
   return usable == true or noMana == true
 end
 local oomBad = {} -- spells that turned out to be blocked in a fight: no measures
-local function Nearest(max, share, above)
+local function Nearest(max, share)
   local target, best = max * share, nil
   for _, e in ipairs(oomBook) do
-    if not oomBad[e.id] and e.cost >= target * 0.5 and e.cost <= target * 1.5 and (not above or e.cost > above)
+    if not oomBad[e.id] and e.cost >= target * 0.5 and e.cost <= target * 1.5
       and (not best or math.abs(e.cost - target) < math.abs(best.cost - target)) and Measures(e.id) then
+      best = e
+    end
+  end
+  return best
+end
+local function Dearest(max, above)
+  local best
+  for _, e in ipairs(oomBook) do
+    if not oomBad[e.id] and e.cost >= max * LOW_MIN and e.cost <= max * LOW_MAX and (not above or e.cost > above)
+      and (not best or e.cost > best.cost) and Measures(e.id) then
       best = e
     end
   end
@@ -910,7 +920,7 @@ local function PickMeasures()
   end
   oomMax = max
   oomOut = Nearest(max, OUT_AT)
-  oomLow = Nearest(max, LOW_AT, oomOut and oomOut.cost)
+  oomLow = Dearest(max, oomOut and oomOut.cost)
 end
 local function NoMana(spellID)
   if not (C_Spell and C_Spell.IsSpellUsable) then return false end
