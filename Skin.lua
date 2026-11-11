@@ -79,6 +79,14 @@ local function MetalByHand(f)
   right:SetPoint("TOPRIGHT", tr, "BOTTOMRIGHT"); right:SetPoint("BOTTOMRIGHT", br, "TOPRIGHT")
   for _, t in ipairs({ top, bottom }) do if t.SetHorizTile then t:SetHorizTile(true) end end
   for _, t in ipairs({ left, right }) do if t.SetVertTile then t:SetVertTile(true) end end
+  -- the band itself is solid like the window (owner's test 11 Nov: the metal art is open in
+  -- the middle and the windows behind showed through)
+  local bandBg = f:CreateTexture(nil, "BACKGROUND", nil, -7)
+  bandBg:SetPoint("BOTTOMLEFT", f, "TOPLEFT", 0, 0)
+  bandBg:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", 0, 0)
+  bandBg:SetHeight(up - 4)
+  bandBg:SetColorTexture(Skin.BG[1] * 0.7, Skin.BG[2] * 0.7, Skin.BG[3] * 0.7, 1)
+  f.skinBandBg = bandBg
   f.skinMetal = holder
   f.skinBand = up
   return true
@@ -124,7 +132,10 @@ end
 function Skin.PlaceTitle(fs, f, pad)
   fs:ClearAllPoints()
   if (f.skinBand or 0) > 0 then
-    fs:SetPoint("CENTER", f, "TOP", 0, f.skinBand / 2 - 1)
+    -- drawn above the metal, in the lower, open part of the band
+    if f.skinMetal and fs.SetParent then fs:SetParent(f.skinMetal) end
+    if fs.SetDrawLayer then fs:SetDrawLayer("OVERLAY", 7) end
+    fs:SetPoint("CENTER", f, "TOP", 0, f.skinBand / 2 - 5)
   else
     fs:SetPoint("TOPLEFT", f, "TOPLEFT", pad or 16, -12)
   end
@@ -133,7 +144,8 @@ end
 function Skin.PlaceClose(b, f)
   b:ClearAllPoints()
   if (f.skinBand or 0) > 0 then
-    b:SetPoint("CENTER", f, "TOPRIGHT", -14, f.skinBand / 2 - 1)
+    if f.skinMetal then b:SetFrameLevel((f.skinMetal:GetFrameLevel() or 1) + 2) end
+    b:SetPoint("CENTER", f, "TOPRIGHT", -14, f.skinBand / 2 - 5)
   else
     b:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -8)
   end
