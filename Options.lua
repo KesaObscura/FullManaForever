@@ -179,9 +179,7 @@ local function Edit(parent, w)
   e:SetNumeric(true)
   e:SetMaxLetters(7)
   e:SetTextInsets(5, 5, 0, 0)
-  local bg = e:CreateTexture(nil, "BACKGROUND")
-  bg:SetAllPoints()
-  bg:SetColorTexture(0, 0, 0, 0.6)
+  Skin.Field(e) -- the same field as the steppers' numbers (0.9.11)
   e:SetScript("OnEscapePressed", e.ClearFocus)
   return e
 end
