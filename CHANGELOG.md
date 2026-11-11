@@ -1,5 +1,14 @@
 # Changelog
 
+**Full Mana Forever 0.9.11**
+
+A new look, in the style of the game's own windows:
+- The settings, the item list and the profiles window get the metal frame and the red close button of Forever's windows
+- Labels in gold and values in white, like the game's settings; section headers with the game's divider
+- New check boxes, dropdowns and red buttons; values with arrows on both sides: ◄ 48 ►
+- The icons get the frame of the game's action buttons; red buttons on the unlocked frame
+- Settings stay as they are
+
 **Full Mana Forever 0.9.10**
 
 Asked for in the comments:

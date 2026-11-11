@@ -7,7 +7,8 @@ local methods = {}
 -- like real frames: unknown fields are nil, only widget methods resolve
 local Widget = { __index = methods }
 function M.noop() end
-for _, name in ipairs({ "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDrag", "SetAutoFocus",
+for _, name in ipairs({ "SetAtlas", "SetNormalAtlas", "SetPushedAtlas", "SetCheckedAtlas", "SetDisabledCheckedAtlas",
+  "SetHighlightAtlas", "SetHorizTile", "SetVertTile", "SetDesaturated", "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDrag", "SetAutoFocus",
   "SetBlendMode", "SetCheckedTexture", "SetDisabledCheckedTexture", "SetClampedToScreen", "SetColorTexture",
   "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
   "SetHighlightFontObject", "HighlightText", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",

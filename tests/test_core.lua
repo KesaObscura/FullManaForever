@@ -1816,7 +1816,7 @@ test("settings: 'Show before ready' sits above 'Out of combat', 0 to 120 s in st
   end
   ok(st and combat, "settings not found")
   ok(st.label.points[1][5] > combat.points[1][5], "not above 'Out of combat'")
-  ok(st.value.points[1][5] < 0 and st.minus.points[1][5] < 0, "value and -/+ not on the line under the label")
+  ok(st.field.points[1][5] < 0 and st.minus.points[1][5] < 0 and st.plus.points[1][5] < 0, "value and -/+ not on the line under the label")
   ok(combat.points[1][5] <= st.label.points[1][5] - 45, "'Out of combat' not under the value line")
   eq(st.value.text, ns.L.cdShowSec:format(5), "default not 5 s")
   st.minus.scripts.OnClick(st.minus)
