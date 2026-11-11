@@ -842,8 +842,10 @@ end
 local LOW_AT, OUT_AT = 0.20, 0.05
 local oomBook, oomBookDirty = {}, true -- { { id = spellID, cost = mana }, ... }
 local oomLow, oomOut, oomMax -- the two measures { id, cost } and the max mana they were picked for
+local oomSeen, oomRead = 0, 0 -- spell book entries seen at the last read, and when (for the probe)
 local function ReadBook()
   local list = {}
+  oomSeen = 0
   local book = C_SpellBook
   if not (book and book.GetNumSpellBookSkillLines and book.GetSpellBookSkillLineInfo
     and book.GetSpellBookItemInfo and C_Spell and C_Spell.GetSpellPowerCost) then
@@ -857,6 +859,7 @@ local function ReadBook()
       for k = line.itemIndexOffset + 1, line.itemIndexOffset + line.numSpellBookItems do
         local it = book.GetSpellBookItemInfo(k, bank)
         if it and type(it.spellID) == "number" and not it.isPassive and not (future and it.itemType == future) then
+          oomSeen = oomSeen + 1
           local ok, costs = pcall(C_Spell.GetSpellPowerCost, it.spellID)
           if ok and type(costs) == "table" then
             for _, c in ipairs(costs) do
@@ -894,11 +897,15 @@ end
 local function PickMeasures()
   local max = UnitPowerMax("player", MANA)
   if IsSecret(max) or type(max) ~= "number" or max <= 0 then oomLow, oomOut, oomMax = nil, nil, nil return end
+  -- an empty book is read again (every 2 s at most): at login the costs may not be there yet
+  local now = GetTime()
+  if #oomBook == 0 and now - oomRead >= 2 then oomBookDirty = true end
   if not oomBookDirty and max == oomMax then return end
   if oomBookDirty then
     local ok, list = pcall(ReadBook)
     oomBook = ok and list or {}
     oomBookDirty = false
+    oomRead = now
   end
   oomMax = max
   oomOut = Nearest(max, OUT_AT)
@@ -914,6 +921,15 @@ function ns.ManaWarning()
   if oomOut and NoMana(oomOut.id) then return "out" end
   if oomLow and NoMana(oomLow.id) then return "low" end
   return nil
+end
+-- for /fmf probe: numbers only
+function ns.OomProbe()
+  pcall(PickMeasures)
+  local usable = 0
+  for _, e in ipairs(oomBook) do if Measures(e.id) then usable = usable + 1 end end
+  return ("warnings: book=%d withCost=%d usable=%d max=%s low=%s out=%s API=%s"):format(oomSeen, #oomBook, usable,
+    tostring(oomMax), oomLow and tostring(oomLow.cost) or "-", oomOut and tostring(oomOut.cost) or "-",
+    tostring(C_Spell and C_Spell.IsSpellUsable ~= nil))
 end
 -- for the settings: the shares of the maximum mana the two warnings come at (nil = not available)
 function ns.OomInfo()
@@ -2477,6 +2493,10 @@ local function Probe()
     P("secret now: auras=%s cooldowns=%s stats=%s", CS.ShouldAurasBeSecret and q(CS.ShouldAurasBeSecret) or "-",
       CS.ShouldCooldownsBeSecret and q(CS.ShouldCooldownsBeSecret) or "-",
       CS.ShouldUnitStatsBeSecret and q(CS.ShouldUnitStatsBeSecret) or "-")
+  end
+  if ns.OomProbe then
+    local okO, line = pcall(ns.OomProbe)
+    P("%s", okO and line or "warnings: error")
   end
   P("scale100=%s locked=%s onlyCombat=%s iconsCombat=%s showIcons=%s custom=%d", tostring(acct.scale100),
     tostring(db.locked), tostring(db.onlyCombat), tostring(db.iconsCombat), tostring(db.showIcons ~= false),

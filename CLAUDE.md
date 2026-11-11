@@ -15,6 +15,9 @@ and `/fmf log` (kept in releases for bug reports).
   the change only.
 - **Every user-visible text in all 9 locale tables** of `Locale.lua` (esMX falls back to
   esES). `lua5.1 tests/run.lua` checks keys and placeholders.
+- **Texts for players say what a thing does and when, never how it is done** (owner, 11 Nov):
+  tooltips, changelog, CurseForge and README carry no word about the game calls or tricks behind
+  a feature. The how stays in code comments and `docs/notes.md`.
 - **Every control that can be clicked has a tooltip** (owner, 0.8.3), also while greyed out
   (`Tip` sets `SetMotionScriptsWhileDisabled`); a test walks all controls of the settings and
   the item list.
