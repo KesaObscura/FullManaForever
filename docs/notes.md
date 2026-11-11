@@ -305,8 +305,15 @@ Facts that matter for this addon (the full list lives in that project):
   the alpha of a curve result put on a texture reads back as SECRET (`GetAlpha`); the mana percent
   formatted into a FontString reads back as SECRET text and SECRET width (`GetStringWidth`). So no
   addon can test "mana below X": an automatic "out of mana" warning is impossible; the built-in
-  /oom emote is the answer. In combat on a mob: restrictions combat=2 encounter=2 (encounter also
-  outside a dungeon), auras and cooldowns secret, stats not.
+  /oom emote is the answer. In combat on a mob: restrictions combat=2, all others 0 (saved probe;
+  an earlier note here said encounter=2: misread from a screenshot), auras, cooldowns and stats secret.
+- "Out of mana!" to chat (0.9.10, owner's test build 11 Nov, priest 25, solo, ruRU): a cast failing
+  for lack of mana fires `UI_ERROR_MESSAGE` with type 358 = `LE_GAME_ERR_OUT_OF_MANA` and the plain
+  text `ERR_OUT_OF_MANA`, also in combat (not secret). `SendChatMessage` from that event handler
+  works in combat, even to SAY outdoors; `C_ChatInfo.InChatMessagingLockdown` false, chat
+  restriction 0 on a normal mob. Not tested: party / raid chat, dungeon bosses, battlegrounds.
+  The game's scrolling "Low mana" text (`MANA_LOW`) cannot be watched: `CombatText_AddMessage`
+  does not exist as a global, also after Blizzard_CombatText has loaded.
 
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 

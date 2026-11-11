@@ -860,7 +860,10 @@ function ns.AnnounceOom(manual)
 end
 local oomFrame = CreateFrame("Frame")
 pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
-oomFrame:SetScript("OnEvent", function(_, _, errType, msg)
+oomFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+oomFrame:SetScript("OnEvent", function(_, event, errType, msg)
+  -- a new fight is a new situation for the group: its first failed cast is said at once
+  if event == "PLAYER_REGEN_ENABLED" then oomLast = nil return end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end
   if not InCombatLockdown() then return end
   local hit = false

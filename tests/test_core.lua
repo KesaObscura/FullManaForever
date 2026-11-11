@@ -2385,8 +2385,11 @@ test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to 
   fail(101); eq(sent[1], "PARTY:" .. ns.L.oomMsg)
   fail(110); eq(#sent, 1, "not throttled")
   fail(132); eq(#sent, 2, "no second message after 30 s")
+  -- the fight ends: the next fight's first failed cast is said at once
+  fail(140); eq(#sent, 2)
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
   M.state.raid = true
-  fail(170); eq(sent[3], "RAID:" .. ns.L.oomMsg, "auto in a raid")
+  fail(145); eq(sent[3], "RAID:" .. ns.L.oomMsg, "auto in a raid, new fight")
   ns.db.oomChat = "party"; fail(210); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "party chat in a raid")
   M.state.raid = false
   ns.db.oomChat = "raid"; fail(250); eq(#sent, 4, "raid chat chosen, only in a party")
