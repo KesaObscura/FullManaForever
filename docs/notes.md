@@ -301,26 +301,8 @@ Facts that matter for this addon (the full list lives in that project):
   the aura carries the use spell's ID is not tested in game. Second Wind 11819 (63 mana/s for 10 s,
   doubled in mountains) and Mindtap Talisman 18371 (1250 over 10 s, -60 Intellect for 2 min) load
   since launch.
-- Read-back probe (0.9.9, owner 11 Nov, out of combat at full mana, below half, and in combat):
-  the alpha of a curve result put on a texture reads back as SECRET (`GetAlpha`); the mana percent
-  formatted into a FontString reads back as SECRET text and SECRET width (`GetStringWidth`). So no
-  addon can test "mana below X": an automatic "out of mana" warning is impossible; the built-in
-  /oom emote is the answer. In combat on a mob: restrictions combat=2, all others 0 (saved probe;
-  an earlier note here said encounter=2: misread from a screenshot), auras, cooldowns and stats secret.
-- "Out of mana!" to chat (0.9.10, owner's test build 11 Nov, priest 25, solo, ruRU): a cast failing
-  for lack of mana fires `UI_ERROR_MESSAGE` with type 358 = `LE_GAME_ERR_OUT_OF_MANA` and the plain
-  text `ERR_OUT_OF_MANA`, also in combat (not secret). `SendChatMessage` from that event handler
-  works in combat, even to SAY outdoors; `C_ChatInfo.InChatMessagingLockdown` false, chat
-  restriction 0 on a normal mob. Not tested: party / raid chat, dungeon bosses, battlegrounds.
-  Later tests the same day: chat sent WITHOUT a key press (timer or event handler) to SAY and to
-  EMOTE returns no error but never arrives, in and out of combat; with a key press (slash command)
-  both arrive, also in combat. `DoEmote("OOM")` from a timer worked out of combat. Whisper to
-  oneself failed (name with a space not found), so PARTY / RAID without a key press is still open.
-  `C_Spell.IsSpellUsable(id)` returns plain (usable, noMana) in combat and flips with the mana
-  (cost 400 of 2023 max flipped first, then the 95-215 ones): a real "mana below the cost of spell
-  X" test; `C_Spell.GetSpellPowerCost` readable in combat.
-  The game's scrolling "Low mana" text (`MANA_LOW`) cannot be watched: `CombatText_AddMessage`
-  does not exist as a global, also after Blizzard_CombatText has loaded.
+- Mana to chat (0.9.10) and the read-back probe (0.9.9): the test results and how the warnings
+  work are in the owner's private notes, not in this repository (owner, 11 Nov).
 
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 

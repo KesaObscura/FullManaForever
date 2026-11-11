@@ -71,10 +71,7 @@ and `/fmf log` (kept in releases for bug reports).
 - A secret value can only be formatted (`string.format`) into a FontString or turned into an
   alpha by the game (`UnitPowerPercent` with a curve, `CurveConstants.ScaleTo100` exists);
   `Curve:Evaluate` refuses secrets, arithmetic and comparisons fail.
-  Reading it back fails too (probe, owner 11 Nov): `GetAlpha` of that alpha, the text and
-  `GetStringWidth` of the formatted percent are SECRET. The one working mana test is per spell:
-  `C_Spell.IsSpellUsable(id)` gives plain (usable, noMana), also in combat (owner's test, 11 Nov):
-  "mana below the cost of spell X" (0.9.10 mana warnings).
+  Reading it back fails too (probe, owner 11 Nov).
 - Text with letters must use the game's "...Outline" font objects (a single font file breaks
   Cyrillic/Asian letters).
 - Wands put a weapon-speed cooldown (~1.8 s) on all items after each shot: item cooldowns of
@@ -169,22 +166,14 @@ and `/fmf log` (kept in releases for bug reports).
   430/431/432/1133/1135/1137/22734, owner's scan 10 Nov) gives its end; then the learned normal rate.
   Mana and healing potions share the cooldown (owner's scan 10 Nov).
   The settings regroup moves to 0.9.9 (11 Nov).
-  0.9.10 (owner, 11 Nov: "find a solution for the oom message, party or raid", then "two warnings,
-  low mana and out of mana"; asked in a comment): mana warnings to chat (`oomChat` off / party /
-  raid / auto, off by default: nothing is written in the player's name unasked). Mana cannot be
-  read, but `C_Spell.IsSpellUsable` (usable, noMana) is readable in combat and so are the costs:
-  two spells of the spell book (all ranks) are the measures (owner, 11 Nov: not the cast spells),
-  the one costing nearest to 20 % of the max mana ("low") and nearest to 5 % ("out"), each within
-  half to one and a half of its mark, picked again when the book or the max mana changes; the
-  marks are shown under the setting (`ns.OomInfo`). A cast failing for lack of mana
-  (`UI_ERROR_MESSAGE` type 358 = `ERR_OUT_OF_MANA`) counts too (below). The whole block is
-  in a `do ... end` in Core.lua: the chunk was at Lua's limit of 200 locals. 30 s pause each, reset
-  after a fight. Chat sent without a key press: SAY and EMOTE are dropped silently (owner's test),
-  party chat takes addon messages without one (owner, 11 Nov: quest addons write there; seen
-  in his chat). Owner, 11 Nov: no macro line for players, no keyboard frame ("no elephant out of
-  a fly"), spells AND the failed cast together: a failed cast says "out" when the out measure
-  cannot be paid (or there is none), else "low". `/fmf oom` says "Out of mana!" at once. Nothing
-  is sent while addon chat is locked. Not tested in a group yet.
+  0.9.10 (owner, 11 Nov; asked in a comment): "Mana to chat" (`oomChat` off / party / raid / auto,
+  off by default: nothing is written in the player's name unasked): "Low mana!" and "Out of
+  mana!" to the party or raid chat in a fight, 30 s pause each, reset after a fight; the marks
+  are shown under the setting; `/fmf oom` says "Out of mana!" at once. Owner: no macro line for
+  players, no keyboard frame. How it works and every test result: the owner's private notes
+  (`FMF-INTERNALS.md` in the private research repository), never in this repository or in
+  public texts; read them there before changing this block. The block is in a `do ... end` in
+  Core.lua: the chunk was at Lua's limit of 200 locals. Not tested in a group yet.
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.
