@@ -301,6 +301,12 @@ Facts that matter for this addon (the full list lives in that project):
   the aura carries the use spell's ID is not tested in game. Second Wind 11819 (63 mana/s for 10 s,
   doubled in mountains) and Mindtap Talisman 18371 (1250 over 10 s, -60 Intellect for 2 min) load
   since launch.
+- Read-back probe (0.9.9, owner 11 Nov, out of combat at full mana, below half, and in combat):
+  the alpha of a curve result put on a texture reads back as SECRET (`GetAlpha`); the mana percent
+  formatted into a FontString reads back as SECRET text and SECRET width (`GetStringWidth`). So no
+  addon can test "mana below X": an automatic "out of mana" warning is impossible; the built-in
+  /oom emote is the answer. In combat on a mob: restrictions combat=2 encounter=2 (encounter also
+  outside a dungeon), auras and cooldowns secret, stats not.
 
 ## From the ManaMaster addon (olav9/ManaMaster, Apache-2.0; its notes, not verified by us)
 
