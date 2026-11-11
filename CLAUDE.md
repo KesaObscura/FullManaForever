@@ -172,15 +172,15 @@ and `/fmf log` (kept in releases for bug reports).
   two spells of the spell book (all ranks) are the measures (owner, 11 Nov: not the cast spells),
   the one costing nearest to 20 % of the max mana ("low") and nearest to 5 % ("out"), each within
   half to one and a half of its mark, picked again when the book or the max mana changes; the
-  marks are shown under the setting (`ns.OomInfo`). Without an "out" measure a cast failing for
-  lack of mana (`UI_ERROR_MESSAGE` type 358 = `ERR_OUT_OF_MANA`) says "out". The whole block is
+  marks are shown under the setting (`ns.OomInfo`). A cast failing for lack of mana
+  (`UI_ERROR_MESSAGE` type 358 = `ERR_OUT_OF_MANA`) counts too (below). The whole block is
   in a `do ... end` in Core.lua: the chunk was at Lua's limit of 200 locals. 30 s pause each, reset
   after a fight. Chat sent without a key press: SAY and EMOTE are dropped silently (owner's test),
-  PARTY / RAID not tested yet. Owner, 11 Nov: no macro solution for players. So a warning waits
-  (8 s at most) for the player's next key press: a frame with the keyboard on that passes every
-  key on (`SetPropagateKeyboardInput(true)` first, then `EnableKeyboard`; only out of combat, only
-  while the warnings are on) sends it from `OnKeyDown`. `/fmf oom` says it at once. Nothing is
-  sent while addon chat is locked.
+  party chat takes addon messages without one (owner, 11 Nov: quest addons write there; seen
+  in his chat). Owner, 11 Nov: no macro line for players, no keyboard frame ("no elephant out of
+  a fly"), spells AND the failed cast together: a failed cast says "out" when the out measure
+  cannot be paid (or there is none), else "low". `/fmf oom` says "Out of mana!" at once. Nothing
+  is sent while addon chat is locked. Not tested in a group yet.
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.

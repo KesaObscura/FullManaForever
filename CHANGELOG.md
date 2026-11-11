@@ -5,7 +5,7 @@
 Asked for in the comments:
 - **Mana warnings to chat** (bottom of the right column: Off / Party chat / Raid chat / Party or raid): in a fight the addon tells your group **"Low mana!"** and **"Out of mana!"**, each at most every 30 seconds. Off by default
 - How it knows, although Forever hides your mana from addons: the game tells for each spell whether your mana is enough for it. Two spells from your spell book serve as measures, one costing about a fifth of your mana (*low*) and one about a twentieth (*out*); the line under the setting shows the exact marks for your character, for example "Low mana!" below about 20%
-- The warning goes out with your next key press in the fight: the game only delivers chat that is sent on a key press
+- A cast that fails for lack of mana is said too: as "Out of mana!" when you are below the lower mark, else as "Low mana!"
 - `/fmf oom` says "Out of mana!" at once
 - If the game blocks addon chat in a boss fight, the addon says so once: use the game's own `/oom` emote there
 

@@ -2377,7 +2377,7 @@ test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to 
   local sent = {}
   _G.SendChatMessage = function(msg, ch) sent[#sent + 1] = ch .. ":" .. msg end
   _G.ERR_OUT_OF_MANA = "Not enough mana"
-  local function fail(t) M.state.time = t; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); ns.OomKey() end
+  local function fail(t) M.state.time = t; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana") end
   M.state.group, M.state.raid, M.state.combat = true, false, false
   fail(100); eq(#sent, 0, "sent out of combat")
   M.state.combat = true
@@ -2434,7 +2434,7 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from two spells of the spell book t
     end }
   M.state.maxMana, M.state.group, M.state.combat, M.state.time = 2000, true, true, 100
   M.Fire("SPELLS_CHANGED")
-  local function tick(t) M.state.time = t; ns.OomTick(1); ns.OomKey() end
+  local function tick(t) M.state.time = t; ns.OomTick(1) end
   local low, out = ns.OomInfo()
   eq(low, 0.2, "low mark"); eq(out, 95 / 2000, "out mark (not the passive 100, not the blocked 110)")
   tick(101); eq(#sent, 0, "a warning with enough mana")
@@ -2445,17 +2445,14 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from two spells of the spell book t
   tick(104); eq(sent[2], "PARTY:" .. ns.L.oomMsg)
   mana = 300; tick(110); eq(#sent, 2, "low right after out")
   mana = 1000; tick(111); mana = 300; tick(140); eq(sent[3], "PARTY:" .. ns.L.lowMsg, "low again after the pause")
-  -- a failed cast adds nothing while there is a measure for "out"
+  -- a cast failing for lack of mana: "low" while the out measure can still be paid, else "out"
   M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
   _G.ERR_OUT_OF_MANA = "Not enough mana"
-  M.state.time = 150; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); ns.OomKey(); eq(#sent, 3, "failed cast at 15 % said as out")
-  -- nothing goes out without a key press; a warning older than 8 s is dropped
-  mana = 1000; ns.OomTick(1)
-  mana = 50; M.state.time = 200; ns.OomTick(1); eq(#sent, 3, "sent without a key press")
-  M.state.time = 203; ns.OomKey(); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "not sent with the key press")
-  ns.OomKey(); eq(#sent, 4, "sent twice")
-  mana = 1000; ns.OomTick(1); M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
-  mana = 50; M.state.time = 300; ns.OomTick(1); M.state.time = 320; ns.OomKey(); eq(#sent, 4, "an old warning sent")
+  mana = 1000
+  M.state.time = 150; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(sent[4], "PARTY:" .. ns.L.lowMsg, "failed dear cast")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  mana = 50
+  M.state.time = 160; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(sent[5], "PARTY:" .. ns.L.oomMsg, "failed cast without mana")
   -- more maximum mana: other measures (400 is now 10 %: the low mark moves to 1500 of 6000)
   M.state.maxMana = 6000; mana = 6000
   low, out = ns.OomInfo(); eq(low, 0.25, "low mark not picked again"); eq(out, 215 / 6000)

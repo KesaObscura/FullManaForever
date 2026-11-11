@@ -926,7 +926,6 @@ end
 
 -- kind: "out" (default) or "low". manual: typed by the player (/fmf oom): no pause, hints shown.
 local lowLast
-local oomPending
 local function OomSend(text, channel, manual)
   local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
   if not send then return false end
@@ -957,42 +956,10 @@ function ns.AnnounceOom(manual, kind)
     return false
   end
   if kind == "low" then lowLast = now else oomLast = now end
-  local text = kind == "low" and L.lowMsg or L.oomMsg
-  -- typed by the player: a key press, sent at once. Otherwise it waits for the next key press
-  -- (ns.OomKey): the game drops chat an addon sends without one, silently (owner's test, 11 Nov)
-  if manual then return OomSend(text, channel, true) end
-  oomPending = { text = text, channel = channel, t = now }
-  return true
+  -- party and raid chat take addon messages without a key press (quest addons write there;
+  -- only SAY, EMOTE and the like need one: owner's test, 11 Nov)
+  return OomSend(kind == "low" and L.lowMsg or L.oomMsg, channel, manual)
 end
--- any key the player presses in the next seconds carries the waiting warning out
-local OOM_WAIT = 8
-function ns.OomKey()
-  local p = oomPending
-  if not p then return end
-  oomPending = nil
-  if GetTime() - p.t > OOM_WAIT then return end
-  OomSend(p.text, p.channel, false)
-end
--- keys reach this frame and go on to the game untouched. Passing them on is switched on first
--- and only then the keyboard: if the game refuses the first (in a fight), the frame never takes
--- a key. Only while the warnings are on.
-local keyFrame = CreateFrame("Frame", nil, UIParent)
-local keysOn = false
-function ns.OomKeys()
-  local want = db and (db.oomChat == "party" or db.oomChat == "raid" or db.oomChat == "auto") or false
-  if want == keysOn then return end
-  if InCombatLockdown() then return end -- again after the fight
-  if want then
-    if not keyFrame.SetPropagateKeyboardInput or not keyFrame.EnableKeyboard then return end
-    if not pcall(keyFrame.SetPropagateKeyboardInput, keyFrame, true) then return end
-    if not pcall(keyFrame.EnableKeyboard, keyFrame, true) then return end
-    keysOn = true
-  else
-    pcall(keyFrame.EnableKeyboard, keyFrame, false)
-    keysOn = false
-  end
-end
-keyFrame:SetScript("OnKeyDown", function() pcall(ns.OomKey) end)
 local oomFrame = CreateFrame("Frame")
 pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
 pcall(oomFrame.RegisterEvent, oomFrame, "SPELLS_CHANGED")
@@ -1000,7 +967,7 @@ oomFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if event == "SPELLS_CHANGED" then oomBookDirty = true return end
   -- a new fight is a new situation for the group: its first warning is said at once
-  if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil; pcall(ns.OomKeys) return end
+  if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil return end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end
   if not InCombatLockdown() then return end
   local errType, msg = a1, a2
@@ -1009,8 +976,12 @@ oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if not hit and LE_GAME_ERR_OUT_OF_MANA and not IsSecret(errType) and errType == LE_GAME_ERR_OUT_OF_MANA then
     hit = true
   end
-  -- only without a measure for "out": a dear spell failing at 15 % mana is not "out of mana"
-  if hit and not oomOut then pcall(ns.AnnounceOom, false, "out") end
+  -- a cast failed for lack of mana: "out" when the measure says so (or there is none), else
+  -- "low": mana is left, but not for what the player needs
+  if hit then
+    PickMeasures()
+    pcall(ns.AnnounceOom, false, (not oomOut or NoMana(oomOut.id)) and "out" or "low")
+  end
 end)
 -- in a fight the state is looked at twice a second: a warning when it turns to "low" or "out"
 local oomAcc, oomState = 0, nil
@@ -1018,7 +989,6 @@ function ns.OomTick(dt)
   oomAcc = oomAcc + (dt or 0)
   if oomAcc < 0.5 then return end
   oomAcc = 0
-  pcall(ns.OomKeys) -- follows the setting (and a profile switch) out of combat
   if not db or db.oomChat == nil or db.oomChat == "off" or not InCombatLockdown() then oomState = nil return end
   local ok, st = pcall(ns.ManaWarning)
   if not ok then return end
