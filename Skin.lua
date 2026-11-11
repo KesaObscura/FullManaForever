@@ -15,11 +15,17 @@ Skin.GREY = { 0.50, 0.50, 0.50 }        -- greyed out
 Skin.BG = { 0.065, 0.06, 0.055 }        -- window background, warm dark like the game's windows
 Skin.EDGE = { 0.42, 0.35, 0.22 }        -- thin bronze edges (fields, lists, fallback frame)
 
+-- whether the client has an atlas; asked once per name (the answer never changes in a session)
+local known = {}
 local function Has(atlas)
+  local k = known[atlas]
+  if k ~= nil then return k end
   local get = C_Texture and C_Texture.GetAtlasInfo
-  if not get then return false end
+  if not get then return false end -- not cached: the tests switch the API on and off
   local ok, info = pcall(get, atlas)
-  return ok and type(info) == "table"
+  k = ok and type(info) == "table"
+  known[atlas] = k
+  return k
 end
 Skin.Has = Has
 

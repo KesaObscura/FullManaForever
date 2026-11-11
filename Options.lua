@@ -1206,12 +1206,12 @@ local function BuildProfiles()
   close:SetScript("OnClick", function() pwin:Hide() end)
   Tip(close, L.optClose, L.tipClose)
 
-  local uses = Label(pwin, "")
+  local uses = Label(pwin, "", "GameFontHighlight") -- white, the profile name in gold
   uses:SetPoint("TOPLEFT", PAD, -44 + T0)
   local header = Header(pwin, L.profCopyFrom)
   header:SetPoint("TOPLEFT", PAD, -72 + T0)
   local none = Label(pwin, L.profNone, "GameFontDisableSmall")
-  none:SetPoint("TOPLEFT", PAD + 4, -98)
+  none:SetPoint("TOPLEFT", PAD + 4, -98 + T0)
 
   -- a small question over the window before anything is replaced or deleted
   local confirm = CreateFrame("Frame", nil, pwin)
