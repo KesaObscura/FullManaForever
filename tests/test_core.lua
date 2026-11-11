@@ -2377,7 +2377,7 @@ test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to 
   local sent = {}
   _G.SendChatMessage = function(msg, ch) sent[#sent + 1] = ch .. ":" .. msg end
   _G.ERR_OUT_OF_MANA = "Not enough mana"
-  local function fail(t) M.state.time = t; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana") end
+  local function fail(t) M.state.time = t; M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); ns.OomKey() end
   M.state.group, M.state.raid, M.state.combat = true, false, false
   fail(100); eq(#sent, 0, "sent out of combat")
   M.state.combat = true
@@ -2425,7 +2425,7 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from the spells the game says canno
     IsSpellUsable = function(id) return mana >= cost[id], mana < cost[id] end }
   M.state.maxMana, M.state.group, M.state.combat, M.state.time = 2000, true, true, 100
   local function cast(id) M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "x", id) end
-  local function tick(t) M.state.time = t; ns.OomTick(1) end
+  local function tick(t) M.state.time = t; ns.OomTick(1); ns.OomKey() end
   eq(ns.ManaWarning(), nil, "a warning before any spell is known")
   cast(1); cast(1); cast(1); cast(2); cast(3)
   tick(101); eq(#sent, 0, "a warning with enough mana (1500 is above a quarter of the mana: no measure)")
@@ -2436,13 +2436,13 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from the spells the game says canno
   tick(104); eq(sent[2], "PARTY:" .. ns.L.oomMsg)
   mana = 300; tick(110); eq(#sent, 2, "low right after out")
   mana = 1000; tick(111); mana = 300; tick(140); eq(sent[3], "PARTY:" .. ns.L.lowMsg, "low again after the pause")
-  -- the macro line: silent with enough mana, speaks when low or out, never solo
-  mana = 1000; SlashCmdList.FULLMANAFOREVER("oom check"); eq(#sent, 3)
-  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
-  mana = 50; SlashCmdList.FULLMANAFOREVER("oom check"); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "/fmf oom check")
-  M.state.group = false; M.printed = {}
-  M.Fire("PLAYER_REGEN_ENABLED"); SlashCmdList.FULLMANAFOREVER("oom check"); eq(#sent, 4)
-  eq(#M.printed, 0, "the macro line talks to the player")
+  -- nothing goes out without a key press; a warning older than 8 s is dropped
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  mana = 50; M.state.time = 200; ns.OomTick(1); eq(#sent, 3, "sent without a key press")
+  M.state.time = 203; ns.OomKey(); eq(sent[4], "PARTY:" .. ns.L.oomMsg, "not sent with the key press")
+  ns.OomKey(); eq(#sent, 4, "sent twice")
+  mana = 1000; ns.OomTick(1); M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
+  mana = 50; M.state.time = 300; ns.OomTick(1); M.state.time = 320; ns.OomKey(); eq(#sent, 4, "an old warning sent")
   -- a secret answer is no warning
   _G.C_Spell.IsSpellUsable = function() return M.secret and M.secret(true), M.secret and M.secret(true) end
   if M.secret then eq(ns.ManaWarning(), nil, "secret answer taken as no mana") end

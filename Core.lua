@@ -879,6 +879,14 @@ end
 
 -- kind: "out" (default) or "low". manual: typed by the player (/fmf oom): no pause, hints shown.
 local lowLast
+local oomPending
+local function OomSend(text, channel, manual)
+  local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+  if not send then return false end
+  local ok = pcall(send, text, channel)
+  if not ok and (manual or not oomToldBlocked) then Print(L.oomBlocked); oomToldBlocked = true end
+  return ok
+end
 function ns.AnnounceOom(manual, kind)
   kind = kind == "low" and "low" or "out"
   local mode = db.oomChat
@@ -901,21 +909,43 @@ function ns.AnnounceOom(manual, kind)
     oomToldBlocked = true
     return false
   end
-  local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
-  if not send then return false end
-  -- also after a failed try: no retry on every key press
   if kind == "low" then lowLast = now else oomLast = now end
-  local ok = pcall(send, kind == "low" and L.lowMsg or L.oomMsg, channel)
-  if not ok and (manual or not oomToldBlocked) then Print(L.oomBlocked); oomToldBlocked = true end
-  return ok
+  local text = kind == "low" and L.lowMsg or L.oomMsg
+  -- typed by the player: a key press, sent at once. Otherwise it waits for the next key press
+  -- (ns.OomKey): the game drops chat an addon sends without one, silently (owner's test, 11 Nov)
+  if manual then return OomSend(text, channel, true) end
+  oomPending = { text = text, channel = channel, t = now }
+  return true
 end
--- /fmf oom check, for spell macros: says "Low mana!" or "Out of mana!" only when it is so, with
--- the pauses of the automatic warning. A key press, so the game delivers it to any chat.
-function ns.OomCheck()
-  local st = ns.ManaWarning()
-  if st then return ns.AnnounceOom(false, st) end
-  return false
+-- any key the player presses in the next seconds carries the waiting warning out
+local OOM_WAIT = 8
+function ns.OomKey()
+  local p = oomPending
+  if not p then return end
+  oomPending = nil
+  if GetTime() - p.t > OOM_WAIT then return end
+  OomSend(p.text, p.channel, false)
 end
+-- keys reach this frame and go on to the game untouched. Passing them on is switched on first
+-- and only then the keyboard: if the game refuses the first (in a fight), the frame never takes
+-- a key. Only while the warnings are on.
+local keyFrame = CreateFrame("Frame", nil, UIParent)
+local keysOn = false
+function ns.OomKeys()
+  local want = db and (db.oomChat == "party" or db.oomChat == "raid" or db.oomChat == "auto") or false
+  if want == keysOn then return end
+  if InCombatLockdown() then return end -- again after the fight
+  if want then
+    if not keyFrame.SetPropagateKeyboardInput or not keyFrame.EnableKeyboard then return end
+    if not pcall(keyFrame.SetPropagateKeyboardInput, keyFrame, true) then return end
+    if not pcall(keyFrame.EnableKeyboard, keyFrame, true) then return end
+    keysOn = true
+  else
+    pcall(keyFrame.EnableKeyboard, keyFrame, false)
+    keysOn = false
+  end
+end
+keyFrame:SetScript("OnKeyDown", function() pcall(ns.OomKey) end)
 local oomFrame = CreateFrame("Frame")
 pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
 if oomFrame.RegisterUnitEvent then
@@ -930,7 +960,7 @@ oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
     return
   end
   -- a new fight is a new situation for the group: its first warning is said at once
-  if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil return end
+  if event == "PLAYER_REGEN_ENABLED" then oomLast, lowLast = nil, nil; pcall(ns.OomKeys) return end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end
   if not InCombatLockdown() then return end
   local errType, msg = a1, a2
@@ -947,6 +977,7 @@ function ns.OomTick(dt)
   oomAcc = oomAcc + (dt or 0)
   if oomAcc < 0.5 then return end
   oomAcc = 0
+  pcall(ns.OomKeys) -- follows the setting (and a profile switch) out of combat
   if not db or db.oomChat == nil or db.oomChat == "off" or not InCombatLockdown() then oomState = nil return end
   local ok, st = pcall(ns.ManaWarning)
   if not ok then return end
@@ -2498,8 +2529,6 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     ns.SetHold(not held)
     Print(held and L.holdOn or L.holdOff)
     if ns.RefreshOptions then ns.RefreshOptions() end
-  elseif cmd == "oom" and args[2] == "check" then
-    ns.OomCheck()
   elseif cmd == "oom" then
     ns.AnnounceOom(true)
   elseif cmd == "unlock" then

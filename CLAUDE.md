@@ -173,8 +173,11 @@ and `/fmf log` (kept in releases for bug reports).
   be paid (or `UI_ERROR_MESSAGE` type 358 = `ERR_OUT_OF_MANA`), "low" = the dearest spell of at
   most a quarter of the max mana, dearer than the main one, cannot be paid. 30 s pause each, reset
   after a fight. Chat sent without a key press: SAY and EMOTE are dropped silently (owner's test),
-  PARTY / RAID not tested yet; `/fmf oom check` (spell macros, a key press) always gets through,
-  `/fmf oom` says it at once. Nothing is sent while addon chat is locked.
+  PARTY / RAID not tested yet. Owner, 11 Nov: no macro solution for players. So a warning waits
+  (8 s at most) for the player's next key press: a frame with the keyboard on that passes every
+  key on (`SetPropagateKeyboardInput(true)` first, then `EnableKeyboard`; only out of combat, only
+  while the warnings are on) sends it from `OnKeyDown`. `/fmf oom` says it at once. Nothing is
+  sent while addon chat is locked.
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder
   between pulls.
