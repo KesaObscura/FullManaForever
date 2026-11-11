@@ -2477,6 +2477,28 @@ test("0.9.10: 'Low mana!' and 'Out of mana!' from two spells of the spell book t
   M.state.maxMana, M.state.group, M.state.combat, M.state.time = 1000, false, false, nil
 end)
 
+test("0.9.10: the marks also come from the ruler spells, the same for every class (about 30 % and 5 %)", function()
+  local ns = M.load({ oomChat = "auto" })
+  local cost = { [133] = 45, [10] = 320, [10187] = 1400, [1245] = 70 }
+  _G.C_SpellBook = {
+    GetNumSpellBookSkillLines = function() return 1 end,
+    GetSpellBookSkillLineInfo = function() return { itemIndexOffset = 0, numSpellBookItems = 1 } end,
+    GetSpellBookItemInfo = function() return { spellID = 1245, name = "own" } end, -- also in the ruler: once
+  }
+  _G.C_Spell = { GetSpellPowerCost = function(id) return cost[id] and { { type = 0, cost = cost[id] } } or {} end,
+    IsSpellUsable = function() return true, false end }
+  M.state.maxMana = 1000
+  M.Fire("SPELLS_CHANGED")
+  local low, out = ns.OomInfo()
+  eq(low, 0.32, "low mark from the ruler"); eq(out, 0.045, "out mark from the ruler")
+  ok(ns.OomProbe():find("withCost=4", 1, true), "ruler and book not merged: " .. ns.OomProbe())
+  -- a big mana pool: the dearest ruler spell is the low mark while it is at least 10 %
+  M.state.maxMana = 10000; low = ns.OomInfo(); eq(low, 0.14)
+  M.state.maxMana = 20000; low = ns.OomInfo(); eq(low, nil, "low below a tenth of the mana")
+  _G.C_Spell, _G.C_SpellBook = nil, nil
+  M.state.maxMana = 1000
+end)
+
 -- 0.9.4: fading out of combat (asked for in a CurseForge comment) --------------------------
 
 test("0.9.4: out of combat the bar and its texts fade at full mana, come back when mana is spent, full in combat", function()

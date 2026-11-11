@@ -835,11 +835,9 @@ end
 -- Which mana warning is due: two spells of the player's spell book (all ranks) are the
 -- measures, one for "out" (cost nearest to OUT_AT of the maximum mana, within half to one and a
 -- half of it) and one for "low" (below). No fitting spell: that warning is not available.
-local OUT_AT = 0.05
--- "low" comes as early as a spell can tell: the dearest spell that costs at least LOW_MIN and at
--- most LOW_MAX of the maximum mana (owner's group test, 11 Nov: the one nearest to 20 % came
--- only two casts before "out")
-local LOW_MIN, LOW_MAX = 0.10, 0.35
+-- The measures come from the spell book and from ns.MANA_RULER (Data.lua).
+local LOW_AT, OUT_AT = 0.30, 0.05
+local LOW_MIN = 0.10 -- "low" is never said below this share: too close to "out"
 local oomBook, oomBookDirty = {}, true -- { { id = spellID, cost = mana }, ... }
 local oomLow, oomOut, oomMax -- the two measures { id, cost } and the max mana they were picked for
 local oomSeen, oomRead = 0, 0 -- spell book entries seen at the last read, and when (for the probe)
@@ -851,6 +849,21 @@ local function ReadBook()
     and book.GetSpellBookItemInfo and C_Spell and C_Spell.GetSpellPowerCost) then
     return list
   end
+  local seen = {}
+  local function Add(id)
+    if seen[id] then return end
+    seen[id] = true
+    local ok, costs = pcall(C_Spell.GetSpellPowerCost, id)
+    if not ok or type(costs) ~= "table" then return end
+    for _, c in ipairs(costs) do
+      if type(c) == "table" and not IsSecret(c.type) and c.type == MANA and not IsSecret(c.cost)
+        and type(c.cost) == "number" and c.cost > 0 then
+        list[#list + 1] = { id = id, cost = c.cost }
+        return
+      end
+    end
+  end
+  for _, id in ipairs(ns.MANA_RULER or {}) do Add(id) end
   local future = Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.FutureSpell
   local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
   for i = 1, book.GetNumSpellBookSkillLines() do
@@ -860,16 +873,7 @@ local function ReadBook()
         local it = book.GetSpellBookItemInfo(k, bank)
         if it and type(it.spellID) == "number" and not it.isPassive and not (future and it.itemType == future) then
           oomSeen = oomSeen + 1
-          local ok, costs = pcall(C_Spell.GetSpellPowerCost, it.spellID)
-          if ok and type(costs) == "table" then
-            for _, c in ipairs(costs) do
-              if type(c) == "table" and not IsSecret(c.type) and c.type == MANA and not IsSecret(c.cost)
-                and type(c.cost) == "number" and c.cost > 0 then
-                list[#list + 1] = { id = it.spellID, cost = c.cost }
-                break
-              end
-            end
-          end
+          Add(it.spellID)
         end
       end
     end
@@ -885,21 +889,12 @@ local function Measures(id)
   return usable == true or noMana == true
 end
 local oomBad = {} -- spells that turned out to be blocked in a fight: no measures
-local function Nearest(max, share)
+-- the measure whose cost is nearest to share of the maximum mana, within lo..hi of the maximum
+local function Nearest(max, share, lo, hi, above)
   local target, best = max * share, nil
   for _, e in ipairs(oomBook) do
-    if not oomBad[e.id] and e.cost >= target * 0.5 and e.cost <= target * 1.5
+    if not oomBad[e.id] and e.cost >= max * lo and e.cost <= max * hi and (not above or e.cost > above)
       and (not best or math.abs(e.cost - target) < math.abs(best.cost - target)) and Measures(e.id) then
-      best = e
-    end
-  end
-  return best
-end
-local function Dearest(max, above)
-  local best
-  for _, e in ipairs(oomBook) do
-    if not oomBad[e.id] and e.cost >= max * LOW_MIN and e.cost <= max * LOW_MAX and (not above or e.cost > above)
-      and (not best or e.cost > best.cost) and Measures(e.id) then
       best = e
     end
   end
@@ -919,8 +914,8 @@ local function PickMeasures()
     oomRead = now
   end
   oomMax = max
-  oomOut = Nearest(max, OUT_AT)
-  oomLow = Dearest(max, oomOut and oomOut.cost)
+  oomOut = Nearest(max, OUT_AT, OUT_AT * 0.5, OUT_AT * 1.5)
+  oomLow = Nearest(max, LOW_AT, LOW_MIN, LOW_AT * 1.2, oomOut and oomOut.cost)
 end
 local function NoMana(spellID)
   if not (C_Spell and C_Spell.IsSpellUsable) then return false end
