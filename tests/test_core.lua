@@ -2604,3 +2604,67 @@ test("0.9.6: 'Only markers' keeps the fill transparent, also when the game reset
   ns.db.barStyle = "full"; ns.Layout(true); M.tick()
   eq(tex.alpha, 1, "fill hidden with the full bar")
 end)
+
+-- 0.9.7 ------------------------------------------------------------------------------------
+
+test("0.9.7: time to full mana out of combat, through a numeric curve; rule and casting rate counted", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
+  regenApis(51, 0)
+  local b = bar(ns)
+  M.tick()
+  ok(b.fullIn.shown, "timer not shown")
+  eq(b.fullIn.text, ns.L.fullIn:format(26.7), "drinking case from the owner's test")
+  eq(b.fullIn.text, "full in ~27 s")
+  -- a spell that costs mana: the rule runs first at 0 regen
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 2050)
+  M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(5 + 1364 / 51), "rule not counted")
+  -- casting rate during the rule (Spirit Tap: half): first 5 s at 10/s, then 20/s
+  regenApis(20, 10); M.state.time = 100.001; M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 2050); M.tick()
+  local left = ns.FsrLeft()
+  eq(b.fullIn.text, ns.L.fullIn:format(left + (1364 - left * 10) / 20), "casting rate not counted")
+  -- full mana: hidden by the curve's alpha
+  M.state.time = 200; regenApis(51, 0); M.state.manaPct = 1; M.tick()
+  eq(b.fullIn.alpha, 0, "timer shown at full mana")
+  M.state.manaPct = 0.5; M.tick()
+  eq(b.fullIn.alpha, 1)
+  -- in combat: hidden (the regen is secret there)
+  M.state.combat = true; M.tick()
+  ok(not b.fullIn.shown, "timer in combat")
+  M.state.combat = false
+  -- switched off, or the regen text off: hidden
+  ns.db.fullTimer = false; M.tick()
+  ok(not b.fullIn.shown, "timer while switched off")
+  ns.db.fullTimer, ns.db.regenText = true, false; M.tick()
+  ok(not b.fullIn.shown, "timer without the regen text")
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.7: time to full mana counts the end of drinking (drink aura out of combat)", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
+  local base = 15
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end, GetSpellName = function(id) return id == 430 and "Drink" or nil end }
+  local aura
+  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return aura end end }
+  local b = bar(ns)
+  M.tick()                                      -- normal rate 15/s learned
+  eq(b.fullIn.text, ns.L.fullIn:format(1364 / 15))
+  -- drinking a new Forever water (unknown ID, same name): 51/s for 10 more seconds, then 15/s
+  base, M.state.time = 51, 101
+  aura = { spellId = 1249999, name = "Drink", expirationTime = 111 }
+  M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 510) / 15), "end of drinking not counted")
+  -- enough drink left for all of it
+  aura.expirationTime = 200; M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(1364 / 51))
+  -- the drink is over: the plain rate
+  aura, base = nil, 15; M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(1364 / 15))
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  _G.GetPowerRegen, _G.C_Spell = nil, nil
+end)

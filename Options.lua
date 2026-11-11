@@ -781,6 +781,9 @@ Build = function()
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))
+  -- time to full mana next to the regen, out of combat (0.9.7)
+  c.Row(Check(col, L.optFullTimer, function() return db.fullTimer ~= false end,
+    function(v) db.fullTimer = v end, L.tipFullTimer, function() return db.regenText end), PAD + 26, 26)
 
   ------------------------------------------------------------ right column
   c = right

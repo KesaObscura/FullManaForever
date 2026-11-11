@@ -4,12 +4,15 @@
 [![CurseForge](https://img.shields.io/curseforge/dt/1717647?label=CurseForge)](https://www.curseforge.com/wow/addons/full-mana-forever)
 [![License: MIT](https://img.shields.io/github/license/KesaObscura/FullManaForever)](LICENSE)
 
+**Download:** [CurseForge](https://www.curseforge.com/wow/addons/full-mana-forever) (CurseForge app) · [latest release on GitHub](https://github.com/KesaObscura/FullManaForever/releases/latest)
+
 An addon for **World of Warcraft: Forever** (WoW Forever, "Classic+", client 1.60.1) for healers
 and every other mana user. It lights up your **mana potion**, Demonic/Dark Rune, mage mana gem,
 mana item or **own mana spell** (Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap,
 Eureka!, Read Leyline) **the moment it is ready and fits into your missing mana**, so nothing
 is wasted: drink on cooldown, stay near full mana, and never panic-chug at 5 %. A compact mana bar
-shows the **five-second rule (5SR)** and your **live mana regen per second, also in combat**.
+shows the **five-second rule (5SR)**, your **live mana regen per second, also in combat**, and the
+**time to full mana** while you drink.
 
 ![A mana potion lights up when it fits into the missing mana](docs/images/mana-potion-at-the-right-moment.png)
 
@@ -21,7 +24,7 @@ shows the **five-second rule (5SR)** and your **live mana regen per second, also
 |---|---|
 | ![The mana potion shows up grey with a countdown, lights up, and is drunk](docs/images/see-it-coming-mana-potion.gif) | ![A spell starts the five-second rule: gold strip and seconds, regen 0.0/s, then 15.5/s again](docs/images/five-second-rule-live-regen.gif) |
 
-## How it works with Forever's addon rules
+## How it works with WoW Forever's addon rules
 
 In Forever your current mana is a *secret value*: addons cannot read or compare it.
 Full Mana Forever never tries to. It gives the game a step curve
@@ -33,7 +36,7 @@ Item cooldowns, item counts and maximum mana are readable and handled normally.
 The addon never uses an item for you. Put your potions on the action bar and press them
 when the icon lights up.
 
-## Features
+## Features: mana potions, mana bar, five-second rule, mana regen
 
 - One icon per cooldown group: mana potions, Demonic/Dark Rune, mage mana gems, other
   mana consumables, and use effects of equipped gear.
@@ -59,7 +62,8 @@ when the icon lights up.
   bar onto the unit frame's mana bar, match length and thickness, *Above other frames*.
 - **Five-second rule and mana regen** on the bar: a gold strip (and the seconds, can be switched off) after a spell
   that costs mana, and the regen running right now ("14.8/s"), also in combat. The regen turns
-  green when it is above your normal rate, red while Resurrection Sickness holds it down. The
+  green when it is above your normal rate, red while Resurrection Sickness holds it down. Out of
+  combat it also says how long until your mana is full ("full in ~27 s"). The
   mana numbers, the seconds and the regen also show without the bar, and each can be dragged anywhere ("Move texts freely").
 - **Mana text** like the game's status text: number, percentage or both, with its own switch
   and text size.
@@ -82,7 +86,7 @@ against the Wowhead Forever database (build 1.60.1) and the game's own item data
 shared potion cooldown). Dreamless Sleep Potions are off by default because they put you to
 sleep for 12 seconds, Wildvine Potion because it may restore nothing.
 
-## Looking for a mana tick or mp5 tracker?
+## Looking for a mana tick or mp5 tracker in WoW Forever?
 
 Forever's mana regen is continuous: there are no 2-second mana ticks, and addons cannot read
 your mana or regen in combat, so classic mana tick and mp5 trackers do not work there. Full Mana

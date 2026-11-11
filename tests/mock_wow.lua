@@ -196,8 +196,34 @@ function M.reset(opts)
   _G.CreateColor = function(r, g, b, a)
     return { r = r, g = g, b = b, a = a, GetRGBA = function(s) return s.r, s.g, s.b, s.a end }
   end
-  _G.Enum = { LuaCurveType = { Step = 1 } }
-  _G.C_CurveUtil = { CreateColorCurve = function()
+  _G.Enum = { LuaCurveType = { Step = 1, Linear = 0 } }
+  _G.C_CurveUtil = {
+    -- a numeric curve (0.9.7): linear between its points; through UnitPowerPercent the engine
+    -- returns the value as a secret number (seen in game, 10 Nov)
+    CreateCurve = function()
+      local pts = {}
+      return {
+        numeric = true,
+        SetType = M.noop,
+        AddPoint = function(_, x, y)
+          assert(not isSecret(x) and not isSecret(y), "secret point")
+          pts[#pts + 1] = { x, y }
+          table.sort(pts, function(p, q) return p[1] < q[1] end)
+        end,
+        Evaluate = function(_, x)
+          assert(not isSecret(x), "Evaluate refuses secrets")
+          if x <= pts[1][1] then return pts[1][2] end
+          for i = 2, #pts do
+            if x <= pts[i][1] then
+              local a, c = pts[i - 1], pts[i]
+              return a[2] + (c[2] - a[2]) * (x - a[1]) / (c[1] - a[1])
+            end
+          end
+          return pts[#pts][2]
+        end,
+      }
+    end,
+    CreateColorCurve = function()
     count("CreateColorCurve")
     local pts = {}
     return {
@@ -215,6 +241,7 @@ function M.reset(opts)
     count("UnitPowerPercent")
     if S.powerFails then error("API changed") end
     if curve == M.SCALE100 then return M.secret(S.manaPct * 100) end
+    if curve.numeric then return M.secret(curve:Evaluate(S.manaPct * (S.scale or 1))) end
     return curve:Evaluate(S.manaPct)
   end
   _G.UnitHealthPercent = function(unit, predicted, curve)

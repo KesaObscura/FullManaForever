@@ -133,6 +133,44 @@ local function ManaRegen()
   return pcall(GetPowerRegen)
 end
 
+-- seconds of drinking left, out of combat (auras are readable there), and the normal rate that
+-- follows (the lowest regen of the last minutes); nil when not drinking. The drink is found by
+-- the name the game gives the drink spells (430 "Drink" in the client's language; seen in game
+-- 10 Nov: 430, 431, 432, 1133, 1135, 1137, 22734 all carry it), so new drink IDs match too.
+local DRINK_IDS = { [430] = true, [431] = true, [432] = true, [1133] = true, [1135] = true,
+  [1137] = true, [22734] = true }
+local drinkName
+function ns.DrinkLeft()
+  if InCombatLockdown and InCombatLockdown() then return nil end
+  local get = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
+  if not get then return nil end
+  if drinkName == nil and C_Spell and C_Spell.GetSpellName then
+    local ok, n = pcall(C_Spell.GetSpellName, 430)
+    drinkName = ok and type(n) == "string" and not IsSecret(n) and n or false
+  end
+  local now = GetTime()
+  for i = 1, 40 do
+    local ok, a = pcall(get, "player", i, "HELPFUL")
+    if not ok or a == nil or IsSecret(a) then break end
+    local id, name, exp = a.spellId, a.name, a.expirationTime
+    if not IsSecret(id) and not IsSecret(name) and not IsSecret(exp)
+      and (DRINK_IDS[id] or (drinkName and name == drinkName))
+      and type(exp) == "number" and exp > now then
+      return exp - now, Normal()
+    end
+  end
+  return nil
+end
+
+-- base and casting rate as plain numbers, nil while they are secret (in combat): for the time
+-- to full mana (0.9.7), which only shows out of combat
+function ns.RegenRates()
+  local ok, base, casting = ManaRegen()
+  if not ok or IsSecret(base) or type(base) ~= "number" then return nil end
+  if IsSecret(casting) or type(casting) ~= "number" then casting = 0 end
+  return base, casting
+end
+
 function ns.RegenText()
   local ok, base, casting = ManaRegen()
   if not ok then return nil end

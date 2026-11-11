@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.6"
+ns.VERSION = "0.9.7"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -33,6 +33,7 @@ local DEFAULTS = {
   showBar    = true,
   fsr        = true,    -- five-second rule countdown on the mana bar
   regenText  = true,
+  fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
   fsrNum     = true,    -- the rule's seconds next to the strip (off: only the strip, 0.9.0)
@@ -933,6 +934,11 @@ local function CreateBar()
   bar.regen = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(bar.regen, "GameFontHighlightSmall", true) -- has letters ("/с", "/秒")
   -- regen above normal: a small up arrow after the number, so it is not told by colour alone
+  -- time to full mana, after the regen and its arrow (0.9.7)
+  bar.fullIn = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  bar.fullIn:SetPoint("LEFT", bar.regen, "RIGHT", 18, 0)
+  bar.fullIn:SetTextColor(0.8, 0.82, 0.86)
+  bar.fullIn:Hide()
   bar.regenUp = bar.regenBox:CreateTexture(nil, "OVERLAY")
   bar.regenUp:SetTexture("Interface\\Buttons\\Arrow-Up-Up")
   bar.regenUp:SetSize(16, 16)
@@ -1826,6 +1832,81 @@ local function UpdateRegenText(visible)
   end
 end
 
+-- time to full mana, out of combat (0.9.7, asked for by players; the way to do it was found
+-- in game by the owner's test addon, 10 Nov). The mana is secret also out of combat, so no
+-- arithmetic on it: a NUMERIC curve maps the mana share x (0..1) to the seconds left, and the
+-- engine returns that number (secret) through UnitPowerPercent; it is only formatted into the
+-- text. Regen and max mana are readable out of combat. The curve is piecewise linear: during
+-- the five-second rule the casting rate runs first (0 without talents), then the normal rate.
+-- Drinking: its higher rate runs until the drink aura ends, then the normal rate (Regen.lua).
+-- At full mana the text is hidden by a step curve (alpha), like the fading.
+local timerCurve, timerKey, timerFull, timerFullKey
+local function UpdateFullTimer(visible)
+  local fs = bar.fullIn
+  if not visible or not db.regenText or db.fullTimer == false or InCombatLockdown()
+    or not ns.RegenRates or not (C_CurveUtil and C_CurveUtil.CreateCurve) then
+    if fs:IsShown() then fs:Hide() end
+    return
+  end
+  local base, casting = ns.RegenRates()
+  local max = UnitPowerMax("player", MANA)
+  if type(base) ~= "number" or base <= 0 or IsSecret(max) or type(max) ~= "number" or max <= 0 then
+    if fs:IsShown() then fs:Hide() end
+    return
+  end
+  local left = ns.FsrLeft and ns.FsrLeft() or 0
+  local c = casting > 0 and casting or 0
+  -- drinking: its rate runs until the drink ends, then the normal rate (0.9.7: drink auras found
+  -- in game). A spell breaks the drink, so drink and rule never run together.
+  local dleft, normal
+  if left <= 0 and ns.DrinkLeft then dleft, normal = ns.DrinkLeft() end
+  local pts
+  if dleft and type(normal) == "number" and normal > 0 and normal < base then
+    local m1 = dleft * base                                 -- mana still coming from the drink
+    if m1 >= max then
+      pts = { { 0, max / base }, { 1, 0 } }
+    else
+      pts = { { 0, dleft + (max - m1) / normal }, { 1 - m1 / max, dleft }, { 1, 0 } }
+    end
+    left = -dleft -- part of the curve's key (changes while drinking)
+  elseif left > 0 and c > 0 and left * c >= max then
+    pts = { { 0, max / c }, { 1, 0 } }                    -- all of it within the rule
+  elseif left > 0 and c > 0 then
+    local m1 = left * c                                    -- mana gained in the rest of the rule
+    pts = { { 0, left + (max - m1) / base }, { 1 - m1 / max, left }, { 1, 0 } }
+  elseif left > 0 then
+    pts = { { 0, left + max / base }, { 1, left } }        -- nothing during the rule
+  else
+    pts = { { 0, max / base }, { 1, 0 } }
+  end
+  local key = ("%.2f:%.2f:%.1f:%.2f:%d:%d"):format(base, c, left, type(normal) == "number" and normal or 0, max, Scale())
+  if key ~= timerKey then
+    local cv = C_CurveUtil.CreateCurve()
+    if Enum and Enum.LuaCurveType and Enum.LuaCurveType.Linear then cv:SetType(Enum.LuaCurveType.Linear) end
+    for _, p in ipairs(pts) do cv:AddPoint(p[1] * Scale(), p[2]) end
+    timerCurve, timerKey = cv, key
+  end
+  local ok, secs = TryPower(powerVariant or 1, timerCurve)
+  local okF, text = false, nil
+  if ok and type(secs) ~= "nil" then okF, text = pcall(string.format, L.fullIn, secs) end
+  if not okF then
+    if fs:IsShown() then fs:Hide() end
+    return
+  end
+  fs:SetText(text)
+  -- hidden at full mana
+  local fkey = max .. ":" .. Scale()
+  if fkey ~= timerFullKey then
+    local fc = C_CurveUtil.CreateColorCurve()
+    fc:SetType(Enum.LuaCurveType.Step)
+    fc:AddPoint(0, CreateColor(1, 1, 1, 1))
+    fc:AddPoint((1 - 0.5 / max) * Scale(), CreateColor(1, 1, 1, 0))
+    timerFull, timerFullKey = fc, fkey
+  end
+  ApplyAlpha(fs, PowerColor(timerFull), 0)
+  if not fs:IsShown() then fs:Show() end
+end
+
 -- mana numbers, the rule's seconds and the regen, with or without the bar
 local function UpdateTexts(maxMana)
   local visible = TextsVisible()
@@ -1844,6 +1925,7 @@ local function UpdateTexts(maxMana)
   end
   ShowBox(bar.fsrBox, left > 0)
   UpdateRegenText(visible)
+  UpdateFullTimer(visible)
 end
 
 -- out of combat the bar and its texts can fade (0.9.4): to db.fadeAlpha, and with db.fadeFull

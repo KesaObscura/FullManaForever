@@ -17,9 +17,22 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   five-second rule (5SR) and live mana regen, also in combat. 9 languages."; 16 topics incl.
   wow-forever, classic-plus, five-second-rule; social preview = docs/images/social-preview.png.
   Gallery image descriptions: also at most 256.
+- SEO review (three agents, 10 Nov 2026; reports kept privately): proposed, to be set by the owner
+  after 0.9.7 is out: CurseForge summary (254) "Never waste a mana potion in WoW Forever: the right
+  potion, rune, mana gem or mana spell (Evocation, Innervate, Mana Tide) lights up when it fits your
+  missing mana. Mana bar with five-second rule (5SR), live regen, time to full mana. For every mana
+  user."; GitHub About (294) "Mana addon for World of Warcraft: Forever (WoW Forever, Classic+): the
+  right mana potion, rune, mana gem or own mana spell (Evocation, Innervate, Mana Tide) lights up when
+  it is ready and fits your missing mana. Mana bar with the five-second rule, live regen and time to
+  full mana. 9 languages."; topics +4 (wow-forever-addon, warcraft, hud, healing; never wow-classic);
+  CurseForge Source / Issues fields -> GitHub; empty Wiki off. Not taken: renaming the project,
+  other categories, posts elsewhere. Done in the repo: CURSEFORGE.md (no H1, time to full mana in the
+  first paragraph, "Know when to drink", WoW Forever in headings, own spells image, two FAQ answers,
+  "Tested so far" as a list, the 9 TOC notes at the end), README (Download line, keywords in
+  headings), TOC notes with time to full mana, CurseForge link in the release install line.
 - GitHub release: tag `vX.Y.Z` on the release commit, not a pre-release, same changelog text
   and zip. Title "Full Mana Forever X.Y.Z – WoW Forever mana addon"; body = two-line pitch,
-  install line (CurseForge app or unzip into Interface/AddOns), the changelog, bug-report link.
+  install line ([CurseForge](https://www.curseforge.com/wow/addons/full-mana-forever) app or unzip into Interface/AddOns), the changelog, bug-report link.
   `docs/images` (README images, social preview) is not part of the addon zip. This session cannot push tags; the owner creates the tag with the release.
 
 
@@ -238,6 +251,18 @@ decisions. Read the part you need; `CLAUDE.md` holds the short version.
   Innervate 40, Life Tap 6-56). The Adventures talent "Thrill of Adventure" 1225472 gives 5 % of
   max health and mana over 10 s at max rank; a proc, not a button, so no icon.
 
+## Numeric curves (owner's test addon, 8-10 Nov 2026, priest 24, open world)
+
+- `UnitPowerPercent("player", 0, false, curve)` also takes a NUMERIC curve (`C_CurveUtil.CreateCurve()`,
+  type Linear): the engine puts the hidden mana share (0..1) into it and returns a hidden number.
+- `string.format("%.0f", secret)` and `C_StringUtil.RoundToNearestString(secret)` turn it into text.
+  Refused with secrets: `C_StringUtil.CreateSecondsFormatter():Format`, `C_DurationUtil` durations,
+  `Curve:Evaluate`.
+- Measured: drinking, 515 / 1879 mana, regen 51.0/s: shown "~27 s" (26.7). Right after a cast the
+  plain rate was too optimistic (the rule runs first): 0.9.7 builds the curve piecewise.
+- Used for "time to full mana" (0.9.7). Not tested: whether `AddPoint` takes a secret (for a timer in
+  combat); Lua 5.1 does not call `__eq` for a secret compared with a number of another type.
+
 ## From Full Health Forever (same owner; its in-game probe, 7 Nov 2026, one priest level 21, solo, open world)
 
 Facts that matter for this addon (the full list lives in that project):
@@ -266,7 +291,10 @@ Facts that matter for this addon (the full list lives in that project):
 - Boss fight (Full Health Forever log, same dungeon): Encounter=2 and **Chat=2** while the boss is
   pulled. Addon messages are probably blocked then: the planned group features (who has Innervate /
   Mana Tide ready) would not work in boss fights; `/fmf log chat` neither. Not tested by us.
-- Healing potion item cooldown readable (858: 120 s). Whether mana and healing potions share the
+- Healing potion item cooldown readable (858: 120 s). **Mana and healing potions share the
+  cooldown** (owner's scan 10 Nov, priest 25: after a Minor Mana Potion the same 120 s showed on 17
+  potions incl. Minor Healing Potion 858). Drink auras "Drink" (ruRU "Питье"): 430, 431, 432,
+  1133, 1135, 1137, 22734 (18-30 s); FMF finds the drink by that name, so new drink IDs match too. Whether mana and healing potions share the
   cooldown in Forever is not tested; our potion icon reads the mana potion's own item cooldown, so a
   shared cooldown would simply show as its wait.
 
