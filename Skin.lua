@@ -96,29 +96,49 @@ local function MetalByHand(f)
   f.skinBand = up
   return true
 end
-local function MetalNineSlice(f)
+-- the game's own frame of its windows (the same as the profession or spell book windows), with
+-- the round portrait at the top left when one is given. Its title band lies inside the window
+-- (f.skinTop = its height): the window moves its content below it.
+Skin.TOP = 24
+local function MetalNineSlice(f, portrait)
   if not (NineSliceUtil and NineSliceUtil.ApplyLayoutByName) then return false end
   local ok = pcall(function()
     local n = CreateFrame("Frame", nil, f, "NineSlicePanelTemplate")
     n:SetAllPoints()
     n:SetFrameLevel((f:GetFrameLevel() or 1) + 40)
-    NineSliceUtil.ApplyLayoutByName(n, "ButtonFrameTemplateNoPortrait")
+    NineSliceUtil.ApplyLayoutByName(n, portrait and "PortraitFrameTemplate" or "ButtonFrameTemplateNoPortrait")
     f.skinMetal = n
-    f.skinBand = 0
   end)
-  return ok
+  if not ok then return false end
+  f.skinBand = 0
+  f.skinTop = Skin.TOP
+  if portrait then
+    -- the logo in the round hole of the metal corner (below the metal, like the game's portraits)
+    local p = f:CreateTexture(nil, "OVERLAY")
+    p:SetSize(58, 58)
+    p:SetPoint("TOPLEFT", f, "TOPLEFT", -4, 6)
+    p:SetTexture(portrait)
+    if f.CreateMaskTexture and p.AddMaskTexture then
+      local m = f:CreateMaskTexture()
+      m:SetAllPoints(p)
+      m:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+      p:AddMaskTexture(m)
+    end
+    f.skinPortrait = p
+  end
+  return true
 end
 
--- a window: background, metal frame, a thin line in the addon's colour under the title band
--- (titleH = height of the band; 0 = none)
-function Skin.Window(f, titleH)
+-- a window: background, metal frame, a thin line in the addon's colour under the top row
+-- (titleH = where the line goes below the content top; 0 = none). opts.portrait = the logo.
+function Skin.Window(f, titleH, opts)
   local bg = f:CreateTexture(nil, "BACKGROUND", nil, -7)
   bg:SetAllPoints()
   bg:SetColorTexture(Skin.BG[1], Skin.BG[2], Skin.BG[3], 0.98)
   f.skinBg = bg
-  -- by hand first: the game's own nine-slice layout puts the thick band inside the window,
-  -- over the title and the top row (owner's test 11 Nov); by hand it sits above the window
-  if not MetalByHand(f) and not MetalNineSlice(f) then
+  -- the game's own frame first, exactly as its windows look (owner, 11 Nov: "not the same");
+  -- by hand only where the client has no nine-slice layouts
+  if not MetalNineSlice(f, opts and opts.portrait) and not MetalByHand(f) then
     Skin.Edge(f, Skin.EDGE, 1, "ARTWORK")
   elseif (f.skinBand or 0) > 0 then
     -- the metal sits 6 px outside the window and is open on its inner side: the fill goes under
@@ -129,8 +149,9 @@ function Skin.Window(f, titleH)
   end
   if titleH and titleH > 0 then
     local line = f:CreateTexture(nil, "ARTWORK")
-    line:SetPoint("TOPLEFT", 12, -titleH)
-    line:SetPoint("TOPRIGHT", -12, -titleH)
+    local y = -titleH - Skin.Top(f)
+    line:SetPoint("TOPLEFT", 12, y)
+    line:SetPoint("TOPRIGHT", -12, y)
     line:SetHeight(1)
     local a = Skin.ACCENT
     line:SetColorTexture(a[1], a[2], a[3], 0.7)
@@ -139,24 +160,45 @@ function Skin.Window(f, titleH)
   return f
 end
 
--- the window title: centred in the metal band above the window, else at the top left inside
+-- how far the content moves down: the height of a title band inside the window
+function Skin.Top(f) return f.skinTop or 0 end
+-- where the content starts when the old title row (at -12, content from -44) is gone
+function Skin.ContentTop(f)
+  if (f.skinTop or 0) > 0 then return -(f.skinTop + 10) end
+  if (f.skinBand or 0) > 0 then return -14 end
+  return -44
+end
+
+-- the window title: centred in the title band (inside or above the window), else top left
 function Skin.PlaceTitle(fs, f, pad)
   fs:ClearAllPoints()
-  if (f.skinBand or 0) > 0 then
-    -- drawn above the metal, in the lower, open part of the band
+  local band, inside = f.skinBand or 0, f.skinTop or 0
+  if band > 0 or inside > 0 then
+    -- drawn above the metal
     if f.skinMetal and fs.SetParent then fs:SetParent(f.skinMetal) end
     if fs.SetDrawLayer then fs:SetDrawLayer("OVERLAY", 7) end
-    fs:SetPoint("CENTER", f, "TOP", 0, f.skinBand / 2 - 5)
+    if inside > 0 then
+      -- the size of the game's own window titles
+      if fs.SetFontObject then fs:SetFontObject("GameFontNormal") end
+      fs:SetPoint("CENTER", f, "TOP", 0, -inside / 2)
+    else
+      fs:SetPoint("CENTER", f, "TOP", 0, band / 2 - 5)
+    end
   else
     fs:SetPoint("TOPLEFT", f, "TOPLEFT", pad or 16, -12)
   end
 end
--- the close button: in the right end of the band, else at the top right inside
+-- the close button: at the right end of the title band, else at the top right inside
 function Skin.PlaceClose(b, f)
   b:ClearAllPoints()
-  if (f.skinBand or 0) > 0 then
+  local band, inside = f.skinBand or 0, f.skinTop or 0
+  if band > 0 or inside > 0 then
     if f.skinMetal then b:SetFrameLevel((f.skinMetal:GetFrameLevel() or 1) + 2) end
-    b:SetPoint("CENTER", f, "TOPRIGHT", -14, f.skinBand / 2 - 5)
+    if inside > 0 then
+      b:SetPoint("TOPRIGHT", f, "TOPRIGHT", 1, 0)
+    else
+      b:SetPoint("CENTER", f, "TOPRIGHT", -14, band / 2 - 5)
+    end
   else
     b:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -8)
   end

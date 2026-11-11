@@ -481,7 +481,8 @@ Build = function()
   -- change builds the windows anew): the name is set here, else Esc looks at the old frame
   EscListed(win, "FullManaForeverOptions")
 
-  Skin.Window(win, 38)
+  Skin.Window(win, 38, { portrait = "Interface\\AddOns\\FullManaForever\\icon" })
+  local T = Skin.Top(win) -- the content moves below a title band inside the window
 
   -- while the item list or the profiles window is open over the settings, the settings are
   -- dimmed and take no clicks: only one window can be used at a time
@@ -539,8 +540,8 @@ Build = function()
   local profBtn = Button(win, L.optProfiles, 120)
   -- the profile row has the top of the window to itself; the title and the close button sit
   -- in the metal band above it (0.9.11)
-  if (win.skinBand or 0) > 0 then
-    profBtn:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -9)
+  if (win.skinBand or 0) > 0 or T > 0 then
+    profBtn:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -9 - T)
   else
     profBtn:SetPoint("RIGHT", close, "LEFT", -12, 0)
   end
@@ -563,7 +564,7 @@ Build = function()
   -- two columns: display + look on the left, consumables on the right
   local function Column(index)
     local col = CreateFrame("Frame", nil, win)
-    col:SetPoint("TOPLEFT", win, "TOPLEFT", (index - 1) * W, 0)
+    col:SetPoint("TOPLEFT", win, "TOPLEFT", (index - 1) * W, -T)
     col:SetSize(W, 10)
     local c = { frame = col, y = -44 }
     function c.Row(frame, x, dy)
@@ -579,7 +580,7 @@ Build = function()
   local sep = win:CreateTexture(nil, "ARTWORK")
   sep:SetColorTexture(Skin.EDGE[1], Skin.EDGE[2], Skin.EDGE[3], 0.6)
   sep:SetWidth(1)
-  sep:SetPoint("TOP", win, "TOPLEFT", W, -44)
+  sep:SetPoint("TOP", win, "TOPLEFT", W, -44 - T)
   sep:SetPoint("BOTTOM", win, "BOTTOMLEFT", W, 12)
 
   -- settings that only matter while a switch is on stay in place but are greyed out and
@@ -977,14 +978,14 @@ Build = function()
 
   -- footer across both columns (0.9.9): what belongs to the whole window or the account, not to
   -- a section: the language (all characters) and the two resets
-  local fy = math.min(left.y, right.y) - 6
+  local fy = math.min(left.y, right.y) - 6 - T -- the columns' y is measured from their own top
   local fline = win:CreateTexture(nil, "ARTWORK")
   fline:SetColorTexture(Skin.EDGE[1], Skin.EDGE[2], Skin.EDGE[3], 0.6)
   fline:SetHeight(1)
   fline:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, fy)
   fline:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, fy)
   sep:ClearAllPoints()
-  sep:SetPoint("TOP", win, "TOPLEFT", W, -44)
+  sep:SetPoint("TOP", win, "TOPLEFT", W, -44 - T)
   sep:SetPoint("BOTTOM", win, "TOPLEFT", W, fy - 2)
   local fc = { y = fy - 12 }
   local HALF = math.floor((W - 2 * PAD - 8) / 2)
@@ -1196,8 +1197,9 @@ local function BuildProfiles()
   -- in game a new frame does not take over a name an older one already has (the language
   -- change builds the windows anew): the name is set here, else Esc looks at the old frame
   EscListed(pwin, "FullManaForeverProfiles")
-  Skin.Window(pwin, 0)
-  local T0 = (pwin.skinBand or 0) > 0 and 30 or 0 -- the title row moved into the band
+  Skin.Window(pwin, 0, { portrait = "Interface\\AddOns\\FullManaForever\\icon" })
+  -- the old title row (content from -44) is gone: content from Skin.ContentTop
+  local T0 = 44 + Skin.ContentTop(pwin)
   local title = Label(pwin, L.profTitle, "GameFontNormalLarge")
   Skin.PlaceTitle(title, pwin, PAD)
   local close = CloseButton(pwin)
