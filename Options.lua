@@ -583,11 +583,8 @@ Build = function()
     return lab, dd
   end
   c.Row(Header(col, L.optDisplay), PAD, 24)
-  -- one switch for placing: unlocked = movable and showing everything that is switched on
-  -- unlock, "Move texts freely" under it, then the two reset buttons as two equal halves,
-  -- together as wide as the column
-  local HALF = math.floor((W - 2 * PAD - 8) / 2)
-  local X2 = PAD + HALF + 8
+  -- one switch for placing: unlocked = movable and showing everything that is switched on;
+  -- what moves on its own and the strata under it (the resets are in the footer, 0.9.9)
   local unlockCb = Check(col, L.optUnlock, function() return not db.locked end,
     function(v) db.locked = not v; ns.ApplyLock() end, L.tipUnlock)
   c.Row(unlockCb)
@@ -606,40 +603,8 @@ Build = function()
   -- above unit frames of other addons (HIGH strata)
   c.Row(Check(col, L.optOnTop, function() return db.onTop end,
     function(v) db.onTop = v; ns.PositionBar() end, L.tipOnTop))
-  -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
-  local reset = Button(col, L.optReset, HALF)
-  reset:SetWidth(HALF)
-  c.Row(reset, PAD, 34)
-  reset:SetScript("OnClick", function() ns.Confirm(L.confirmReset, ns.ResetPosition) end)
-  Tip(reset, L.optReset, L.tipReset)
-  local resetSize = Button(col, L.optResetSize, HALF)
-  resetSize:SetWidth(HALF)
-  resetSize:SetPoint("TOPLEFT", col, "TOPLEFT", X2, c.y + 34)
-  resetSize:SetScript("OnClick", function()
-    ns.Confirm(L.confirmResetSize, function() ns.ResetSize(); ns.RefreshOptions() end)
-  end)
-  Tip(resetSize, L.optResetSize, L.tipResetSize)
-  local langLabel = Label(col, L.optLang .. ":")
-  local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
-  for _, l in ipairs(ns.LANGUAGES) do entries[#entries + 1] = { value = l.code, text = l.name } end
-  local lang = Dropdown(col, DD_W, entries, function()
-    if ns.acct.language == "auto" then return L.langAuto end
-    return ns.LanguageName(ns.acct.language, true)
-  end, function(code)
-    if code == ns.acct.language then return end -- rebuilding creates new frames: only on a change
-    ns.acct.language = code
-    ns.SetLanguage(code)
-    ns.OnLanguageChanged()
-    if panelButton then panelButton:SetText(L.optOpen); FitWidth(panelButton, 220) end
-    Rebuild()
-    if ns.RebuildLibrary then ns.RebuildLibrary(true) end
-    if ns.DropProfiles then ns.DropProfiles() end
-  end)
-  c.Right(lang)
-  c.Row(langLabel, PAD + 4, 34)
-  TipBoth(col, langLabel, lang, L.optLang, L.tipLang)
-
-  -- look
+  -- the icons (0.9.9: one section per thing on the HUD: position, icons, bar, texts)
+  c.y = c.y - 8 -- the last switch of Placement sits closer than the steppers above the other headers
   c.Row(Header(col, L.optAppearance), PAD, 26)
   local layLabel = Label(col, L.optLayout .. ":")
   local lay = Dropdown(col, DD_W, {
@@ -669,6 +634,7 @@ Build = function()
     function(v) db.iconGap = v; ns.Layout(true) end, { step = 2, lo = 0, hi = 24, fmt = num, tip = L.tipGap })
   c.Row(gap.label, PAD + 4, 30)
 
+  c.Row(Header(col, L.optBarHdr), PAD, 26)
   c.Row(Check(col, L.optBar, function() return db.showBar end, function(v) db.showBar = v end, L.tipBar))
   -- the style right under the bar switch: the colour below depends on it (0.9.0 "Only
   -- markers", a list since 0.9.5)
@@ -749,6 +715,7 @@ Build = function()
   -- mana numbers like the game's "Status Text": number, percentage or both
   -- one list: off or the format (0.9.5; keys manaTextOn + manaText stay)
   local mtText = { number = L.mtNumber, percent = L.mtPercent, both = L.mtBoth }
+  c.Row(Header(col, L.optTextsHdr), PAD, 26)
   LabeledDD(L.optManaText, PAD + 4, {
     { value = "off", text = L.mtOff }, { value = "number", text = L.mtNumber },
     { value = "percent", text = L.mtPercent }, { value = "both", text = L.mtBoth },
@@ -950,8 +917,55 @@ Build = function()
   c.y = c.y - 34
   PlaceGroups(true)
 
+  -- footer across both columns (0.9.9): what belongs to the whole window or the account, not to
+  -- a section: the language (all characters) and the two resets
+  local fy = math.min(left.y, right.y) - 6
+  local fline = win:CreateTexture(nil, "ARTWORK")
+  fline:SetColorTexture(0.3, 0.55, 1, 0.25)
+  fline:SetHeight(1)
+  fline:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, fy)
+  fline:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, fy)
+  sep:ClearAllPoints()
+  sep:SetPoint("TOP", win, "TOPLEFT", W, -44)
+  sep:SetPoint("BOTTOM", win, "TOPLEFT", W, fy - 2)
+  local fc = { y = fy - 12 }
+  local HALF = math.floor((W - 2 * PAD - 8) / 2)
+  local langLabel = Label(win, L.optLang .. ":")
+  local entries = { { value = "auto", text = L.langAuto .. " (" .. ns.LanguageName(ns.GameLanguage()) .. ")" } }
+  for _, l in ipairs(ns.LANGUAGES) do entries[#entries + 1] = { value = l.code, text = l.name } end
+  local lang = Dropdown(win, DD_W, entries, function()
+    if ns.acct.language == "auto" then return L.langAuto end
+    return ns.LanguageName(ns.acct.language, true)
+  end, function(code)
+    if code == ns.acct.language then return end -- rebuilding creates new frames: only on a change
+    ns.acct.language = code
+    ns.SetLanguage(code)
+    ns.OnLanguageChanged()
+    if panelButton then panelButton:SetText(L.optOpen); FitWidth(panelButton, 220) end
+    Rebuild()
+    if ns.RebuildLibrary then ns.RebuildLibrary(true) end
+    if ns.DropProfiles then ns.DropProfiles() end
+  end)
+  lang:SetPoint("TOPRIGHT", win, "TOPLEFT", W - PAD, fc.y + 3)
+  langLabel:SetPoint("TOPLEFT", win, "TOPLEFT", PAD + 4, fc.y)
+  TipBoth(win, langLabel, lang, L.optLang, L.tipLang)
+  -- placing the frame: unlock, then reset if it got lost; sizes back to the defaults
+  local reset = Button(win, L.optReset, HALF)
+  reset:SetWidth(HALF)
+  reset:SetPoint("TOPLEFT", win, "TOPLEFT", W + PAD, fc.y + 4)
+  reset:SetScript("OnClick", function() ns.Confirm(L.confirmReset, ns.ResetPosition) end)
+  Tip(reset, L.optReset, L.tipReset)
+  local resetSize = Button(win, L.optResetSize, HALF)
+  resetSize:SetWidth(HALF)
+  resetSize:SetPoint("TOPLEFT", win, "TOPLEFT", W + PAD + HALF + 8, fc.y + 4)
+  resetSize:SetScript("OnClick", function()
+    ns.Confirm(L.confirmResetSize, function() ns.ResetSize(); ns.RefreshOptions() end)
+  end)
+  Tip(resetSize, L.optResetSize, L.tipResetSize)
+  fc.y = fc.y - 34
+
   win:SetWidth(2 * W)
-  win:SetHeight(math.max(-left.y, -right.y) + 8)
+  win:SetHeight(-fc.y + 4)
   -- small screens or a big UI scale: the whole window stays on the screen (0.9.1)
   local sh = UIParent:GetHeight() or 0
   local wh = win:GetHeight() or 0

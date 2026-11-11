@@ -68,6 +68,9 @@ and `/fmf log` (kept in releases for bug reports).
 - A secret value can only be formatted (`string.format`) into a FontString or turned into an
   alpha by the game (`UnitPowerPercent` with a curve, `CurveConstants.ScaleTo100` exists);
   `Curve:Evaluate` refuses secrets, arithmetic and comparisons fail.
+  Reading it back fails too (probe, owner 11 Nov): `GetAlpha` of that alpha, the text and
+  `GetStringWidth` of the formatted percent are SECRET: no "mana below X" test, no automatic
+  "out of mana" warning (players: the built-in /oom emote).
 - Text with letters must use the game's "...Outline" font objects (a single font file breaks
   Cyrillic/Asian letters).
 - Wands put a weapon-speed cooldown (~1.8 s) on all items after each shot: item cooldowns of
@@ -150,7 +153,9 @@ and `/fmf log` (kept in releases for bug reports).
   Mindtap Talisman 18371 and Second Wind 11819 in the gear group (now loadable; their item
   cooldowns come from the game; not tested in game). Burst of Knowledge / Robes of Insight not
   taken (cost reduction, no refill). Goes to CurseForge instead of 0.9.7 with one changelog.
-  0.9.9 (owner, 10 Nov: release 0.9.6 first, the regroup next; planned 7 Nov): the full regroup of the settings window in two columns (left: position /
+  0.9.9 done (owner, 11 Nov "начинаем 0.9.9"): left Placement / Icons / Mana bar / Texts, right
+  When to show / Consumables (name kept: the owner's public replies point to it), footer with the
+  language and both resets; window 830 px high (790 before), tested in game 11 Nov (ru, de, ko, zhTW, es). Was planned as (10 Nov): the full regroup of the settings window in two columns (left: position /
   icons / bar / texts, right: when to show / what to suggest, footer: language and resets; see
   the UI reviews), typing a number into a stepper; gallery 06 re-shot after it.
   0.9.7 (owner, 10 Nov; players asked): "Time to full mana" (`fullTimer`, on) out of combat next to
@@ -222,6 +227,9 @@ and `/fmf log` (kept in releases for bug reports).
    downloads in two days); 0.9.6 merged 10 Nov (PR #22, tag v0.9.6, CurseForge 11 Nov); 0.9.7 on GitHub
    11 Nov (PR #23, tag v0.9.7; CurseForge and the SEO settings from docs/notes.md next). After the
    11 Nov game update: still Interface 16001, not out of date (owner).
+   0.9.8 on GitHub 11 Nov (PR #24, tag v0.9.8). Owner, 11 Nov: one CurseForge release per day to
+   show activity, not several versions at once: 12 Nov 0.9.8 (changelog 0.9.7 + 0.9.8: 0.9.7 alone
+   would ship the tea bug of the timer), 13 Nov 0.9.9.
    Reply to the commenters once it is live. SEO from the Full Health Forever session (7 Nov):
    once FHF has its CurseForge page, link both pages to each other (CurseForge descriptions, READMEs,
    GitHub About) and show both flasks side by side; check the GitHub topics (16 of 20 used); a

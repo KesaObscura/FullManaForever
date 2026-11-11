@@ -1,5 +1,16 @@
 # Changelog
 
+**Full Mana Forever 0.9.9**
+
+Settings window, easier to find things:
+- Left column, one section per part of the display: **Placement** (unlock, move texts / the bar, above other frames), **Icons**, **Mana bar**, **Texts**
+- Right column: **When to show** and **Consumables** as before
+- **Language** and the two **Reset** buttons in a row at the bottom of the window: they belong to the whole window (the language to all characters), not to one section
+- Saved settings stay as they are
+
+Diagnostics:
+- `/fmf probe` also checks whether the game lets an addon read the mana check back (for a possible "out of mana" warning); nothing is sent to the chat
+
 **Full Mana Forever 0.9.8**
 
 - **Time to full mana** now knows the Forever teas (Peace Tea, Royal Tea, ... "Nutritious Drink") and the other drinks, rations and biscuits with mana: the end of the drink is counted for them too
