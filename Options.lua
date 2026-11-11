@@ -908,8 +908,9 @@ Build = function()
   groupTail = { frame = items, dx = 0 }
   if #groupRows == 0 then items:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y) end
   c.y = c.y - 34
-  -- "Out of mana!" to the group chat when a cast fails for lack of mana (0.9.10); off by
-  -- default: nothing is written in the player's name unasked
+  -- mana warnings to the group chat (0.9.10): its own section like the others; off by default,
+  -- nothing is written in the player's name unasked
+  c.Row(Header(col, L.optOomHdr), PAD, 26)
   local oomText = { off = L.mtOff, party = L.oomParty, raid = L.oomRaid, auto = L.oomAuto }
   LabeledDD(L.optOom, PAD + 4, {
     { value = "off", text = L.mtOff }, { value = "party", text = L.oomParty },
@@ -921,9 +922,9 @@ Build = function()
   local function OomRow(text, tip, key, atKey, o)
     local cb = Check(col, text, function() return db[key] ~= false end, function(v) db[key] = v end, tip, OomOn)
     o.fmt, o.tip, o.title, o.scale = pct, tip, text, 100
-    local st = Stepper(col, PAD + 26, "", function() return db[atKey] end, function(v) db[atKey] = v end, o)
-    st.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD + 26, c.y - 13) -- on the line of the switch text
-    c.Row(cb, PAD + 26, 28)
+    local st = Stepper(col, PAD, "", function() return db[atKey] end, function(v) db[atKey] = v end, o)
+    st.label:SetPoint("TOPLEFT", col, "TOPLEFT", PAD, c.y - 13) -- on the line of the switch text
+    c.Row(cb, PAD, 28)
     ActiveIf(function() return OomOn() and db[key] ~= false end, st)
   end
   OomRow(L.optOomLow, L.tipOomLow, "oomLow", "oomLowAt", { step = 0.05, lo = 0.10, hi = 0.60 })
