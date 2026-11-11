@@ -450,7 +450,11 @@ end)
 
 
 test("0.9.11: with the game's textures the windows build in the game's look, every control keeps its tooltip", function()
+  local flat = M.load(nil)
+  flat.ToggleOptions(true)
+  local before = _G.FullManaForeverOptions:GetHeight()
   _G.C_Texture = { GetAtlasInfo = function(n) return { width = 20, height = 20, file = n } end }
+  _G.NineSliceUtil = { ApplyLayoutByName = function() end }
   local ns = M.load({ custom = { { id = 12345, max = 500, group = "potion" } } })
   ns.ToggleOptions(true)
   ns.ToggleLibrary(true)
@@ -479,17 +483,12 @@ test("0.9.11: with the game's textures the windows build in the game's look, eve
   local found = false
   for _, f in ipairs(M.all) do if f.frameTex then found = true break end end
   ok(found, "icons without the action button frame")
-  -- with the game's own window frames: its title band inside, the logo in the round corner,
-  -- the content below the band
-  _G.NineSliceUtil = { ApplyLayoutByName = function() end }
-  local before = _G.FullManaForeverOptions:GetHeight()
-  ns = M.load(nil)
-  ns.ToggleOptions(true)
-  ns.ToggleLibrary(true)
+  -- the game's own window frame: its title band inside, the logo in the round corner, the
+  -- content below the band
   local win = _G.FullManaForeverOptions
   eq(win.skinTop, ns.Skin.TOP, "no title band inside the window")
   ok(win.skinPortrait and _G.FullManaForeverItems.skinPortrait, "no logo in the corner")
-  eq(win:GetHeight(), before - 0 + ns.Skin.TOP - 0, "window not taller by the band")
+  eq(win:GetHeight(), before + ns.Skin.TOP, "window not taller by the band")
   _G.NineSliceUtil, _G.C_Texture = nil, nil
 end)
 

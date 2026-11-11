@@ -8,6 +8,7 @@ local Skin = {}
 ns.Skin = Skin
 
 Skin.ACCENT = { 0.30, 0.55, 1.00 }      -- this addon's colour: line under the title, HUD
+Skin.LOGO = "Interface\\AddOns\\FullManaForever\\icon" -- this addon's logo in the round corner
 Skin.GOLD = { 1.00, 0.82, 0.00 }        -- labels, like the game's settings
 Skin.WHITE = { 0.92, 0.92, 0.92 }       -- values
 Skin.GREY = { 0.50, 0.50, 0.50 }        -- greyed out
@@ -44,58 +45,6 @@ function Skin.Edge(f, c, a, layer)
   return out
 end
 
--- the metal frame of the game's windows: drawn by hand from the game's corners and edges,
--- else the game's nine-slice layout, else a bronze line
-local CORNER = 0.42 -- the metal corners are 95 px in the atlas: scaled to about 40 px
-local function MetalByHand(f)
-  if not (Has("UI-Frame-Metal-CornerTopLeft") and Has("_UI-Frame-Metal-EdgeTop")) then return false end
-  local holder = CreateFrame("Frame", nil, f)
-  holder:SetAllPoints()
-  holder:SetFrameLevel((f:GetFrameLevel() or 1) + 40)
-  local c = math.floor(95 * CORNER + 0.5)
-  local cb = math.floor(100 * CORNER + 0.5)
-  local o = 6 -- the metal sits a little outside the window
-  local function T(atlas, w, h)
-    local t = holder:CreateTexture(nil, "OVERLAY")
-    Skin.Atlas(t, atlas)
-    if w then t:SetWidth(w) end
-    if h then t:SetHeight(h) end
-    return t
-  end
-  -- the thick top of the metal is the title band: it sits above the window, so nothing inside
-  -- the window moves (owner's test 11 Nov: inside it covered the title and the top row)
-  local up = c + 2
-  local tl = T("UI-Frame-Metal-CornerTopLeft", c, c); tl:SetPoint("TOPLEFT", -o, up)
-  local tr = T("UI-Frame-Metal-CornerTopRight", c, c); tr:SetPoint("TOPRIGHT", o, up)
-  local bl = T("UI-Frame-Metal-CornerBottomLeft", c, cb); bl:SetPoint("BOTTOMLEFT", -o, -o)
-  local br = T("UI-Frame-Metal-CornerBottomRight", c, cb); br:SetPoint("BOTTOMRIGHT", o, -o)
-  local top = T("_UI-Frame-Metal-EdgeTop", nil, c)
-  top:SetPoint("TOPLEFT", tl, "TOPRIGHT"); top:SetPoint("TOPRIGHT", tr, "TOPLEFT")
-  local bottom = T("_UI-Frame-Metal-EdgeBottom", nil, cb)
-  bottom:SetPoint("BOTTOMLEFT", bl, "BOTTOMRIGHT"); bottom:SetPoint("BOTTOMRIGHT", br, "BOTTOMLEFT")
-  local left = T("!UI-Frame-Metal-EdgeLeft", c, nil)
-  left:SetPoint("TOPLEFT", tl, "BOTTOMLEFT"); left:SetPoint("BOTTOMLEFT", bl, "TOPLEFT")
-  local right = T("!UI-Frame-Metal-EdgeRight", c, nil)
-  right:SetPoint("TOPRIGHT", tr, "BOTTOMRIGHT"); right:SetPoint("BOTTOMRIGHT", br, "TOPRIGHT")
-  for _, t in ipairs({ top, bottom }) do if t.SetHorizTile then t:SetHorizTile(true) end end
-  for _, t in ipairs({ left, right }) do if t.SetVertTile then t:SetVertTile(true) end end
-  -- the band itself is solid like the window (owner's test 11 Nov: the metal art is open in
-  -- the middle and the windows behind showed through)
-  local bandBg = f:CreateTexture(nil, "BACKGROUND", nil, -7)
-  -- as wide as the metal (it sits o px outside the window), so it reaches the gold edges
-  bandBg:SetPoint("BOTTOMLEFT", f, "TOPLEFT", -o - 3, 0)
-  bandBg:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", o + 3, 0)
-  bandBg:SetHeight(up - 4)
-  bandBg:SetColorTexture(Skin.BG[1] * 0.7, Skin.BG[2] * 0.7, Skin.BG[3] * 0.7, 1)
-  f.skinBandBg = bandBg
-  -- the band is part of the window for the mouse (drag the window by its title, owner 11 Nov)
-  -- and for the screen edge (the band and the metal never leave the screen)
-  if f.SetHitRectInsets then f:SetHitRectInsets(0, 0, -up, 0) end
-  if f.SetClampRectInsets then f:SetClampRectInsets(-o, o, up, -o) end
-  f.skinMetal = holder
-  f.skinBand = up
-  return true
-end
 -- the game's own frame of its windows (the same as the profession or spell book windows), with
 -- the round portrait at the top left when one is given. Its title band lies inside the window
 -- (f.skinTop = its height): the window moves its content below it.
@@ -110,7 +59,6 @@ local function MetalNineSlice(f, portrait)
     f.skinMetal = n
   end)
   if not ok then return false end
-  f.skinBand = 0
   f.skinTop = Skin.TOP
   if portrait then
     -- the logo in the round hole of the metal corner (below the metal, like the game's portraits)
@@ -129,24 +77,15 @@ local function MetalNineSlice(f, portrait)
   return true
 end
 
--- a window: background, metal frame, a thin line in the addon's colour under the top row
--- (titleH = where the line goes below the content top; 0 = none). opts.portrait = the logo.
+-- a window: background, the game's frame (a bronze line without it), a thin line in the
+-- addon's colour under the top row (titleH below the content top; 0 = none).
+-- opts.portrait = the logo in the round corner.
 function Skin.Window(f, titleH, opts)
   local bg = f:CreateTexture(nil, "BACKGROUND", nil, -7)
   bg:SetAllPoints()
   bg:SetColorTexture(Skin.BG[1], Skin.BG[2], Skin.BG[3], 0.98)
   f.skinBg = bg
-  -- the game's own frame first, exactly as its windows look (owner, 11 Nov: "not the same");
-  -- by hand only where the client has no nine-slice layouts
-  if not MetalNineSlice(f, opts and opts.portrait) and not MetalByHand(f) then
-    Skin.Edge(f, Skin.EDGE, 1, "ARTWORK")
-  elseif (f.skinBand or 0) > 0 then
-    -- the metal sits 6 px outside the window and is open on its inner side: the fill goes under
-    -- it, so no strip of the world shows between the window and the gold edge (owner, 11 Nov)
-    bg:ClearAllPoints()
-    bg:SetPoint("TOPLEFT", f, "TOPLEFT", -9, 0)
-    bg:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 9, -9)
-  end
+  if not MetalNineSlice(f, opts and opts.portrait) then Skin.Edge(f, Skin.EDGE, 1, "ARTWORK") end
   if titleH and titleH > 0 then
     local line = f:CreateTexture(nil, "ARTWORK")
     local y = -titleH - Skin.Top(f)
@@ -160,70 +99,56 @@ function Skin.Window(f, titleH, opts)
   return f
 end
 
--- how far the content moves down: the height of a title band inside the window
+-- how far the content moves down: the height of the title band inside the window
 function Skin.Top(f) return f.skinTop or 0 end
--- where the content starts when the old title row (at -12, content from -44) is gone
+-- where the content starts in a window whose title sits in the band: below the logo when
+-- there is one (owner's test 11 Nov: a header was under the logo)
 function Skin.ContentTop(f)
-  if (f.skinTop or 0) > 0 then return -(f.skinTop + 10) end
-  if (f.skinBand or 0) > 0 then return -14 end
+  if (f.skinTop or 0) > 0 then return f.skinPortrait and -56 or -(f.skinTop + 10) end
   return -44
 end
 
--- the window title: centred in the title band (inside or above the window), else top left
+-- the window title: centred in the title band, else at the top left
 function Skin.PlaceTitle(fs, f, pad)
   fs:ClearAllPoints()
-  local band, inside = f.skinBand or 0, f.skinTop or 0
-  if band > 0 or inside > 0 then
-    -- drawn above the metal
+  local inside = f.skinTop or 0
+  if inside > 0 then
+    -- drawn above the metal, at the size of the game's own window titles
     if f.skinMetal and fs.SetParent then fs:SetParent(f.skinMetal) end
     if fs.SetDrawLayer then fs:SetDrawLayer("OVERLAY", 7) end
-    if inside > 0 then
-      -- the size of the game's own window titles
-      if fs.SetFontObject then fs:SetFontObject("GameFontNormal") end
-      fs:SetPoint("CENTER", f, "TOP", 0, -inside / 2)
-    else
-      fs:SetPoint("CENTER", f, "TOP", 0, band / 2 - 5)
-    end
+    if fs.SetFontObject then fs:SetFontObject("GameFontNormal") end
+    fs:SetPoint("CENTER", f, "TOP", 0, -inside / 2)
   else
     fs:SetPoint("TOPLEFT", f, "TOPLEFT", pad or 16, -12)
   end
 end
--- the close button: at the right end of the title band, else at the top right inside
-function Skin.PlaceClose(b, f)
-  b:ClearAllPoints()
-  local band, inside = f.skinBand or 0, f.skinTop or 0
-  if band > 0 or inside > 0 then
-    if f.skinMetal then b:SetFrameLevel((f.skinMetal:GetFrameLevel() or 1) + 2) end
-    if inside > 0 then
-      b:SetPoint("TOPRIGHT", f, "TOPRIGHT", 1, 0)
-    else
-      b:SetPoint("CENTER", f, "TOPRIGHT", -14, band / 2 - 5)
+
+-- the close button of the game's windows (its own template, so it sits exactly where the
+-- game puts it); a plain "X" from the caller without it
+function Skin.Close(parent)
+  for _, tpl in ipairs({ "UIPanelCloseButtonDefaultAnchors", "UIPanelCloseButton" }) do
+    local ok, b = pcall(CreateFrame, "Button", nil, parent, tpl)
+    if ok and b and (tpl ~= "UIPanelCloseButton" or b.GetNormalTexture and b:GetNormalTexture()) then
+      if parent.skinMetal then b:SetFrameLevel((parent.skinMetal:GetFrameLevel() or 1) + 2) end
+      if tpl ~= "UIPanelCloseButtonDefaultAnchors" then
+        b:ClearAllPoints()
+        b:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 1, 0)
+      end
+      b.skinTemplate = tpl
+      return b
     end
+  end
+  return nil
+end
+-- where the close button goes: the game's place in its frame, else the top right inside
+function Skin.PlaceClose(b, f)
+  if b.skinTemplate == "UIPanelCloseButtonDefaultAnchors" then return end
+  b:ClearAllPoints()
+  if (f.skinTop or 0) > 0 then
+    b:SetPoint("TOPRIGHT", f, "TOPRIGHT", 1, 0)
   else
     b:SetPoint("TOPRIGHT", f, "TOPRIGHT", -8, -8)
   end
-end
-
--- the red close button of the game's windows; nil when the client lacks it
-function Skin.Close(parent)
-  if not Has("RedButton-Exit") then return nil end
-  local b = CreateFrame("Button", nil, parent)
-  b:SetSize(24, 24)
-  local n = b:CreateTexture(nil, "ARTWORK")
-  n:SetAllPoints()
-  Skin.Atlas(n, "RedButton-Exit")
-  local p = b:CreateTexture(nil, "ARTWORK")
-  p:SetAllPoints()
-  if not Skin.Atlas(p, "RedButton-Exit-Pressed") then Skin.Atlas(p, "RedButton-Exit") end
-  p:Hide()
-  local h = b:CreateTexture(nil, "HIGHLIGHT")
-  h:SetAllPoints()
-  Skin.Atlas(h, "RedButton-Exit")
-  if h.SetBlendMode then h:SetBlendMode("ADD") end
-  h:SetAlpha(0.35)
-  b:SetScript("OnMouseDown", function() n:Hide(); p:Show() end)
-  b:SetScript("OnMouseUp", function() p:Hide(); n:Show() end)
-  return b
 end
 
 -- the red button of the game's dialogs, in three parts so it stretches to any width
@@ -291,12 +216,6 @@ function Skin.DropArrow(dd)
   t:SetSize(22, 22)
   t:SetPoint("RIGHT", -1, 0)
   Skin.Atlas(t, "common-dropdown-a-button")
-  dd:HookScript("OnEnter", function(self)
-    if self:IsEnabled() then Skin.Atlas(t, "common-dropdown-a-button-hover") end
-  end)
-  dd:HookScript("OnLeave", function(self)
-    if self:IsEnabled() then Skin.Atlas(t, "common-dropdown-a-button") end
-  end)
   dd:HookScript("OnDisable", function() Skin.Atlas(t, "common-dropdown-a-button-disabled") end)
   dd:HookScript("OnEnable", function() Skin.Atlas(t, "common-dropdown-a-button") end)
   return t
@@ -330,10 +249,8 @@ end
 -- the divider line under a section header
 function Skin.Divider(parent)
   local t = parent:CreateTexture(nil, "ARTWORK")
-  if Skin.Atlas(t, "Options_HorizontalDivider") then
-    t:SetHeight(1)
-  else
-    t:SetHeight(1)
+  t:SetHeight(1)
+  if not Skin.Atlas(t, "Options_HorizontalDivider") then
     local e = Skin.EDGE
     t:SetColorTexture(e[1], e[2], e[3], 0.8)
   end

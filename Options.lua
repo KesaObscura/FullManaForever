@@ -228,7 +228,8 @@ local function Stepper(parent, x, text, get, set, o)
   -- typed to match another addon's frame)
   s.valueBtn = CreateFrame("Button", nil, parent)
   s.valueBtn:SetAllPoints(s.field)
-  Tip(s.valueBtn, text, (o.tip and (o.tip .. "\n\n") or "") .. L.tipTypeValue)
+  -- the title is the setting's name also where the stepper has no label of its own
+  Tip(s.valueBtn, o.title or text, (o.tip and (o.tip .. "\n\n") or "") .. L.tipTypeValue)
   s.edit = CreateFrame("EditBox", nil, parent)
   s.edit:SetSize(FIELD_W, 20)
   s.edit:SetPoint("LEFT", s.field, "LEFT", 0, 0)
@@ -240,7 +241,7 @@ local function Stepper(parent, x, text, get, set, o)
   ebg:SetAllPoints()
   ebg:SetColorTexture(0, 0, 0, 0.8)
   s.edit:Hide()
-  Tip(s.edit, text, L.tipTypeValue)
+  Tip(s.edit, o.title or text, L.tipTypeValue)
   local function closeEdit()
     s.edit:ClearFocus(); s.edit:Hide(); s.value:Show()
   end
@@ -481,7 +482,7 @@ Build = function()
   -- change builds the windows anew): the name is set here, else Esc looks at the old frame
   EscListed(win, "FullManaForeverOptions")
 
-  Skin.Window(win, 38, { portrait = "Interface\\AddOns\\FullManaForever\\icon" })
+  Skin.Window(win, 38, { portrait = Skin.LOGO })
   local T = Skin.Top(win) -- the content moves below a title band inside the window
 
   -- while the item list or the profiles window is open over the settings, the settings are
@@ -538,9 +539,9 @@ Build = function()
   -- profile in use: Shared or this character's own; rare actions in "Profiles..."
   local P = ns.Profiles
   local profBtn = Button(win, L.optProfiles, 120)
-  -- the profile row has the top of the window to itself; the title and the close button sit
-  -- in the metal band above it (0.9.11)
-  if (win.skinBand or 0) > 0 or T > 0 then
+  -- under the game's frame the title and the close button sit in its title band: the
+  -- profile row is the first row below it (0.9.11)
+  if T > 0 then
     profBtn:SetPoint("TOPRIGHT", win, "TOPRIGHT", -PAD, -9 - T)
   else
     profBtn:SetPoint("RIGHT", close, "LEFT", -12, 0)
@@ -1197,8 +1198,8 @@ local function BuildProfiles()
   -- in game a new frame does not take over a name an older one already has (the language
   -- change builds the windows anew): the name is set here, else Esc looks at the old frame
   EscListed(pwin, "FullManaForeverProfiles")
-  Skin.Window(pwin, 0, { portrait = "Interface\\AddOns\\FullManaForever\\icon" })
-  -- the old title row (content from -44) is gone: content from Skin.ContentTop
+  Skin.Window(pwin, 0, { portrait = Skin.LOGO })
+  -- the title sits in the frame's title band: the content starts below it and the logo
   local T0 = 44 + Skin.ContentTop(pwin)
   local title = Label(pwin, L.profTitle, "GameFontNormalLarge")
   Skin.PlaceTitle(title, pwin, PAD)
