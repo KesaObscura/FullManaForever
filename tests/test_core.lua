@@ -2641,3 +2641,30 @@ test("0.9.7: time to full mana out of combat, through a numeric curve; rule and 
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
   noRegenApis()
 end)
+
+test("0.9.7: time to full mana counts the end of drinking (drink aura out of combat)", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
+  local base = 15
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end, GetSpellName = function(id) return id == 430 and "Drink" or nil end }
+  local aura
+  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) if i == 1 then return aura end end }
+  local b = bar(ns)
+  M.tick()                                      -- normal rate 15/s learned
+  eq(b.fullIn.text, ns.L.fullIn:format(1364 / 15))
+  -- drinking a new Forever water (unknown ID, same name): 51/s for 10 more seconds, then 15/s
+  base, M.state.time = 51, 101
+  aura = { spellId = 1249999, name = "Drink", expirationTime = 111 }
+  M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 510) / 15), "end of drinking not counted")
+  -- enough drink left for all of it
+  aura.expirationTime = 200; M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(1364 / 51))
+  -- the drink is over: the plain rate
+  aura, base = nil, 15; M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(1364 / 15))
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  _G.GetPowerRegen, _G.C_Spell = nil, nil
+end)

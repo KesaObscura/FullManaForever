@@ -33,7 +33,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Five-second rule.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it) — in whole seconds (5, 4, 3 ...) or with tenths, or just the strip without the number. The strip runs down smoothly.
 ### Know when to drink: live mana regen and time to full mana
 
-- **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule included.
+- **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included.
 - **Live mana regen per second,** also in combat, including Spirit Tap and drinking. It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
@@ -94,6 +94,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 - **Different settings for my healer and my mage?** Yes: each character can have its own profile, or copy another character's settings.
 - **How do I save my expensive potions?** Switch single items off in `/fmf items`, or hold potions for one fight with `/fmf hold`.
 - **Does it work with my unit frames?** Yes: *Style: Only markers*, *Move the bar separately* and *Above other frames* lay the markers and the five-second strip over your unit frame's mana bar; type the exact length and thickness.
+- **Does a healing potion block my mana potion?** Yes, in Forever they share the 2-minute cooldown; the icon then shows the wait.
 - **How long do I have to drink?** Out of combat the regen shows "full in ~N s": the time until your mana is full at the current rate.
 
 ## Tested so far

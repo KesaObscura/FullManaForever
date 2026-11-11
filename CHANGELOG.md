@@ -3,7 +3,8 @@
 **Full Mana Forever 0.9.7**
 
 Asked for by players:
-- **Time to full mana**: out of combat, next to the regen, "full in ~27 s": how long until your mana is full at the current rate, the five-second rule included. Hidden in combat and at full mana; switch: *Time to full mana* under *Mana regen*. When drinking ends early, the time jumps to the slower rate
+- **Time to full mana**: out of combat, next to the regen, "full in ~27 s": how long until your mana is full at the current rate, the five-second rule and the end of your drink included. Hidden in combat and at full mana; switch: *Time to full mana* under *Mana regen*
+- The mana potion group says that healing potions share its cooldown (confirmed in game: after a healing potion the mana potion waits)
 
 **Full Mana Forever 0.9.6**
 

@@ -150,7 +150,9 @@ and `/fmf log` (kept in releases for bug reports).
   0.9.7 (owner, 10 Nov; players asked): "Time to full mana" (`fullTimer`, on) out of combat next to
   the regen: a numeric curve over the mana share, piecewise for the five-second rule (casting rate
   first), hidden at full mana by a step curve; not in combat (regen secret, and meaningless while
-  casting). The early end of drinking is not foreseen (drink aura IDs unknown): later.
+  casting). Drinking: the drink aura (by the name of spell 430 in the client's language, or IDs
+  430/431/432/1133/1135/1137/22734, owner's scan 10 Nov) gives its end; then the learned normal rate.
+  Mana and healing potions share the cooldown (owner's scan 10 Nov).
   The settings regroup moves to 0.9.8.
   Later: gallery re-shoots (need screenshots), exact fit to unit frames (sizes typed in / attach
   to the player frame), choice of bar markers (all / potions only / nearest), a "drink" reminder

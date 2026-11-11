@@ -291,7 +291,10 @@ Facts that matter for this addon (the full list lives in that project):
 - Boss fight (Full Health Forever log, same dungeon): Encounter=2 and **Chat=2** while the boss is
   pulled. Addon messages are probably blocked then: the planned group features (who has Innervate /
   Mana Tide ready) would not work in boss fights; `/fmf log chat` neither. Not tested by us.
-- Healing potion item cooldown readable (858: 120 s). Whether mana and healing potions share the
+- Healing potion item cooldown readable (858: 120 s). **Mana and healing potions share the
+  cooldown** (owner's scan 10 Nov, priest 25: after a Minor Mana Potion the same 120 s showed on 17
+  potions incl. Minor Healing Potion 858). Drink auras "Drink" (ruRU "Питье"): 430, 431, 432,
+  1133, 1135, 1137, 22734 (18-30 s); FMF finds the drink by that name, so new drink IDs match too. Whether mana and healing potions share the
   cooldown in Forever is not tested; our potion icon reads the mana potion's own item cooldown, so a
   shared cooldown would simply show as its wait.
 

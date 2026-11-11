@@ -1838,7 +1838,7 @@ end
 -- engine returns that number (secret) through UnitPowerPercent; it is only formatted into the
 -- text. Regen and max mana are readable out of combat. The curve is piecewise linear: during
 -- the five-second rule the casting rate runs first (0 without talents), then the normal rate.
--- Drinking that ends early is not foreseen: the number then drops to the slower rate at once.
+-- Drinking: its higher rate runs until the drink aura ends, then the normal rate (Regen.lua).
 -- At full mana the text is hidden by a step curve (alpha), like the fading.
 local timerCurve, timerKey, timerFull, timerFullKey
 local function UpdateFullTimer(visible)
@@ -1856,8 +1856,20 @@ local function UpdateFullTimer(visible)
   end
   local left = ns.FsrLeft and ns.FsrLeft() or 0
   local c = casting > 0 and casting or 0
+  -- drinking: its rate runs until the drink ends, then the normal rate (0.9.7: drink auras found
+  -- in game). A spell breaks the drink, so drink and rule never run together.
+  local dleft, normal
+  if left <= 0 and ns.DrinkLeft then dleft, normal = ns.DrinkLeft() end
   local pts
-  if left > 0 and c > 0 and left * c >= max then
+  if dleft and type(normal) == "number" and normal > 0 and normal < base then
+    local m1 = dleft * base                                 -- mana still coming from the drink
+    if m1 >= max then
+      pts = { { 0, max / base }, { 1, 0 } }
+    else
+      pts = { { 0, dleft + (max - m1) / normal }, { 1 - m1 / max, dleft }, { 1, 0 } }
+    end
+    left = -dleft -- part of the curve's key (changes while drinking)
+  elseif left > 0 and c > 0 and left * c >= max then
     pts = { { 0, max / c }, { 1, 0 } }                    -- all of it within the rule
   elseif left > 0 and c > 0 then
     local m1 = left * c                                    -- mana gained in the rest of the rule
@@ -1867,7 +1879,7 @@ local function UpdateFullTimer(visible)
   else
     pts = { { 0, max / base }, { 1, 0 } }
   end
-  local key = ("%.2f:%.2f:%.1f:%d:%d"):format(base, c, left, max, Scale())
+  local key = ("%.2f:%.2f:%.1f:%.2f:%d:%d"):format(base, c, left, type(normal) == "number" and normal or 0, max, Scale())
   if key ~= timerKey then
     local cv = C_CurveUtil.CreateCurve()
     if Enum and Enum.LuaCurveType and Enum.LuaCurveType.Linear then cv:SetType(Enum.LuaCurveType.Linear) end
