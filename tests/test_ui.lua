@@ -449,6 +449,49 @@ test("every control in the settings and the item list has a tooltip, also while 
 end)
 
 
+test("0.9.11: with the game's textures the windows build in the game's look, every control keeps its tooltip", function()
+  local flat = M.load(nil)
+  flat.ToggleOptions(true)
+  local before = _G.FullManaForeverOptions:GetHeight()
+  _G.C_Texture = { GetAtlasInfo = function(n) return { width = 20, height = 20, file = n } end }
+  _G.NineSliceUtil = { ApplyLayoutByName = function() end }
+  local ns = M.load({ custom = { { id = 12345, max = 500, group = "potion" } } })
+  ns.ToggleOptions(true)
+  ns.ToggleLibrary(true)
+  ns.ToggleProfiles(true)
+  ok(_G.FullManaForeverOptions.skinMetal, "no metal frame on the settings")
+  ok(_G.FullManaForeverItems.skinMetal, "no metal frame on the item list")
+  ok(_G.FullManaForeverProfiles.skinMetal, "no metal frame on the profiles window")
+  local roots = { [_G.FullManaForeverOptions] = true, [_G.FullManaForeverItems] = true }
+  local seen = 0
+  for _, f in ipairs(M.all) do
+    if f.kind == "Button" or f.kind == "CheckButton" then
+      local p, inList, inWin = f.parent, false, false
+      while p do
+        if p.ddList then inList = true end
+        if roots[p] then inWin = true end
+        p = p.parent
+      end
+      if inWin and not inList then
+        seen = seen + 1
+        ok(f.scripts.OnEnter, "no tooltip on " .. tostring(f.text or (f.label and f.label.text) or f.kind))
+      end
+    end
+  end
+  ok(seen > 30, "too few controls found: " .. seen)
+  -- the icons get the action button frame
+  local found = false
+  for _, f in ipairs(M.all) do if f.frameTex then found = true break end end
+  ok(found, "icons without the action button frame")
+  -- the game's own window frame: its title band inside, the logo in the round corner, the
+  -- content below the band
+  local win = _G.FullManaForeverOptions
+  eq(win.skinTop, ns.Skin.TOP, "no title band inside the window")
+  ok(win.skinPortrait and _G.FullManaForeverItems.skinPortrait, "no logo in the corner")
+  eq(win:GetHeight(), before + ns.Skin.TOP, "window not taller by the band")
+  _G.NineSliceUtil, _G.C_Texture = nil, nil
+end)
+
 test("options: the health threshold is greyed out only while runes, spells and other items are all off (0.9.3)", function()
   local ns = M.load({ enabled = { rune = false, spell = false, herb = false } })
   ns.ToggleOptions(true)

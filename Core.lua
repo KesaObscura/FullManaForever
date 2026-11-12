@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.10"
+ns.VERSION = "0.9.11"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -750,8 +750,17 @@ local function CreateLayer(parent)
       CreateColor(1, 1, 1, 0.14)) then
     l.shine:Hide() -- no hard line without a gradient
   end
-  Border(l, l, "OVERLAY", 0, 0, 0, 1, 1)
-  l.inner = Border(l, l, "OVERLAY", 1, 1, 1, 0.12, 0)
+  -- the frame of the game's action buttons (0.9.11); a thin dark frame without it
+  local frameTex = l:CreateTexture(nil, "OVERLAY", nil, 1)
+  if ns.Skin and ns.Skin.Atlas(frameTex, "UI-HUD-ActionBar-IconFrame") then
+    frameTex:SetPoint("TOPLEFT", l, "TOPLEFT", -1, 1)
+    frameTex:SetPoint("BOTTOMRIGHT", l, "BOTTOMRIGHT", 2, -2)
+    l.frameTex = frameTex
+  else
+    frameTex:Hide()
+    Border(l, l, "OVERLAY", 0, 0, 0, 1, 1)
+    l.inner = Border(l, l, "OVERLAY", 1, 1, 1, 0.12, 0)
+  end
   l.count = l:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
   l.count:SetPoint("BOTTOMRIGHT", -2, 2)
   OutlineFont(l.count, "NumberFontNormal")
@@ -1531,6 +1540,7 @@ function ns.ApplyLock()
   local unlocked = not db.locked
   anchor:EnableMouse(unlocked)
   anchor.bg:SetShown(unlocked)
+  for _, e in ipairs(anchor.edge or {}) do e:SetShown(unlocked) end
   anchor.label:SetShown(unlocked)
   anchor.lockBtn:SetShown(unlocked)
   anchor.cfgBtn:SetShown(unlocked)
@@ -1556,13 +1566,8 @@ end
 -- searching for the settings window (it may cover the frame)
 local function FrameButton(onClick, title, tip)
   local b = CreateFrame("Button", nil, anchor)
-  b:SetHeight(20)
-  local bg = b:CreateTexture(nil, "BACKGROUND")
-  bg:SetAllPoints()
-  bg:SetColorTexture(0.04, 0.10, 0.22, 0.9)
-  local hl = b:CreateTexture(nil, "HIGHLIGHT")
-  hl:SetAllPoints()
-  hl:SetColorTexture(0.3, 0.6, 1, 0.25)
+  b:SetHeight(22)
+  ns.Skin.RedButton(b) -- the red button of the game's dialogs (0.9.11)
   b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
   OutlineFont(b.text, "GameFontHighlightSmall", true)
   b.text:SetPoint("CENTER")
@@ -1644,7 +1649,10 @@ local function CreateAnchor()
   anchor.bg = anchor:CreateTexture(nil, "BACKGROUND")
   anchor.bg:SetPoint("TOPLEFT", -4, 4)
   anchor.bg:SetPoint("BOTTOMRIGHT", 4, -4)
-  anchor.bg:SetColorTexture(0, 0.4, 1, 0.35)
+  -- unlocked: a thin blue outline and a faint fill, so the icons and the bar stay easy to see
+  -- while placing them (0.9.11; a solid blue box before)
+  anchor.bg:SetColorTexture(0.35, 0.65, 1, 0.12)
+  anchor.edge = Border(anchor, anchor.bg, "BACKGROUND", 0.35, 0.65, 1, 0.9, 0)
   anchor.label = anchor:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   anchor.label:SetPoint("BOTTOM", anchor, "TOP", 0, 6)
   anchor.label:SetText(L.anchor)
