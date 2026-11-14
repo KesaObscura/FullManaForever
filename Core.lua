@@ -817,7 +817,7 @@ end
 
 do -- mana warnings to chat: own scope (a Lua chunk holds 200 locals at most)
 -- "Low mana!" and "Out of mana!" to the party or raid chat (0.9.10, asked for in a comment),
--- at most every OOM_GAP seconds each; /fmf oom says "Out of mana!" at once. While the game
+-- at most every OOM_GAP seconds each. While the game
 -- locks addon chat nothing is sent: the player is told once to use the game's /oom emote.
 local OOM_GAP = 30
 local oomLast, oomToldBlocked
@@ -979,42 +979,34 @@ function ns.OomInfo()
   return oomLow and oomLow.cost / oomMax or nil, oomOut and oomOut.cost / oomMax or nil
 end
 
--- kind: "out" (default) or "low". manual: typed by the player (/fmf oom): no pause, hints shown.
+-- kind: "out" (default) or "low".
 local lowLast
-local function OomSend(text, channel, manual)
+local function OomSend(text, channel)
   local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
   if not send then return false end
   local ok = pcall(send, text, channel)
-  if not ok and (manual or not oomToldBlocked) then Print(L.oomBlocked); oomToldBlocked = true end
+  if not ok and not oomToldBlocked then Print(L.oomBlocked); oomToldBlocked = true end
   return ok
 end
-function ns.AnnounceOom(manual, kind)
+function ns.AnnounceOom(kind)
   kind = kind == "low" and "low" or "out"
-  if not manual and db[kind == "low" and "oomLow" or "oomOut"] == false then return false end
+  if db[kind == "low" and "oomLow" or "oomOut"] == false then return false end
   local mode = db.oomChat
-  if mode ~= "party" and mode ~= "raid" and mode ~= "auto" then
-    if not manual then return false end
-    mode = "auto" -- the command also works with the setting off
-  end
+  if mode ~= "party" and mode ~= "raid" and mode ~= "auto" then return false end
   local now = GetTime()
-  if not manual then
-    if oomLast and now - oomLast < OOM_GAP then return false end -- nothing right after "out"
-    if kind == "low" and lowLast and now - lowLast < OOM_GAP then return false end
-  end
+  if oomLast and now - oomLast < OOM_GAP then return false end -- nothing right after "out"
+  if kind == "low" and lowLast and now - lowLast < OOM_GAP then return false end
   local channel = OomChannel(mode)
-  if not channel then
-    if manual then Print(L.oomNoGroup) end
-    return false
-  end
+  if not channel then return false end
   if ChatLocked() then
-    if manual or not oomToldBlocked then Print(L.oomBlocked) end
+    if not oomToldBlocked then Print(L.oomBlocked) end
     oomToldBlocked = true
     return false
   end
   if kind == "low" then lowLast = now else oomLast = now end
   -- party and raid chat take addon messages without a key press (quest addons write there;
   -- only SAY, EMOTE and the like need one: owner's test, 11 Nov)
-  return OomSend(kind == "low" and L.lowMsg or L.oomMsg, channel, manual)
+  return OomSend(kind == "low" and L.lowMsg or L.oomMsg, channel)
 end
 local oomFrame = CreateFrame("Frame")
 pcall(oomFrame.RegisterEvent, oomFrame, "UI_ERROR_MESSAGE")
@@ -1041,7 +1033,7 @@ oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if hit then
     PickMeasures()
     local out = db.oomOut ~= false and (not oomOut or NoMana(oomOut.id))
-    pcall(ns.AnnounceOom, false, out and "out" or "low")
+    pcall(ns.AnnounceOom, out and "out" or "low")
   end
 end)
 -- in a fight the state is looked at twice a second: a warning when it turns to "low" or "out"
@@ -1053,7 +1045,7 @@ function ns.OomTick(dt)
   if not db or db.oomChat == nil or db.oomChat == "off" or not InCombatLockdown() then oomState = nil return end
   local ok, st = pcall(ns.ManaWarning)
   if not ok then return end
-  if st and st ~= oomState then pcall(ns.AnnounceOom, false, st) end
+  if st and st ~= oomState then pcall(ns.AnnounceOom, st) end
   oomState = st
 end
 oomFrame:SetScript("OnUpdate", function(_, dt) ns.OomTick(dt) end)
@@ -2605,8 +2597,6 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     ns.SetHold(not held)
     Print(held and L.holdOn or L.holdOff)
     if ns.RefreshOptions then ns.RefreshOptions() end
-  elseif cmd == "oom" then
-    ns.AnnounceOom(true)
   elseif cmd == "unlock" then
     db.locked = false; ns.ApplyLock(); Print(L.unlocked)
   elseif cmd == "lock" then

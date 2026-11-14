@@ -2396,21 +2396,18 @@ test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to 
   M.state.group = false
   ns.db.oomChat = "auto"; fail(290); eq(#sent, 4, "sent while solo")
   ns.db.oomChat = "off"; M.state.group = true; fail(330); eq(#sent, 4, "sent while off")
-  -- the command works with the setting off, and tells when there is no group
-  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[5], "PARTY:" .. ns.L.oomMsg, "/fmf oom")
-  M.state.group = false; M.printed = {}
-  SlashCmdList.FULLMANAFOREVER("oom"); eq(#sent, 5)
-  ok(table.concat(M.printed, "\n"):find(ns.L.oomNoGroup, 1, true), "no hint without a group")
+  -- there is no command for it any more (0.9.12): "/fmf oom" sends nothing
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(#sent, 4, "/fmf oom sent a message")
   -- the game locks addon chat: nothing is sent, the player is told once
   M.state.group = true; ns.db.oomChat = "auto"; M.printed = {}
   _G.C_RestrictedActions = { GetAddOnRestrictionState = function(i) return i == 5 and 2 or 0 end }
-  fail(400); fail(440); eq(#sent, 5, "sent during a chat lockdown")
+  fail(400); fail(440); eq(#sent, 4, "sent during a chat lockdown")
   local n = 0
   for _, p in ipairs(M.printed) do if p:find(ns.L.oomBlocked, 1, true) then n = n + 1 end end
   eq(n, 1, "the lockdown hint not shown exactly once")
   -- a secret error text is never compared
   _G.C_RestrictedActions = nil
-  M.Fire("UI_ERROR_MESSAGE", 51, M.secret and M.secret("x") or "other"); eq(#sent, 5)
+  M.Fire("UI_ERROR_MESSAGE", 51, M.secret and M.secret("x") or "other"); eq(#sent, 4)
   _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
   M.state.group, M.state.raid, M.state.combat, M.state.time = false, false, false, nil
 end)
@@ -2510,7 +2507,6 @@ test("0.9.10: the marks also come from the ruler spells, the same for every clas
   ns.db.oomLow, ns.db.oomOut = false, false
   M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
   M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(#sent, 1, "a warning with both switched off")
-  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[2], ns.L.oomMsg, "/fmf oom with both switched off")
   ns.db.oomLow, ns.db.oomOut = true, true
   _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
   M.state.group, M.state.combat, M.state.time = false, false, nil
