@@ -85,6 +85,49 @@ local function CostsMana(id)
   return false
 end
 
+-- Blessing of Wisdom: its mana comes in on top of the regen the game reports (owner's test,
+-- 14 Nov: the regen number stayed the same, the mana came in faster). Mana per 5 s by spell ID,
+-- from the game texts of WoW Forever (scan 14 Nov); it keeps running within the rule.
+local WISDOM = {
+  [19742] = 12, [19850] = 18, [19852] = 24, [19853] = 30, [19854] = 36, [25290] = 40, -- Blessing
+  [25894] = 36, [25918] = 40,                                                         -- Greater
+}
+local buffMp5, buffUntil = 0, 0
+-- read on aura changes; while the answer is secret (in combat) the last one is kept until the
+-- buff runs out
+local function ScanBuffs()
+  local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+  if not get then return end
+  local best, ends = 0, 0
+  for id, mp5 in pairs(WISDOM) do
+    local ok, a = pcall(get, id)
+    if not ok or IsSecret(a) then return end
+    if a ~= nil and mp5 > best then
+      local exp = a.expirationTime
+      if IsSecret(exp) then return end
+      best, ends = mp5, (type(exp) == "number" and exp > 0) and exp or math.huge
+    end
+  end
+  buffMp5, buffUntil = best, ends
+end
+-- mana per second from such buffs right now (0 without one)
+function ns.BuffRegen()
+  if buffMp5 > 0 and GetTime() < buffUntil then return buffMp5 / 5 end
+  return 0
+end
+local auraFrame = CreateFrame("Frame")
+if auraFrame.RegisterUnitEvent then
+  auraFrame:RegisterUnitEvent("UNIT_AURA", "player")
+else
+  auraFrame:RegisterEvent("UNIT_AURA")
+end
+auraFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+auraFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+auraFrame:SetScript("OnEvent", function(_, event, unit)
+  if event == "UNIT_AURA" and unit ~= "player" then return end
+  ScanBuffs()
+end)
+
 -- seconds left of the five-second rule (0 = regen runs at the normal rate)
 function ns.FsrLeft()
   local left = fsrUntil - GetTime()
@@ -171,13 +214,14 @@ function ns.DrinkLeft()
   return nil
 end
 
--- base and casting rate as plain numbers, nil while they are secret (in combat): for the time
--- to full mana (0.9.7), which only shows out of combat
+-- base and casting rate as plain numbers (Blessing of Wisdom included), nil while they are
+-- secret (in combat): for the time to full mana (0.9.7), which only shows out of combat
 function ns.RegenRates()
   local ok, base, casting = ManaRegen()
   if not ok or IsSecret(base) or type(base) ~= "number" then return nil end
   if IsSecret(casting) or type(casting) ~= "number" then casting = 0 end
-  return base, casting
+  local extra = ns.BuffRegen()
+  return base + extra, casting + extra
 end
 
 function ns.RegenText()
@@ -187,15 +231,24 @@ function ns.RegenText()
   local value
   if inRule then value = casting else value = base end
   if value == nil then return nil end
+  -- Blessing of Wisdom on top: added to a plain value, shown as "+3.6" next to a secret one
+  local extra = ns.BuffRegen()
+  local okF, text
   -- the unit is part of the pattern; "%" in a unit would have to be escaped
-  local okF, text = pcall(string.format, "%.1f" .. ns.L.regenUnit, value)
+  if extra > 0 and IsSecret(value) then
+    okF, text = pcall(string.format, "%.1f+%.1f" .. ns.L.regenUnit, value, extra)
+  else
+    if extra > 0 and type(value) == "number" then value = value + extra end
+    okF, text = pcall(string.format, "%.1f" .. ns.L.regenUnit, value)
+  end
   if not okF then return nil end
   local boosted = GetTime() < boostUntil
   if not inRule and not IsSecret(base) and type(base) == "number" and base > 0 then
     local now = GetTime()
-    if not Lowered() then Learn(base, now) end
+    local total = base + extra
+    if not Lowered() then Learn(total, now) end
     local normal = Normal()
-    boosted = boosted or (normal ~= nil and base > normal * BOOST_RATIO + 0.05)
+    boosted = boosted or (normal ~= nil and total > normal * BOOST_RATIO + 0.05)
   end
   -- below normal for a while (Resurrection Sickness): red with a down arrow (0.8.9)
   local lowered = not inRule and not boosted and Lowered()

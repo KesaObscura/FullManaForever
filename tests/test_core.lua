@@ -1955,6 +1955,48 @@ test("Read Leyline keeps the regen green for 30 s after the cast (game text, 17 
   noRegenApis()
 end)
 
+test("0.9.12: Blessing of Wisdom adds its mana to the regen, the time to full and the green", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 942 / 1999, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end -- the game leaves the blessing out
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if aura and id == aura.spellId then return aura end end }
+  local b = bar(ns)
+  M.tick()
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "regen without the blessing")
+  -- rank 2: 18 mana every 5 s = 3.6 per second, out of combat in the number and the timer
+  aura = { spellId = 19850, expirationTime = 3700 }
+  M.Fire("UNIT_AURA", "player")
+  local text, _, boosted = ns.RegenText()
+  eq(text, "21.1" .. ns.L.regenUnit, "blessing not added")
+  ok(boosted, "+20 % not green")
+  M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(1057 / 21.1), "time to full without the blessing")
+  -- within the rule it keeps running
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 1)
+  _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 50 } } end }
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 2)
+  eq((ns.RegenText()), "3.6" .. ns.L.regenUnit, "blessing lost within the rule")
+  M.state.time = 200
+  -- in combat: the regen is secret, the aura answer too; the kept amount shows as "+3.6"
+  _G.GetPowerRegen = function() return M.secret(17.5), M.secret(0) end
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return M.secret({}) end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "17.5+3.6" .. ns.L.regenUnit, "blessing not shown in combat")
+  -- it runs out: nothing added any more
+  M.state.time = 3701
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "blessing counted after it ran out")
+  -- the buff is gone out of combat
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
+  M.state.time = 300; M.Fire("PLAYER_REGEN_ENABLED")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "blessing counted after it was gone")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
 
 test("texts lie above the bar; 'Above other frames' raises the whole display", function()

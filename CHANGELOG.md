@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.9.12**
+
+Asked for in the comments:
+- Blessing of Wisdom (also the Greater one) now counts in your mana per second, in the time to full mana and in the green regen. In a fight it shows as its own part next to the regen: "17.5+3.6/s"
+
 **Full Mana Forever 0.9.11**
 
 A new look, in the style of the game's own windows:
