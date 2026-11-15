@@ -242,12 +242,12 @@ function ns.RegenText()
   local value
   if inRule then value = casting else value = base end
   if value == nil then return nil end
-  -- Blessing of Wisdom on top: added to a plain value, shown as "+3.6" next to a secret one
+  -- Blessing of Wisdom on top: added to a plain value, shown as a white "+3.6" next to a secret one
   local extra = ns.BuffRegen()
   local okF, text
   -- the unit is part of the pattern; "%" in a unit would have to be escaped
   if extra > 0 and IsSecret(value) then
-    okF, text = pcall(string.format, "%.1f+%.1f" .. ns.L.regenUnit, value, extra)
+    okF, text = pcall(string.format, "%.1f|cffffffff+%.1f|r" .. ns.L.regenUnit, value, extra)
   else
     if extra > 0 and type(value) == "number" then value = value + extra end
     okF, text = pcall(string.format, "%.1f" .. ns.L.regenUnit, value)

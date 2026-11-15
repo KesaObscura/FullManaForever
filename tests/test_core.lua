@@ -1985,7 +1985,7 @@ test("0.9.12: Blessing of Wisdom adds its mana to the regen, the time to full an
   M.state.combat = true
   _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
   M.Fire("UNIT_AURA", "player")
-  eq((ns.RegenText()), "17.5+3.6" .. ns.L.regenUnit, "blessing not shown in combat")
+  eq((ns.RegenText()), "17.5|cffffffff+3.6|r" .. ns.L.regenUnit, "blessing not shown in combat")
   M.state.combat = false
   -- it runs out: nothing added any more
   M.state.time = 3701
