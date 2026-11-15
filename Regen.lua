@@ -93,9 +93,9 @@ local WISDOM = {
   [25894] = 36, [25918] = 40,                                                         -- Greater
 }
 local buffMp5, buffUntil = 0, 0
--- read on aura changes, out of combat only: in a fight the game answers "no such buff" for a
--- buff that is there (owner's test, 15 Nov), so the last answer from before the fight is kept
--- until the buff runs out
+-- read on aura changes, out of combat only: in a fight the game hides which buff came or went
+-- and answers "no such buff" for one that is there (owner's tests, 15 Nov), so what was known
+-- before the fight is kept until the buff runs out, and read again when the fight ends
 local function AurasHidden()
   if InCombatLockdown and InCombatLockdown() then return true end
   local f = C_Secrets and C_Secrets.ShouldAurasBeSecret
@@ -133,6 +133,7 @@ else
 end
 auraFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 auraFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+auraFrame:RegisterEvent("PLAYER_REGEN_DISABLED") -- the last look before a fight (still readable)
 auraFrame:SetScript("OnEvent", function(_, event, unit)
   if event == "UNIT_AURA" and unit ~= "player" then return end
   ScanBuffs()
