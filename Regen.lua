@@ -93,11 +93,21 @@ local WISDOM = {
   [25894] = 36, [25918] = 40,                                                         -- Greater
 }
 local buffMp5, buffUntil = 0, 0
--- read on aura changes; while the answer is secret (in combat) the last one is kept until the
--- buff runs out
+-- read on aura changes, out of combat only: in a fight the game answers "no such buff" for a
+-- buff that is there (owner's test, 15 Nov), so the last answer from before the fight is kept
+-- until the buff runs out
+local function AurasHidden()
+  if InCombatLockdown and InCombatLockdown() then return true end
+  local f = C_Secrets and C_Secrets.ShouldAurasBeSecret
+  if f then
+    local ok, v = pcall(f)
+    if not ok or IsSecret(v) or v then return true end
+  end
+  return false
+end
 local function ScanBuffs()
   local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
-  if not get then return end
+  if not get or AurasHidden() then return end
   local best, ends = 0, 0
   for id, mp5 in pairs(WISDOM) do
     local ok, a = pcall(get, id)

@@ -1981,9 +1981,12 @@ test("0.9.12: Blessing of Wisdom adds its mana to the regen, the time to full an
   M.state.time = 200
   -- in combat: the regen is secret, the aura answer too; the kept amount shows as "+3.6"
   _G.GetPowerRegen = function() return M.secret(17.5), M.secret(0) end
-  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return M.secret({}) end }
+  -- and the game says "no such buff" for a buff that is there: not believed in a fight
+  M.state.combat = true
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
   M.Fire("UNIT_AURA", "player")
   eq((ns.RegenText()), "17.5+3.6" .. ns.L.regenUnit, "blessing not shown in combat")
+  M.state.combat = false
   -- it runs out: nothing added any more
   M.state.time = 3701
   eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "blessing counted after it ran out")
