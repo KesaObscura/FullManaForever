@@ -24,20 +24,28 @@ local BOOST_SPELLS = {        -- [spell] = seconds of raised regen (own casts on
 }
 -- the lowest regen per 30 s, for the last 10 such parts with a sample (5 minutes out of combat)
 local BUCKET, KEEP = 30, 10
-local buckets = {}            -- { { k = part number, v = lowest regen }, ... } oldest first
-local function Learn(base, now)
+-- { { k = part number, v = lowest regen with the mana buffs, b = lowest regen the game reports }, ... }
+local buckets = {}            -- oldest first
+local function Learn(total, base, now)
   local k = math.floor(now / BUCKET)
   local last = buckets[#buckets]
   if last and last.k == k then
-    if base < last.v then last.v = base end
+    if total < last.v then last.v = total end
+    if base < last.b then last.b = base end
   else
-    buckets[#buckets + 1] = { k = k, v = base }
+    buckets[#buckets + 1] = { k = k, v = total, b = base }
     if #buckets > KEEP then table.remove(buckets, 1) end
   end
 end
 local function Normal()
   local m
   for _, b in ipairs(buckets) do if not m or b.v < m then m = b.v end end
+  return m
+end
+-- the same for the game's own number, without the mana buffs
+local function NormalBase()
+  local m
+  for _, b in ipairs(buckets) do if not m or b.b < m then m = b.b end end
   return m
 end
 local boostUntil = 0
@@ -51,9 +59,10 @@ local function IsSecret(v) return issecretvalue ~= nil and issecretvalue(v) or f
 -- less Spirit stay part of the normal regen. The sickness takes 75 % of the BASE stat
 -- (in game: Spirit 38 = base 48 + 26 from buffs - 36), so the cut is compared with the base.
 local LOWERED = 0.5           -- at least half of the base stat taken away
+local LOWERED_STATS = { 4, 5 } -- 4 Intellect, 5 Spirit
 local function Lowered()
   if UnitStat then
-    for _, stat in ipairs({ 4, 5 }) do          -- 4 Intellect, 5 Spirit
+    for _, stat in ipairs(LOWERED_STATS) do
       local ok, _, eff, pos, neg = pcall(UnitStat, "player", stat)
       if ok and not IsSecret(eff) and not IsSecret(pos) and not IsSecret(neg)
         and type(eff) == "number" and type(pos) == "number" and type(neg) == "number"
@@ -65,7 +74,7 @@ local function Lowered()
   local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
   if get then
     local ok, aura = pcall(get, SICKNESS)
-    if ok and aura ~= nil and not IsSecret(aura) then return true end
+    if ok and not IsSecret(aura) and aura ~= nil then return true end
   end
   return false
 end
@@ -84,6 +93,99 @@ local function CostsMana(id)
   end
   return false
 end
+
+-- Mana buffs whose mana comes in on top of the regen the game reports. Mana per second by spell
+-- ID, from the game's own texts; both keep running within the five-second rule.
+-- Blessing of Wisdom: 12-40 mana every 5 s, one hour.
+local WISDOM = {
+  [19742] = 12 / 5, [19850] = 18 / 5, [19852] = 24 / 5, [19853] = 30 / 5, [19854] = 36 / 5,
+  [25290] = 40 / 5, [25894] = 36 / 5, [25918] = 40 / 5,                -- the last two: Greater
+}
+-- Mana Spring Totem: the buff on the player while near the totem, 4-10 mana every 2 s, no end
+-- time (it comes and goes with the distance to the totem)
+local SPRING = { [5677] = 4 / 2, [10491] = 6 / 2, [10493] = 8 / 2, [10494] = 10 / 2 }
+local wisdom, wisdomUntil, spring = 0, 0, 0
+-- The buffs are read out of combat only: in a fight the game does not tell which buff came or
+-- went, and says "no such buff" for one that is there. The blessing lasts an hour, so what was
+-- known before the fight is kept until it runs out; the totem buff depends on where the player
+-- and the totem are, so in a fight it is not counted. Both are read again when the fight ends.
+local function AurasHidden()
+  if InCombatLockdown and InCombatLockdown() then return true end
+  local f = C_Secrets and C_Secrets.ShouldAurasBeSecret
+  if f then
+    local ok, v = pcall(f)
+    if not ok or IsSecret(v) or v then return true end
+  end
+  return false
+end
+-- the strongest of the given buffs on the player: per second and its end time; nil if unreadable
+local function Strongest(get, list)
+  local best, ends = 0, 0
+  for id, perSec in pairs(list) do
+    local ok, a = pcall(get, id)
+    if not ok or IsSecret(a) then return nil end
+    if type(a) == "table" and perSec > best then
+      local exp = a.expirationTime
+      if IsSecret(exp) then return nil end
+      best, ends = perSec, (type(exp) == "number" and exp > 0) and exp or math.huge
+    end
+  end
+  return best, ends
+end
+-- recheckAt: one more look shortly after a fight or a loading screen, in case the first one came
+-- too early; settleUntil: until then a change of the buffs starts the learning of the normal
+-- regen again (the buffs may show up a moment after the regen at login, which would look like
+-- a raise)
+local recheckAt, settleUntil = nil, 0
+-- true when the buffs were read
+local function ScanBuffs()
+  local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+  if not get or AurasHidden() then return false end
+  local w, wEnds = Strongest(get, WISDOM)
+  local s = Strongest(get, SPRING)
+  if w == nil or s == nil then return false end
+  if (w ~= wisdom or s ~= spring) and GetTime() < settleUntil then wipe(buckets) end
+  wisdom, wisdomUntil, spring = w, wEnds, s
+  return true
+end
+-- mana per second from such buffs right now (0 without one)
+function ns.BuffRegen()
+  local now = GetTime()
+  if recheckAt and now >= recheckAt then
+    recheckAt = nil
+    -- still not readable out of combat: look again in a second
+    if not ScanBuffs() and not (InCombatLockdown and InCombatLockdown()) then recheckAt = now + 1 end
+  end
+  local n = 0
+  if wisdom > 0 and now < wisdomUntil then n = n + wisdom end
+  if spring > 0 and not AurasHidden() then n = n + spring end
+  return n
+end
+local auraFrame = CreateFrame("Frame")
+if auraFrame.RegisterUnitEvent then
+  auraFrame:RegisterUnitEvent("UNIT_AURA", "player")
+else
+  auraFrame:RegisterEvent("UNIT_AURA")
+end
+auraFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+auraFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+auraFrame:RegisterEvent("PLAYER_REGEN_DISABLED") -- the last look before a fight
+auraFrame:RegisterEvent("PLAYER_DEAD")           -- death takes the buffs
+auraFrame:SetScript("OnEvent", function(_, event, unit)
+  if event == "UNIT_AURA" and unit ~= "player" then return end
+  local now = GetTime()
+  if event == "PLAYER_DEAD" then
+    wisdom, wisdomUntil, spring = 0, 0, 0
+    recheckAt = now + 1
+    return
+  end
+  if event == "PLAYER_ENTERING_WORLD" then
+    recheckAt, settleUntil = now + 1, now + 5
+  elseif event == "PLAYER_REGEN_ENABLED" then
+    recheckAt = now + 1
+  end
+  ScanBuffs()
+end)
 
 -- seconds left of the five-second rule (0 = regen runs at the normal rate)
 function ns.FsrLeft()
@@ -165,40 +267,58 @@ function ns.DrinkLeft()
     if not IsSecret(id) and not IsSecret(name) and not IsSecret(exp)
       and (DRINK_IDS[id] or (drinkNames and type(name) == "string" and drinkNames[name]))
       and type(exp) == "number" and exp > now then
-      return exp - now, Normal()
+      -- after the drink: the lowest regen the game reported lately, plus the mana buffs of now
+      local normal = NormalBase()
+      return exp - now, normal and normal + ns.BuffRegen() or nil
     end
   end
   return nil
 end
 
--- base and casting rate as plain numbers, nil while they are secret (in combat): for the time
--- to full mana (0.9.7), which only shows out of combat
+-- base and casting rate as plain numbers (Blessing of Wisdom and Mana Spring included), nil while they are
+-- secret (in combat): for the time to full mana (0.9.7), which only shows out of combat
 function ns.RegenRates()
   local ok, base, casting = ManaRegen()
   if not ok or IsSecret(base) or type(base) ~= "number" then return nil end
   if IsSecret(casting) or type(casting) ~= "number" then casting = 0 end
-  return base, casting
+  local extra = ns.BuffRegen()
+  return base + extra, casting + extra
 end
 
+local patUnit, patPlain, patPlus
 function ns.RegenText()
   local ok, base, casting = ManaRegen()
   if not ok then return nil end
   local inRule = ns.FsrLeft() > 0
   local value
   if inRule then value = casting else value = base end
-  if value == nil then return nil end
+  if not IsSecret(value) and value == nil then return nil end
+  -- Blessing of Wisdom and Mana Spring Totem on top: added to a plain value, shown as a white
+  -- "+3.6" next to a secret one
+  local extra = ns.BuffRegen()
   -- the unit is part of the pattern; "%" in a unit would have to be escaped
-  local okF, text = pcall(string.format, "%.1f" .. ns.L.regenUnit, value)
+  if patUnit ~= ns.L.regenUnit then
+    patUnit = ns.L.regenUnit
+    patPlain, patPlus = "%.1f" .. patUnit, "%.1f|cffffffff+%.1f|r" .. patUnit
+  end
+  local okF, text
+  if extra > 0 and IsSecret(value) then
+    okF, text = pcall(string.format, patPlus, value, extra)
+  else
+    if extra > 0 and type(value) == "number" then value = value + extra end
+    okF, text = pcall(string.format, patPlain, value)
+  end
   if not okF then return nil end
   local boosted = GetTime() < boostUntil
+  local low = Lowered()
   if not inRule and not IsSecret(base) and type(base) == "number" and base > 0 then
-    local now = GetTime()
-    if not Lowered() then Learn(base, now) end
+    local total = base + extra
+    if not low then Learn(total, base, GetTime()) end
     local normal = Normal()
-    boosted = boosted or (normal ~= nil and base > normal * BOOST_RATIO + 0.05)
+    boosted = boosted or (normal ~= nil and total > normal * BOOST_RATIO + 0.05)
   end
   -- below normal for a while (Resurrection Sickness): red with a down arrow (0.8.9)
-  local lowered = not inRule and not boosted and Lowered()
+  local lowered = not inRule and not boosted and low
   return text, inRule, boosted, lowered
 end
 

@@ -17,7 +17,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Read Leyline (Skyborne) light up when the spell is ready and your mana is at or below its own threshold (a sensible default per spell, changeable in the list). Two spells ready at once? Each gets its own icon. Life Tap lights up like a potion when its mana fits, with the same health check as runes. Forever hides spell cooldowns from addons in combat, so the addon counts them from your cast — never too early.
 - **See it coming.** Potions, runes, gems, gear and your own spells already show in the last seconds of their cooldown — grey, counting down like your action bar — so you are ready the moment they light up. 5 seconds by default, up to 120 (the whole potion cooldown), or off.
 - **Made for wanding.** Each wand shot blocks potions and spells for a moment. The icon stays lit and shows that short wait as a sweep, like the action bar: the potion fits, stop shooting and drink.
-- **"Low mana!" and "Out of mana!" to your group.** Switch it on (party chat, raid chat or both) and the addon warns your group in a fight, at most every 30 seconds each. Each warning has its own switch and its own mark (30 % and 5 % of your mana by default). `/fmf oom` says "Out of mana!" at once. Off by default.
+- **"Low mana!" and "Out of mana!" to your group.** Switch it on (party chat, raid chat or both) and the addon warns your group in a fight, at most every 30 seconds each. Each warning has its own switch and its own mark (30 % and 5 % of your mana by default). Off by default.
 - **Hold potions.** `/fmf hold` (best in a macro) holds mana potions until the end of the next fight, for when you want the potion cooldown for something else. The potion icon turns grey with "HOLD"; after the fight it releases by itself.
 - **Only what you can use:** items above your level, other classes' items and battleground-only items outside battlegrounds are skipped.
 
@@ -35,7 +35,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 ### Know when to drink: live mana regen and time to full mana
 
 - **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included.
-- **Live mana regen per second,** also in combat, including Spirit Tap and drinking. It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
+- **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight the blessing shows as its own part: "17.5+3.6/s"). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
 
@@ -102,7 +102,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 - **In the live game** since launch (4 Nov) and in the beta, priest level 16–26: in combat, solo, in a party and in a full dungeon run.
 - Potions (also a second potion after the 2-minute cooldown in the same fight), wanding, Eureka! and Inner Focus, Read Leyline on a Skyborne mage.
-- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Resurrection Sickness; fading out of combat; time to full mana while drinking.
+- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Mana Spring Totem, Resurrection Sickness; fading out of combat; time to full mana while drinking.
 - Profiles across several characters, `/fmf hold`, the icon order, the item list as priest, mage and druid.
 - "Low mana!" and "Out of mana!" in the party chat.
 - The bar over the mana bar of Forever Unit Frames (only markers, moved separately, above other frames).

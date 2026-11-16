@@ -1955,6 +1955,164 @@ test("Read Leyline keeps the regen green for 30 s after the cast (game text, 17 
   noRegenApis()
 end)
 
+test("0.9.12: Blessing of Wisdom adds its mana to the regen, the time to full and the green", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 942 / 1999, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end -- the game leaves the blessing out
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if aura and id == aura.spellId then return aura end end }
+  local b = bar(ns)
+  M.tick()
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "regen without the blessing")
+  -- rank 2: 18 mana every 5 s = 3.6 per second, out of combat in the number and the timer
+  aura = { spellId = 19850, expirationTime = 3700 }
+  M.Fire("UNIT_AURA", "player")
+  local text, _, boosted = ns.RegenText()
+  eq(text, "21.1" .. ns.L.regenUnit, "blessing not added")
+  ok(boosted, "+20 % not green")
+  M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(1057 / 21.1), "time to full without the blessing")
+  -- within the rule it keeps running
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 1)
+  _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 50 } } end }
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 2)
+  eq((ns.RegenText()), "3.6" .. ns.L.regenUnit, "blessing lost within the rule")
+  M.state.time = 200
+  -- in combat: the regen is secret, the aura answer too; the kept amount shows as "+3.6"
+  _G.GetPowerRegen = function() return M.secret(17.5), M.secret(0) end
+  -- and the game says "no such buff" for a buff that is there: not believed in a fight
+  M.state.combat = true
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "17.5|cffffffff+3.6|r" .. ns.L.regenUnit, "blessing not shown in combat")
+  M.state.combat = false
+  -- it runs out: nothing added any more
+  M.state.time = 3701
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "blessing counted after it ran out")
+  -- the buff is gone out of combat
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
+  M.state.time = 300; M.Fire("PLAYER_REGEN_ENABLED")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "blessing counted after it was gone")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.12: Mana Spring Totem adds its mana out of combat, not in a fight", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 942 / 1999, 100
+  _G.GetPowerRegen = function() return 16.93, 6.12 end -- the game leaves the totem out (16 Nov)
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local auras = {}
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) return auras[id] end }
+  M.tick()
+  -- rank 1 near the totem: 4 mana every 2 s, no end time
+  auras[5677] = { spellId = 5677, expirationTime = 0 }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "18.9" .. ns.L.regenUnit, "totem not added")
+  -- with a blessing too (rank 1, 2.4 per second)
+  auras[19742] = { spellId = 19742, expirationTime = 3700 }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "21.3" .. ns.L.regenUnit, "totem and blessing not added up")
+  -- in a fight only the blessing: the totem buff comes and goes with the distance
+  M.state.combat = true
+  _G.GetPowerRegen = function() return M.secret(16.93), M.secret(6.12) end
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "16.9|cffffffff+2.4|r" .. ns.L.regenUnit, "totem counted in a fight")
+  -- walked away from the totem, fight over
+  M.state.combat = false
+  _G.GetPowerRegen = function() return 16.93, 6.12 end
+  auras[5677] = nil
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) return auras[id] end }
+  M.Fire("PLAYER_REGEN_ENABLED")
+  eq((ns.RegenText()), "19.3" .. ns.L.regenUnit, "totem counted after it was gone")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.12: the mana buffs are looked for again a second after a fight and after a loading screen", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 0.5, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura = { spellId = 19850, expirationTime = 3700 }
+  local answer = true
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if answer and id == 19850 then return aura end end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "21.1" .. ns.L.regenUnit)
+  -- the fight ends and the game still says "no such buff" at that moment
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  answer = false
+  M.state.combat = false; M.state.time = 200; M.Fire("PLAYER_REGEN_ENABLED")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "the early answer was not taken")
+  answer = true; M.state.time = 201.1
+  eq((ns.RegenText()), "21.1" .. ns.L.regenUnit, "no second look after the fight")
+  -- death takes the blessing, also before the game says so
+  M.Fire("PLAYER_DEAD")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "blessing counted after death")
+  -- an answer that is no table is ignored without an error
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return true end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit)
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.12: a blessing that shows up a moment after login is no raise (not green)", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 0.5, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if aura and id == 19850 then return aura end end }
+  M.Fire("PLAYER_ENTERING_WORLD")
+  ns.RegenText()                                   -- the regen is there first
+  aura = { spellId = 19850, expirationTime = 3700 }
+  M.state.time = 102; M.Fire("UNIT_AURA", "player") -- the buffs two seconds later
+  local text, _, boosted = ns.RegenText()
+  eq(text, "21.1" .. ns.L.regenUnit)
+  ok(not boosted, "green right after login")
+  -- a blessing gained later is a raise
+  aura = nil; M.state.time = 200; M.Fire("UNIT_AURA", "player"); ns.RegenText()
+  aura = { spellId = 19850, expirationTime = 3700 }
+  M.state.time = 230; M.Fire("UNIT_AURA", "player")
+  _, _, boosted = ns.RegenText()
+  ok(boosted, "a new blessing not green")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.12: after a drink the time to full mana counts a blessing gained just now", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
+  local base = 15
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end, GetSpellName = function(id) return id == 430 and "Drink" or nil end }
+  local drink, bless
+  _G.C_UnitAuras = {
+    GetAuraDataByIndex = function(_, i) if i == 1 then return drink end end,
+    GetPlayerAuraBySpellID = function(id) if bless and id == 19850 then return bless end end,
+  }
+  local b = bar(ns)
+  M.tick()                                          -- normal rate 15/s learned, no blessing yet
+  bless = { spellId = 19850, expirationTime = 3700 }
+  M.state.time = 110; M.Fire("UNIT_AURA", "player")
+  base, M.state.time = 51, 111
+  drink = { spellId = 430, name = "Drink", expirationTime = 121 }
+  M.tick()
+  -- 10 s of drink at 51 + 3.6, then 15 + 3.6
+  eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 546) / 18.6), "blessing missing after the drink")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
 
 test("texts lie above the bar; 'Above other frames' raises the whole display", function()
@@ -2396,21 +2554,18 @@ test("0.9.10: a cast failing for lack of mana in a fight says 'Out of mana!' to 
   M.state.group = false
   ns.db.oomChat = "auto"; fail(290); eq(#sent, 4, "sent while solo")
   ns.db.oomChat = "off"; M.state.group = true; fail(330); eq(#sent, 4, "sent while off")
-  -- the command works with the setting off, and tells when there is no group
-  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[5], "PARTY:" .. ns.L.oomMsg, "/fmf oom")
-  M.state.group = false; M.printed = {}
-  SlashCmdList.FULLMANAFOREVER("oom"); eq(#sent, 5)
-  ok(table.concat(M.printed, "\n"):find(ns.L.oomNoGroup, 1, true), "no hint without a group")
+  -- there is no command for it any more (0.9.12): "/fmf oom" sends nothing
+  SlashCmdList.FULLMANAFOREVER("oom"); eq(#sent, 4, "/fmf oom sent a message")
   -- the game locks addon chat: nothing is sent, the player is told once
   M.state.group = true; ns.db.oomChat = "auto"; M.printed = {}
   _G.C_RestrictedActions = { GetAddOnRestrictionState = function(i) return i == 5 and 2 or 0 end }
-  fail(400); fail(440); eq(#sent, 5, "sent during a chat lockdown")
+  fail(400); fail(440); eq(#sent, 4, "sent during a chat lockdown")
   local n = 0
   for _, p in ipairs(M.printed) do if p:find(ns.L.oomBlocked, 1, true) then n = n + 1 end end
   eq(n, 1, "the lockdown hint not shown exactly once")
   -- a secret error text is never compared
   _G.C_RestrictedActions = nil
-  M.Fire("UI_ERROR_MESSAGE", 51, M.secret and M.secret("x") or "other"); eq(#sent, 5)
+  M.Fire("UI_ERROR_MESSAGE", 51, M.secret and M.secret("x") or "other"); eq(#sent, 4)
   _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
   M.state.group, M.state.raid, M.state.combat, M.state.time = false, false, false, nil
 end)
@@ -2510,7 +2665,6 @@ test("0.9.10: the marks also come from the ruler spells, the same for every clas
   ns.db.oomLow, ns.db.oomOut = false, false
   M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED"); M.state.combat = true
   M.Fire("UI_ERROR_MESSAGE", 51, "Not enough mana"); eq(#sent, 1, "a warning with both switched off")
-  SlashCmdList.FULLMANAFOREVER("oom"); eq(sent[2], ns.L.oomMsg, "/fmf oom with both switched off")
   ns.db.oomLow, ns.db.oomOut = true, true
   _G.SendChatMessage, _G.ERR_OUT_OF_MANA = nil, nil
   M.state.group, M.state.combat, M.state.time = false, false, nil
