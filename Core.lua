@@ -1058,9 +1058,9 @@ holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 holdFrame:SetScript("OnEvent", function(_, event)
   -- the mana buffs' "+" labels next to the regen: shown in a fight; made after a fight when the
   -- game was entered in one
-  if event == "PLAYER_REGEN_ENABLED" and ns.MakePlus then ns.MakePlus() end
   if ns.BuffPlusShow then ns.BuffPlusShow(event == "PLAYER_REGEN_DISABLED") end
   ns.regenDirty = true
+  if event == "PLAYER_REGEN_ENABLED" and ns.MakePlus then pcall(ns.MakePlus) end
   if not held then return end
   if event == "PLAYER_REGEN_DISABLED" then
     heldFightSeen = true
@@ -1216,8 +1216,7 @@ end
 -- behind its arrow; under the text when it is right-aligned (nothing may grow into the bar)
 function ns.PlacePlus()
   if not (bar and ns.BuffPlusPlace) then return end
-  local p = bar.regen:GetPoint(1)
-  if type(p) == "string" and p:find("RIGHT") then
+  if bar.plusBelow then
     ns.BuffPlusPlace("TOPLEFT", bar.regen, "BOTTOMLEFT", 0, -1)
   else
     ns.BuffPlusPlace("LEFT", bar.regen, "RIGHT", bar.plusDx or 3, 0)
@@ -1451,7 +1450,8 @@ function ns.PositionBar()
     -- place, counted from every icon that can appear, so they never jump when icons light up)
     bar.regenBox:ClearAllPoints()
     bar.regen:ClearAllPoints()
-    local short = not BarPoint() and Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
+    bar.plusBelow = false
+  local short = not BarPoint() and Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
     if short then
       local right = db.barSide == "right" -- bar right of the icons: texts right of the bar
       local side, edge, dx = right and "LEFT" or "RIGHT", right and "BOTTOMRIGHT" or "BOTTOMLEFT", right and 4 or -4
@@ -1464,6 +1464,7 @@ function ns.PositionBar()
         bar.regenBox:SetPoint("TOP" .. side, bar.text, "BOTTOM" .. side, 0, -2)
       end
       bar.regen:SetPoint(side, bar.regenBox, side, 0, 0)
+      bar.plusBelow = side == "RIGHT" -- right-aligned text: the "+" labels go under it
     else
       bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
       bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
@@ -1505,6 +1506,7 @@ function ns.PositionBar()
     bar.regenBox:SetPoint("LEFT", bar, "RIGHT", 6, 0)
     bar.regen:ClearAllPoints()
     bar.regen:SetPoint("LEFT", bar.regenBox, "LEFT", 0, 0)
+    bar.plusBelow = false
     bar.fsr:ClearAllPoints()
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
     bar.fsr:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
@@ -1536,6 +1538,7 @@ function ns.PositionBar()
       box:SetPoint("CENTER", UIParent, "BOTTOMLEFT", p[1] / scale, p[2] / scale)
       texts[key]:ClearAllPoints()
       texts[key]:SetPoint("CENTER", box, "CENTER", 0, 0)
+      if key == "regen" then bar.plusBelow = false end
     end
   end
   ns.PlacePlus()

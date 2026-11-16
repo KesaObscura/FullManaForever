@@ -6,7 +6,7 @@
 - A blessing gained or lost during a fight shows at once, and so does walking away from the totem
 
 Asked for in the comments:
-- **Border** (new switch under the bar's color): the dark outline and shadow around the mana bar can be switched off
+- **Style: Full bar, no border** (new entry in the Style list): the mana bar without its dark outline and shadow
 
 **Full Mana Forever 0.9.12**
 

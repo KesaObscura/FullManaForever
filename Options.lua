@@ -678,10 +678,17 @@ Build = function()
   c.Row(Check(col, L.optBar, function() return db.showBar end, function(v) db.showBar = v end, L.tipBar))
   -- the style right under the bar switch: the colour below depends on it (0.9.0 "Only
   -- markers", a list since 0.9.5)
+  -- "plain" is the full bar without its outline and shadow (0.9.13; keys barStyle + barBorder)
   local styleLabel, styleDD = LabeledDD(L.optBarStyle, PAD + 30, {
-    { value = "full", text = L.bsFull }, { value = "markers", text = L.bsMarkers },
-  }, function() return db.barStyle == "markers" and L.bsMarkers or L.bsFull end,
-  function(v) db.barStyle = v; ns.Layout(true); ns.RefreshOptions() end, L.tipBarMarkers)
+    { value = "full", text = L.bsFull }, { value = "plain", text = L.bsPlain },
+    { value = "markers", text = L.bsMarkers },
+  }, function()
+    if db.barStyle == "markers" then return L.bsMarkers end
+    return db.barBorder == false and L.bsPlain or L.bsFull
+  end, function(v)
+    if v == "markers" then db.barStyle = "markers" else db.barStyle, db.barBorder = "full", v ~= "plain" end
+    ns.Layout(true); ns.RefreshOptions()
+  end, L.tipBarMarkers)
   local colorEntries = {}
   for _, bc in ipairs(ns.BAR_COLORS) do
     colorEntries[#colorEntries + 1] = { value = bc.key, text = L["col_" .. bc.key] }
@@ -693,11 +700,6 @@ Build = function()
   c.Row(colLabel, PAD + 30, 30)
   TipBoth(col, colLabel, colDD, L.optBarColor, L.tipBarColor)
 
-  -- the outline and shadow around the bar: with the colour, both are the look of the full bar
-  local borderCb = Check(col, L.optBarBorder, function() return db.barBorder ~= false end,
-    function(v) db.barBorder = v; ns.Layout(true) end, L.tipBarBorder,
-    function() return db.showBar and db.barStyle ~= "markers" end)
-  c.Row(borderCb, PAD + 26, 28)
   local bpLabel = Label(col, L.optBarPos .. ":")
   local bp
   if db.vertical then

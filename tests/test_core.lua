@@ -2144,8 +2144,12 @@ test("0.9.13: in a fight the game shows the buffs' '+' labels next to the regen,
   eq(host.alpha, 1, "labels hidden in a fight")
   _G.GetPowerRegen = function() return M.secret(17.5), M.secret(0) end
   eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "the blessing twice in a fight")
+  -- in a fight the place of the regen text cannot be asked for (its text is hidden from addons)
+  b.regen.GetPoint = function() error("secret") end
   M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
   eq(host.alpha, 0, "labels left on after the fight")
+  ns.Layout(true)
+  b.regen.GetPoint = nil
   _G.C_UnitAuras = nil
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
   noRegenApis()
@@ -2195,7 +2199,7 @@ test("the rule's seconds can be switched off: the strip alone shows the rule, sm
   noRegenApis()
 end)
 
-test("0.9.13: 'Border' off takes the outline and the shadow away, the fill and the background stay", function()
+test("0.9.13: style 'Full bar, no border' takes the outline and the shadow away, the fill and the background stay", function()
   local ns = M.load(nil, { bags = POT })
   M.tick()
   local b = bar(ns)
