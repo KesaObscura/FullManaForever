@@ -35,7 +35,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 ### Know when to drink: live mana regen and time to full mana
 
 - **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included.
-- **Live mana regen per second,** also in combat, including Spirit Tap, drinking and Blessing of Wisdom (in a fight the blessing shows as its own part: "17.5+3.6/s"). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
+- **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight the blessing shows as its own part: "17.5+3.6/s"). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
 
@@ -102,7 +102,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 - **In the live game** since launch (4 Nov) and in the beta, priest level 16–26: in combat, solo, in a party and in a full dungeon run.
 - Potions (also a second potion after the 2-minute cooldown in the same fight), wanding, Eureka! and Inner Focus, Read Leyline on a Skyborne mage.
-- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Blessing of Wisdom, Resurrection Sickness; fading out of combat; time to full mana while drinking.
+- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Blessing of Wisdom, Mana Spring Totem, Resurrection Sickness; fading out of combat; time to full mana while drinking.
 - Profiles across several characters, `/fmf hold`, the icon order, the item list as priest, mage and druid.
 - "Low mana!" and "Out of mana!" in the party chat.
 - The bar over the mana bar of Forever Unit Frames (only markers, moved separately, above other frames).

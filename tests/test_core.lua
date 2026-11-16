@@ -2000,6 +2000,40 @@ test("0.9.12: Blessing of Wisdom adds its mana to the regen, the time to full an
   noRegenApis()
 end)
 
+test("0.9.12: Mana Spring Totem adds its mana out of combat, not in a fight", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 942 / 1999, 100
+  _G.GetPowerRegen = function() return 16.93, 6.12 end -- the game leaves the totem out (16 Nov)
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local auras = {}
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) return auras[id] end }
+  M.tick()
+  -- rank 1 near the totem: 4 mana every 2 s, no end time
+  auras[5677] = { spellId = 5677, expirationTime = 0 }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "18.9" .. ns.L.regenUnit, "totem not added")
+  -- with a blessing too (rank 1, 2.4 per second)
+  auras[19742] = { spellId = 19742, expirationTime = 3700 }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "21.3" .. ns.L.regenUnit, "totem and blessing not added up")
+  -- in a fight only the blessing: the totem buff comes and goes with the distance
+  M.state.combat = true
+  _G.GetPowerRegen = function() return M.secret(16.93), M.secret(6.12) end
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "16.9|cffffffff+2.4|r" .. ns.L.regenUnit, "totem counted in a fight")
+  -- walked away from the totem, fight over
+  M.state.combat = false
+  _G.GetPowerRegen = function() return 16.93, 6.12 end
+  auras[5677] = nil
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) return auras[id] end }
+  M.Fire("PLAYER_REGEN_ENABLED")
+  eq((ns.RegenText()), "19.3" .. ns.L.regenUnit, "totem counted after it was gone")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
 
 test("texts lie above the bar; 'Above other frames' raises the whole display", function()

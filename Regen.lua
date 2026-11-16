@@ -85,17 +85,23 @@ local function CostsMana(id)
   return false
 end
 
--- Blessing of Wisdom: its mana comes in on top of the regen the game reports (owner's test,
--- 14 Nov: the regen number stayed the same, the mana came in faster). Mana per 5 s by spell ID,
--- from the game texts of WoW Forever (scan 14 Nov); it keeps running within the rule.
+-- Mana buffs whose mana comes in on top of the regen the game reports (owner's tests, 14-16 Nov:
+-- the regen number stays the same, the mana comes in faster). Mana per second by spell ID, from
+-- the game texts of WoW Forever (scan 14 Nov); both keep running within the rule.
+-- Blessing of Wisdom: 12-40 mana every 5 s, one hour.
 local WISDOM = {
-  [19742] = 12, [19850] = 18, [19852] = 24, [19853] = 30, [19854] = 36, [25290] = 40, -- Blessing
-  [25894] = 36, [25918] = 40,                                                         -- Greater
+  [19742] = 12 / 5, [19850] = 18 / 5, [19852] = 24 / 5, [19853] = 30 / 5, [19854] = 36 / 5,
+  [25290] = 40 / 5, [25894] = 36 / 5, [25918] = 40 / 5,                -- the last two: Greater
 }
-local buffMp5, buffUntil = 0, 0
+-- Mana Spring Totem: the buff on the player while near the totem, 4-10 mana every 2 s, no end time
+-- (it comes and goes with the distance to the totem: owner's test, 16 Nov)
+local SPRING = { [5677] = 4 / 2, [10491] = 6 / 2, [10493] = 8 / 2, [10494] = 10 / 2 }
+local wisdom, wisdomUntil, spring = 0, 0, 0
 -- read on aura changes, out of combat only: in a fight the game hides which buff came or went
--- and answers "no such buff" for one that is there (owner's tests, 15 Nov), so what was known
--- before the fight is kept until the buff runs out, and read again when the fight ends
+-- and answers "no such buff" for one that is there (owner's tests, 15 Nov). The blessing lasts an
+-- hour, so what was known before the fight is kept until it runs out; the totem buff depends on
+-- where the player and the totem are, so in a fight it is not counted at all. Both are read again
+-- when the fight ends.
 local function AurasHidden()
   if InCombatLockdown and InCombatLockdown() then return true end
   local f = C_Secrets and C_Secrets.ShouldAurasBeSecret
@@ -105,25 +111,34 @@ local function AurasHidden()
   end
   return false
 end
+-- the strongest of the given buffs on the player: per second and its end time; nil if unreadable
+local function Strongest(get, list)
+  local best, ends = 0, 0
+  for id, perSec in pairs(list) do
+    local ok, a = pcall(get, id)
+    if not ok or IsSecret(a) then return nil end
+    if a ~= nil and perSec > best then
+      local exp = a.expirationTime
+      if IsSecret(exp) then return nil end
+      best, ends = perSec, (type(exp) == "number" and exp > 0) and exp or math.huge
+    end
+  end
+  return best, ends
+end
 local function ScanBuffs()
   local get = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
   if not get or AurasHidden() then return end
-  local best, ends = 0, 0
-  for id, mp5 in pairs(WISDOM) do
-    local ok, a = pcall(get, id)
-    if not ok or IsSecret(a) then return end
-    if a ~= nil and mp5 > best then
-      local exp = a.expirationTime
-      if IsSecret(exp) then return end
-      best, ends = mp5, (type(exp) == "number" and exp > 0) and exp or math.huge
-    end
-  end
-  buffMp5, buffUntil = best, ends
+  local w, wEnds = Strongest(get, WISDOM)
+  local s = Strongest(get, SPRING)
+  if w == nil or s == nil then return end
+  wisdom, wisdomUntil, spring = w, wEnds, s
 end
 -- mana per second from such buffs right now (0 without one)
 function ns.BuffRegen()
-  if buffMp5 > 0 and GetTime() < buffUntil then return buffMp5 / 5 end
-  return 0
+  local n = 0
+  if wisdom > 0 and GetTime() < wisdomUntil then n = n + wisdom end
+  if spring > 0 and not (InCombatLockdown and InCombatLockdown()) then n = n + spring end
+  return n
 end
 local auraFrame = CreateFrame("Frame")
 if auraFrame.RegisterUnitEvent then
@@ -225,7 +240,7 @@ function ns.DrinkLeft()
   return nil
 end
 
--- base and casting rate as plain numbers (Blessing of Wisdom included), nil while they are
+-- base and casting rate as plain numbers (Blessing of Wisdom and Mana Spring included), nil while they are
 -- secret (in combat): for the time to full mana (0.9.7), which only shows out of combat
 function ns.RegenRates()
   local ok, base, casting = ManaRegen()
@@ -242,7 +257,8 @@ function ns.RegenText()
   local value
   if inRule then value = casting else value = base end
   if value == nil then return nil end
-  -- Blessing of Wisdom on top: added to a plain value, shown as a white "+3.6" next to a secret one
+  -- Blessing of Wisdom and Mana Spring Totem on top: added to a plain value, shown as a white
+  -- "+3.6" next to a secret one
   local extra = ns.BuffRegen()
   local okF, text
   -- the unit is part of the pattern; "%" in a unit would have to be escaped
