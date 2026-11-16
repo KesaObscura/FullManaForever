@@ -4,7 +4,7 @@
 
 Asked for in the comments:
 - Blessing of Wisdom (also the Greater one) and Mana Spring Totem now count in your mana per second, in the time to full mana and in the green regen
-- In a fight the blessing shows as its own part next to the regen: "17.5+3.6/s"
+- In a fight the blessing shows as its own part next to the regen: "17.5+3.6/s"; the totem counts out of combat
 
 **Full Mana Forever 0.9.11**
 

@@ -2034,6 +2034,85 @@ test("0.9.12: Mana Spring Totem adds its mana out of combat, not in a fight", fu
   noRegenApis()
 end)
 
+test("0.9.12: the mana buffs are looked for again a second after a fight and after a loading screen", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 0.5, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura = { spellId = 19850, expirationTime = 3700 }
+  local answer = true
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if answer and id == 19850 then return aura end end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "21.1" .. ns.L.regenUnit)
+  -- the fight ends and the game still says "no such buff" at that moment
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  answer = false
+  M.state.combat = false; M.state.time = 200; M.Fire("PLAYER_REGEN_ENABLED")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "the early answer was not taken")
+  answer = true; M.state.time = 201.1
+  eq((ns.RegenText()), "21.1" .. ns.L.regenUnit, "no second look after the fight")
+  -- death takes the blessing, also before the game says so
+  M.Fire("PLAYER_DEAD")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "blessing counted after death")
+  -- an answer that is no table is ignored without an error
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return true end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit)
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.12: a blessing that shows up a moment after login is no raise (not green)", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 0.5, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if aura and id == 19850 then return aura end end }
+  M.Fire("PLAYER_ENTERING_WORLD")
+  ns.RegenText()                                   -- the regen is there first
+  aura = { spellId = 19850, expirationTime = 3700 }
+  M.state.time = 102; M.Fire("UNIT_AURA", "player") -- the buffs two seconds later
+  local text, _, boosted = ns.RegenText()
+  eq(text, "21.1" .. ns.L.regenUnit)
+  ok(not boosted, "green right after login")
+  -- a blessing gained later is a raise
+  aura = nil; M.state.time = 200; M.Fire("UNIT_AURA", "player"); ns.RegenText()
+  aura = { spellId = 19850, expirationTime = 3700 }
+  M.state.time = 230; M.Fire("UNIT_AURA", "player")
+  _, _, boosted = ns.RegenText()
+  ok(boosted, "a new blessing not green")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.12: after a drink the time to full mana counts a blessing gained just now", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
+  local base = 15
+  _G.GetPowerRegen = function() return base, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end, GetSpellName = function(id) return id == 430 and "Drink" or nil end }
+  local drink, bless
+  _G.C_UnitAuras = {
+    GetAuraDataByIndex = function(_, i) if i == 1 then return drink end end,
+    GetPlayerAuraBySpellID = function(id) if bless and id == 19850 then return bless end end,
+  }
+  local b = bar(ns)
+  M.tick()                                          -- normal rate 15/s learned, no blessing yet
+  bless = { spellId = 19850, expirationTime = 3700 }
+  M.state.time = 110; M.Fire("UNIT_AURA", "player")
+  base, M.state.time = 51, 111
+  drink = { spellId = 430, name = "Drink", expirationTime = 121 }
+  M.tick()
+  -- 10 s of drink at 51 + 3.6, then 15 + 3.6
+  eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 546) / 18.6), "blessing missing after the drink")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
 
 test("texts lie above the bar; 'Above other frames' raises the whole display", function()
