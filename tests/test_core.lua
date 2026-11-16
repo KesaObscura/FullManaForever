@@ -2113,6 +2113,56 @@ test("0.9.12: after a drink the time to full mana counts a blessing gained just 
   noRegenApis()
 end)
 
+test("0.9.13: in a fight the game shows the buffs' '+' labels next to the regen, the text is the game's number alone", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT, auraBox = true })
+  local b, box = bar(ns), M.auraBox
+  ok(box, "no aura container made")
+  eq(box.unit, "player"); eq(box.enabled, true)
+  eq(#box.groups, 10, "one group per amount: 6 blessing, 4 totem")
+  for _, g in ipairs(box.groups) do
+    eq(g.filter, "HELPFUL"); eq(g.options.maxFrameCount, 1)
+    eq(g.frame.mouse, false, "a label takes the mouse")
+  end
+  -- rank 2 of the blessing and the Greater rank 1 with other amounts are apart; 19854 and 25894 share one
+  local function group(id) for _, g in ipairs(box.groups) do if g.options.candidateFilters.includeSpellIDs[id] then return g end end end
+  ok(group(19850) ~= group(19742), "two ranks in one label")
+  eq(group(19854), group(25894), "equal amounts not in one label")
+  ok(group(5677) and group(10494) and group(5677) ~= group(10494))
+  local host = box.parent
+  eq(host.parent, b.regenBox, "labels not in the regen box")
+  eq(host.alpha, 0, "labels visible out of combat")
+  eq(select(2, host:GetPoint()), b.regen, "labels not at the regen text")
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 0.5, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura = { spellId = 19850, expirationTime = 3700 }
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if id == 19850 then return aura end end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "21.1" .. ns.L.regenUnit, "out of combat: the sum")
+  -- the fight: labels on, no "+" in the text
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  eq(host.alpha, 1, "labels hidden in a fight")
+  _G.GetPowerRegen = function() return M.secret(17.5), M.secret(0) end
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "the blessing twice in a fight")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  eq(host.alpha, 0, "labels left on after the fight")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
+test("0.9.13: entered the game in a fight: the '+' labels are made when it ends; until then the kept amount shows", function()
+  local real = M.reset
+  local ns
+  M.reset = function(opts) real(opts); M.state.combat = true end
+  ns = M.load({ fadeAlpha = 1 }, { bags = POT, auraBox = true })
+  M.reset = real
+  ok(not M.auraBox, "container made in a fight")
+  ok(not ns.BuffPlusLive())
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  ok(M.auraBox and ns.BuffPlusLive(), "no container after the fight")
+end)
+
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
 
 test("texts lie above the bar; 'Above other frames' raises the whole display", function()

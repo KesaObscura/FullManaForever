@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.9.13**
+
+- In a fight Blessing of Wisdom and Mana Spring Totem now show next to the regen for exactly as long as they are on you: "17.5/s +3.6 +2.0"
+- A blessing gained or lost during a fight shows at once, and so does walking away from the totem
+
 **Full Mana Forever 0.9.12**
 
 Asked for in the comments:

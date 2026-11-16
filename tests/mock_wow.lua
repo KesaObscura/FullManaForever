@@ -185,8 +185,21 @@ function M.reset(opts)
   local S = M.state
   local function count(name) M.calls[name] = (M.calls[name] or 0) + 1 end
 
+  M.auraBox = nil
   _G.CreateFrame = function(kind, name, parent)
     local f = new(kind, parent)
+    -- opts.auraBox: the game's aura container exists (it shows frames of ours while a buff is up)
+    if kind == "AuraContainer" and opts.auraBox then
+      f.groups = {}
+      f.SetUnit = function(self, u) self.unit = u end
+      f.SetEnabled = function(self, on) self.enabled = on end
+      f.AddAuraGroup = function(self, key, filter, o)
+        local b = new("Button", self)
+        o.initializeFrame(b)
+        self.groups[#self.groups + 1] = { key = key, filter = filter, options = o, frame = b }
+      end
+      M.auraBox = f
+    end
     -- M.keepOldNames: like the game, a new frame does not take over a name already in use
     if name and not (M.keepOldNames and _G[name]) then _G[name] = f end
     return f

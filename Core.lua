@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.12"
+ns.VERSION = "0.9.13"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -1055,6 +1055,11 @@ local holdFrame = CreateFrame("Frame")
 holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 holdFrame:SetScript("OnEvent", function(_, event)
+  -- the mana buffs' "+" labels next to the regen: shown in a fight; made after a fight when the
+  -- game was entered in one
+  if event == "PLAYER_REGEN_ENABLED" and ns.MakePlus then ns.MakePlus() end
+  if ns.BuffPlusShow then ns.BuffPlusShow(event == "PLAYER_REGEN_DISABLED") end
+  ns.regenDirty = true
   if not held then return end
   if event == "PLAYER_REGEN_DISABLED" then
     heldFightSeen = true
@@ -1203,6 +1208,24 @@ local function CreateBar()
   bar.regenDown:SetPoint("LEFT", bar.regen, "RIGHT", 0, -3)
   bar.regenDown:Hide()
   bar:Hide()
+  ns.MakePlus()
+end
+
+-- the "+" labels of Blessing of Wisdom and Mana Spring Totem (Regen.lua): after the regen text,
+-- behind its arrow; under the text when it is right-aligned (nothing may grow into the bar)
+function ns.PlacePlus()
+  if not (bar and ns.BuffPlusPlace) then return end
+  local p = bar.regen:GetPoint(1)
+  if type(p) == "string" and p:find("RIGHT") then
+    ns.BuffPlusPlace("TOPLEFT", bar.regen, "BOTTOMLEFT", 0, -1)
+  else
+    ns.BuffPlusPlace("LEFT", bar.regen, "RIGHT", bar.plusDx or 3, 0)
+  end
+end
+function ns.MakePlus()
+  if not (bar and ns.BuffPlusCreate) then return end
+  local ok, font = pcall(bar.regen.GetFontObject, bar.regen)
+  if ns.BuffPlusCreate(bar.regenBox, ok and font or nil) then ns.PlacePlus() end
 end
 
 -- colors are re-applied on every layout change (option window, color pick)
@@ -1513,6 +1536,7 @@ function ns.PositionBar()
       texts[key]:SetPoint("CENTER", box, "CENTER", 0, 0)
     end
   end
+  ns.PlacePlus()
   PaintBar()
   ApplyStrata()
 end
@@ -2055,6 +2079,7 @@ local function UpdateRegenText(visible)
   end
   -- the text shows the casting rate during the rule even when the strip is switched off
   local now, inRule = GetTime(), (ns.FsrLeft and ns.FsrLeft() or 0) > 0
+  if ns.regenDirty then ns.regenDirty, regenNext = nil, 0 end -- a fight began or ended
   if box:IsShown() and now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
   local text, boosted, lowered
@@ -2075,6 +2100,8 @@ local function UpdateRegenText(visible)
     end
     bar.regenUp:SetShown(boosted and not inRule and true or false)
     bar.regenDown:SetShown(lowered and true or false)
+    local dx = ((boosted and not inRule) or lowered) and 17 or 3 -- room for the arrow
+    if dx ~= bar.plusDx then bar.plusDx = dx; ns.PlacePlus() end
     bar.regen:Show()
     box:Show()
   elseif box:IsShown() then
