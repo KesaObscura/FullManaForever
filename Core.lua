@@ -57,6 +57,7 @@ local DEFAULTS = {
   barThickness = 16,
   barLength  = 0,       -- 0 = auto: room for every group switched on (at least 3)
   barColor   = "blue",
+  barBorder  = true,    -- the dark outline and shadow around the bar (0.9.13, asked for in a comment)
   barStyle   = "full",  -- "full" / "markers": no fill and no background, only the markers, the
                         -- five-second strip and the texts (to lay over another mana bar, 0.9.0)
   barFree    = false,   -- the bar has its own place, apart from the icons (0.9.0)
@@ -1252,9 +1253,10 @@ local function PaintBar()
   local full = db.barStyle ~= "markers"
   if tex then tex:SetAlpha(full and 1 or 0) end
   bar.bg:SetShown(full)
-  bar.shadow:SetShown(full)
+  local edged = full and db.barBorder ~= false
+  bar.shadow:SetShown(edged)
   bar.gloss:SetShown(full)
-  for _, e in ipairs(bar.border) do e:SetShown(full) end
+  for _, e in ipairs(bar.border) do e:SetShown(edged) end
 end
 
 -- the free bar's saved place; a damaged value counts as "next to the icons"

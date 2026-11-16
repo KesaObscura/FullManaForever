@@ -2195,6 +2195,19 @@ test("the rule's seconds can be switched off: the strip alone shows the rule, sm
   noRegenApis()
 end)
 
+test("0.9.13: 'Border' off takes the outline and the shadow away, the fill and the background stay", function()
+  local ns = M.load(nil, { bags = POT })
+  M.tick()
+  local b = bar(ns)
+  ok(b.shadow.shown and b.border[1].shown, "no border by default")
+  ns.db.barBorder = false; ns.Layout(true)
+  ok(not b.shadow.shown, "shadow left")
+  for _, e in ipairs(b.border) do ok(not e.shown, "outline left") end
+  ok(b.bg.shown and b.gloss.shown, "background or gloss gone with the border")
+  ns.db.barBorder = true; ns.Layout(true)
+  ok(b.shadow.shown and b.border[1].shown, "border not back")
+end)
+
 test("'Only markers': no fill, background or border; markers, strip and texts stay", function()
   local ns = M.load({ barStyle = "markers" }, { bags = POT })
   M.state.manaPct = 0.9; M.tick()

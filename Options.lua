@@ -682,6 +682,22 @@ Build = function()
     { value = "full", text = L.bsFull }, { value = "markers", text = L.bsMarkers },
   }, function() return db.barStyle == "markers" and L.bsMarkers or L.bsFull end,
   function(v) db.barStyle = v; ns.Layout(true); ns.RefreshOptions() end, L.tipBarMarkers)
+  local colorEntries = {}
+  for _, bc in ipairs(ns.BAR_COLORS) do
+    colorEntries[#colorEntries + 1] = { value = bc.key, text = L["col_" .. bc.key] }
+  end
+  local colLabel = Label(col, L.optBarColor .. ":")
+  local colDD = Dropdown(col, DD_W, colorEntries, function() return L["col_" .. (db.barColor or "blue")] or L.col_blue end,
+    function(v) db.barColor = v; ns.Layout(true); ns.RefreshOptions() end)
+  c.Right(colDD)
+  c.Row(colLabel, PAD + 30, 30)
+  TipBoth(col, colLabel, colDD, L.optBarColor, L.tipBarColor)
+
+  -- the outline and shadow around the bar: with the colour, both are the look of the full bar
+  local borderCb = Check(col, L.optBarBorder, function() return db.barBorder ~= false end,
+    function(v) db.barBorder = v; ns.Layout(true) end, L.tipBarBorder,
+    function() return db.showBar and db.barStyle ~= "markers" end)
+  c.Row(borderCb, PAD + 26, 28)
   local bpLabel = Label(col, L.optBarPos .. ":")
   local bp
   if db.vertical then
@@ -698,17 +714,6 @@ Build = function()
   c.Right(bp)
   c.Row(bpLabel, PAD + 30, 30)
   TipBoth(col, bpLabel, bp, L.optBarPos, L.tipBarPos)
-
-  local colorEntries = {}
-  for _, bc in ipairs(ns.BAR_COLORS) do
-    colorEntries[#colorEntries + 1] = { value = bc.key, text = L["col_" .. bc.key] }
-  end
-  local colLabel = Label(col, L.optBarColor .. ":")
-  local colDD = Dropdown(col, DD_W, colorEntries, function() return L["col_" .. (db.barColor or "blue")] or L.col_blue end,
-    function(v) db.barColor = v; ns.Layout(true); ns.RefreshOptions() end)
-  c.Right(colDD)
-  c.Row(colLabel, PAD + 30, 30)
-  TipBoth(col, colLabel, colDD, L.optBarColor, L.tipBarColor)
 
 
   local thick = Stepper(col, PAD + 30, L.optBarThick, function() return db.barThickness end,
