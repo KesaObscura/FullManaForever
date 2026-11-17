@@ -929,9 +929,12 @@ local function PickMeasures()
   if #oomBook == 0 and now - oomRead >= 2 then oomBookDirty = true end
   local lowAt, outAt = LowAt(), OutAt()
   local key = ("%s:%.3f:%s:%.3f"):format(tostring(db.oomLow ~= false), lowAt, tostring(db.oomOut ~= false), outAt)
-  if not oomBookDirty and max == oomMax and key == oomKey then return end
+  -- a changed book (forms, new ranks) is read again only out of combat, or in a fight while the
+  -- list is still empty: each read makes a few hundred tables, and the event can come often
+  local read = oomBookDirty and (#oomBook == 0 or not InCombatLockdown())
+  if not read and max == oomMax and key == oomKey then return end
   oomKey = key
-  if oomBookDirty then
+  if read then
     local ok, list = pcall(ReadBook)
     oomBook = ok and list or {}
     oomBookDirty = false
@@ -1024,6 +1027,8 @@ oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if event == "PLAYER_REGEN_ENABLED" then
     oomLast, lowLast = nil, nil
     if next(oomBad) then wipe(oomBad); oomMax = nil end -- blocked spells count again
+    -- a book that changed during the fight is read now (once), ready for the next one
+    if oomBookDirty and db and db.oomChat ~= nil and db.oomChat ~= "off" then pcall(PickMeasures) end
     return
   end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end

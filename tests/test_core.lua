@@ -2202,6 +2202,25 @@ test("0.9.13: entered the game in a fight: the '+' labels are made when it ends;
   ok(M.auraBox and ns.BuffPlusLive(), "no container after the fight")
 end)
 
+test("0.9.14: a spell book that changes in a fight is read again after it, not during it", function()
+  local ns = M.load({ oomChat = "auto" }, { bags = POT })
+  local reads = 0
+  local book = C_SpellBook
+  local apis = spellApis({ 12051 }, { base = { [12051] = 480 } })
+  local nl = C_SpellBook and C_SpellBook.GetNumSpellBookSkillLines
+  if not nl then return end -- this mock has no spell book lines: nothing to count
+  C_SpellBook.GetNumSpellBookSkillLines = function(...) reads = reads + 1 return nl(...) end
+  M.state.group, M.state.combat = true, true
+  M.Fire("PLAYER_REGEN_DISABLED")
+  ns.OomTick(1)
+  local first = reads
+  for _ = 1, 5 do M.Fire("SPELLS_CHANGED"); ns.OomTick(1) end
+  ok(first > 0, "the book never read"); eq(reads, first, "the book read again during the fight")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  eq(reads, first + 1, "the book not read after the fight")
+  noSpellApis()
+end)
+
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
 
 test("texts lie above the bar; 'Above other frames' raises the whole display", function()
