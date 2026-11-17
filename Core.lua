@@ -2289,6 +2289,9 @@ end
 -- changes and stops once it is full, so the fade starts when the mana has filled up; the event
 -- is only counted, its value never read. The first value after a login is taken at once.
 local FADE_TIME = 1.5
+-- the fade starts this long after the last reason to show: the game sends one more mana update
+-- a moment after the mana is full, which made the bar come back and fade a second time
+local FADE_WAIT = 2.5
 local fadeA, holdAt, quietFrom = 1, -math.huge, nil
 local fadeCurves, fadeNum, fadeCurveKey = {}, {}, nil
 
@@ -2327,7 +2330,7 @@ local function UpdateFade()
   local combatOff = InCombatLockdown() and not (db.fadeCombat and db.fadeFull ~= false)
   local off = a >= 1 or not db.locked or combatOff or false
   if off then holdAt = now end
-  local p = (now - holdAt) / FADE_TIME
+  local p = (now - holdAt - FADE_WAIT) / FADE_TIME
   if p > 1 then p = 1 elseif p < 0 then p = 0 end
   -- eased, in steps of 2 % (each step of the curve below is built once)
   local v = math.floor((1 - (1 - a) * (1 - (1 - p) * (1 - p))) * 50 + 0.5) / 50

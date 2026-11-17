@@ -2857,39 +2857,43 @@ test("0.9.4: out of combat the bar and its texts fade at full mana, come back wh
   for _, a in ipairs({ alphas() }) do eq(a, 1, "not back after mana was spent") end
   M.state.maxMana = 1208; M.state.manaPct = 1207 / 1208; at(115)
   eq(b.alpha, 1, "one missing point counted as full")
-  -- the mana fills up: the events stop and the bar fades smoothly over 1.5 s
+  -- the mana fills up: the events stop, and after a short wait the bar fades smoothly over 1.5 s
+  -- (one late mana update right after "full" must not bring it back)
   M.state.manaPct = 1; power(120)
   eq(b.alpha, 1, "faded while the mana was still changing")
-  at(120.5); local mid = b.alpha
+  at(121.5); eq(b.alpha, 1, "faded before the wait was over")
+  power(121.6) -- the game's late update after the mana is full
+  eq(b.alpha, 1)
+  at(124.6); local mid = b.alpha
   ok(mid < 1 and mid > 0.3, "no smooth fade when the mana filled up: " .. tostring(mid))
-  at(121); ok(b.alpha < mid and b.alpha > 0.3, "fade does not go on: " .. tostring(b.alpha))
+  at(125.1); ok(b.alpha < mid and b.alpha > 0.3, "fade does not go on: " .. tostring(b.alpha))
   ok(select(2, ns.FadeAlpha()), "fade not updated on every frame")
-  at(121.6); eq(b.alpha, 0.3)
-  M.state.time = 121.7; M.Fire("UNIT_POWER_FREQUENT", "player", "ENERGY"); at(121.8)
+  at(125.7); eq(b.alpha, 0.3)
+  M.state.time = 125.8; M.Fire("UNIT_POWER_FREQUENT", "player", "ENERGY"); at(125.9)
   eq(b.alpha, 0.3, "energy in cat form brought the mana bar back")
   ok(not select(2, ns.FadeAlpha()), "frame update left running after the fade")
   -- a fight shows everything at once, even at full mana; after it the bar fades smoothly
-  M.state.combat = true; at(130)
+  M.state.combat = true; at(132.5)
   for _, a in ipairs({ alphas() }) do eq(a, 1, "faded in combat") end
-  M.state.combat = false; at(130.5)
+  M.state.combat = false; at(135.5)
   ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade after the fight: " .. tostring(b.alpha))
-  at(132); eq(b.alpha, 0.3)
+  at(137); eq(b.alpha, 0.3)
   -- with the settings open the fading shows as it is: a change is seen at once (owner, 6 Nov)
-  ns.ToggleOptions(true); at(133)
+  ns.ToggleOptions(true); at(138)
   eq(b.alpha, 0.3, "settings window stops the fading")
-  ns.db.fadeAlpha = 0.6; at(133.1)
+  ns.db.fadeAlpha = 0.6; at(138.1)
   eq(b.alpha, 0.6, "a change of the setting not seen at once")
-  ns.ToggleOptions(); ns.db.fadeAlpha = 0.3; at(133.2)
+  ns.ToggleOptions(); ns.db.fadeAlpha = 0.3; at(138.2)
   eq(b.alpha, 0.3)
   -- without "only at full mana": fades with mana missing too, mana changes do not count
   M.state.manaPct = 0.5
   ns.db.fadeFull = false
-  power(134)
+  power(139)
   eq(b.alpha, 0.3, "not faded with mana missing while 'only at full mana' is off")
   -- the unlocked frame and the default never fade
-  ns.db.locked = false; at(135)
+  ns.db.locked = false; at(140)
   eq(b.alpha, 1, "unlocked frame faded")
-  ns.db.locked = true; ns.db.fadeAlpha = 1; at(140)
+  ns.db.locked = true; ns.db.fadeAlpha = 1; at(145)
   eq(b.alpha, 1, "faded with the setting off")
   M.state.maxMana, M.state.time = 1000, nil
 end)

@@ -3,6 +3,7 @@
 **Full Mana Forever 0.9.14**
 
 - Uses far less memory (about a tenth when you stand still): the addon now looks at your buffs, your spell book and your spells' cooldowns only when they change, and the icons ask the game for a plain number instead of a colour
+- Fading: when your mana fills up the bar now fades once, a moment later, instead of fading, coming back and fading again
 
 **Full Mana Forever 0.9.13**
 
