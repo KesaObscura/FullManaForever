@@ -694,12 +694,17 @@ local function Border(owner, region, layer, r, g, b, a, out)
   return t
 end
 
--- outlined text. The game's own "...Outline" font objects keep the whole font family
--- (Latin, Cyrillic, Korean, Chinese). Setting a font file by hand keeps only that one file:
--- fine for digits, but letters of other alphabets turn into boxes, so text with letters
--- (lettersToo) is never switched to a single file.
+-- outlined text. The game's own outlined font objects keep the whole font family (Latin,
+-- Cyrillic, Korean, Chinese). Setting a font file by hand keeps only that one file: fine for
+-- digits, but letters of other alphabets turn into boxes, so text with letters (lettersToo) is
+-- never switched to a single file. "GameFontHighlightSmallOutline" has no outline in this client,
+-- so the small texts take the game's small outlined family (same size, with a shadow).
+local OUTLINED = {
+  GameFontHighlightSmall = "SystemFont_Shadow_Small_Outline",
+  GameFontNormalSmall = "SystemFont_Shadow_Small_Outline",
+}
 local function OutlineFont(fs, template, lettersToo)
-  local obj = template and _G[template .. "Outline"]
+  local obj = template and (_G[OUTLINED[template] or ""] or _G[template .. "Outline"])
   if obj then fs:SetFontObject(obj) return end
   if lettersToo then return end
   pcall(function()
@@ -1193,6 +1198,7 @@ local function CreateBar()
   -- regen above normal: a small up arrow after the number, so it is not told by colour alone
   -- time to full mana, after the regen and its arrow (0.9.7)
   bar.fullIn = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.fullIn, "GameFontHighlightSmall", true)
   bar.fullIn:SetPoint("LEFT", bar.regen, "RIGHT", 18, 0)
   bar.fullIn:SetTextColor(0.8, 0.82, 0.86)
   bar.fullIn:Hide()

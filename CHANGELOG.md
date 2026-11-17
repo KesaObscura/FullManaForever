@@ -4,6 +4,8 @@
 
 - In a fight Blessing of Wisdom and Mana Spring Totem now show next to the regen for exactly as long as they are on you: "17.5/s +3.6 +2.0"
 - A blessing gained or lost during a fight shows at once, and so does walking away from the totem
+- The texts at the mana bar (mana numbers, seconds, regen, time to full mana) get a dark outline, so they read on any ground
+- The Lock and Settings buttons of the unlocked frame get gold text, like the settings window
 
 Asked for in the comments:
 - **Style: Full bar, no border** (new entry in the Style list): the mana bar without its dark outline and shadow

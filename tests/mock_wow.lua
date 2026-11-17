@@ -10,7 +10,7 @@ function M.noop() end
 for _, name in ipairs({ "SetAtlas", "SetNormalAtlas", "SetPushedAtlas", "SetCheckedAtlas", "SetDisabledCheckedAtlas",
   "SetHighlightAtlas", "SetHorizTile", "SetVertTile", "SetDesaturated", "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDrag", "SetAutoFocus",
   "SetBlendMode", "SetCheckedTexture", "SetDisabledCheckedTexture", "SetClampedToScreen", "SetColorTexture",
-  "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
+  "SetDuration", "SetFocus", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
   "SetHighlightFontObject", "HighlightText", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
   "SetMovable", "SetNormalFontObject", "SetNormalTexture", "SetNumeric", "SetOwner", "SetPushedTexture",
   "SetRotation", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
@@ -77,6 +77,8 @@ function methods:GetStringHeight() return 12 end
 function methods:GetFontString() self.fs = self.fs or new("FontString", self); return self.fs end
 function methods:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
 function methods:SetFont(f, s, fl) self.font = { f, s, fl } end
+function methods:SetFontObject(o) self.fontObject = o end
+function methods:GetFontObject() return self.fontObject end
 function methods:GetFrameLevel() return self.level or 1 end
 function methods:SetFrameLevel(l) self.level = l end
 function methods:GetChecked() return self.checked end

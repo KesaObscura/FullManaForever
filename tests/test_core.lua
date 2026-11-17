@@ -2202,6 +2202,18 @@ test("the rule's seconds can be switched off: the strip alone shows the rule, sm
   noRegenApis()
 end)
 
+test("0.9.13: the texts at the bar take the game's small outlined font (all alphabets)", function()
+  local fam = { name = "SystemFont_Shadow_Small_Outline" }
+  _G.SystemFont_Shadow_Small_Outline = fam
+  local ns = M.load(nil, { bags = POT })
+  M.tick()
+  local b = bar(ns)
+  for _, k in ipairs({ "text", "fsrText", "regen", "fullIn" }) do
+    eq(b[k].fontObject, fam, k .. " without an outline")
+  end
+  _G.SystemFont_Shadow_Small_Outline = nil
+end)
+
 test("0.9.13: style 'Full bar, no border' takes the outline and the shadow away, the fill and the background stay", function()
   local ns = M.load(nil, { bags = POT })
   M.tick()
