@@ -678,10 +678,28 @@ Build = function()
   c.Row(Check(col, L.optBar, function() return db.showBar end, function(v) db.showBar = v end, L.tipBar))
   -- the style right under the bar switch: the colour below depends on it (0.9.0 "Only
   -- markers", a list since 0.9.5)
+  -- "plain" is the full bar without its outline and shadow (0.9.13; keys barStyle + barBorder)
   local styleLabel, styleDD = LabeledDD(L.optBarStyle, PAD + 30, {
-    { value = "full", text = L.bsFull }, { value = "markers", text = L.bsMarkers },
-  }, function() return db.barStyle == "markers" and L.bsMarkers or L.bsFull end,
-  function(v) db.barStyle = v; ns.Layout(true); ns.RefreshOptions() end, L.tipBarMarkers)
+    { value = "full", text = L.bsFull }, { value = "plain", text = L.bsPlain },
+    { value = "markers", text = L.bsMarkers },
+  }, function()
+    if db.barStyle == "markers" then return L.bsMarkers end
+    return db.barBorder == false and L.bsPlain or L.bsFull
+  end, function(v)
+    if v == "markers" then db.barStyle = "markers" else db.barStyle, db.barBorder = "full", v ~= "plain" end
+    ns.Layout(true); ns.RefreshOptions()
+  end, L.tipBarMarkers)
+  local colorEntries = {}
+  for _, bc in ipairs(ns.BAR_COLORS) do
+    colorEntries[#colorEntries + 1] = { value = bc.key, text = L["col_" .. bc.key] }
+  end
+  local colLabel = Label(col, L.optBarColor .. ":")
+  local colDD = Dropdown(col, DD_W, colorEntries, function() return L["col_" .. (db.barColor or "blue")] or L.col_blue end,
+    function(v) db.barColor = v; ns.Layout(true); ns.RefreshOptions() end)
+  c.Right(colDD)
+  c.Row(colLabel, PAD + 30, 30)
+  TipBoth(col, colLabel, colDD, L.optBarColor, L.tipBarColor)
+
   local bpLabel = Label(col, L.optBarPos .. ":")
   local bp
   if db.vertical then
@@ -698,17 +716,6 @@ Build = function()
   c.Right(bp)
   c.Row(bpLabel, PAD + 30, 30)
   TipBoth(col, bpLabel, bp, L.optBarPos, L.tipBarPos)
-
-  local colorEntries = {}
-  for _, bc in ipairs(ns.BAR_COLORS) do
-    colorEntries[#colorEntries + 1] = { value = bc.key, text = L["col_" .. bc.key] }
-  end
-  local colLabel = Label(col, L.optBarColor .. ":")
-  local colDD = Dropdown(col, DD_W, colorEntries, function() return L["col_" .. (db.barColor or "blue")] or L.col_blue end,
-    function(v) db.barColor = v; ns.Layout(true); ns.RefreshOptions() end)
-  c.Right(colDD)
-  c.Row(colLabel, PAD + 30, 30)
-  TipBoth(col, colLabel, colDD, L.optBarColor, L.tipBarColor)
 
 
   local thick = Stepper(col, PAD + 30, L.optBarThick, function() return db.barThickness end,

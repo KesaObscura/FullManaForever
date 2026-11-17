@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.12"
+ns.VERSION = "0.9.13"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -57,6 +57,7 @@ local DEFAULTS = {
   barThickness = 16,
   barLength  = 0,       -- 0 = auto: room for every group switched on (at least 3)
   barColor   = "blue",
+  barBorder  = true,    -- the dark outline and shadow around the bar (0.9.13, asked for in a comment)
   barStyle   = "full",  -- "full" / "markers": no fill and no background, only the markers, the
                         -- five-second strip and the texts (to lay over another mana bar, 0.9.0)
   barFree    = false,   -- the bar has its own place, apart from the icons (0.9.0)
@@ -693,12 +694,17 @@ local function Border(owner, region, layer, r, g, b, a, out)
   return t
 end
 
--- outlined text. The game's own "...Outline" font objects keep the whole font family
--- (Latin, Cyrillic, Korean, Chinese). Setting a font file by hand keeps only that one file:
--- fine for digits, but letters of other alphabets turn into boxes, so text with letters
--- (lettersToo) is never switched to a single file.
+-- outlined text. The game's own outlined font objects keep the whole font family (Latin,
+-- Cyrillic, Korean, Chinese). Setting a font file by hand keeps only that one file: fine for
+-- digits, but letters of other alphabets turn into boxes, so text with letters (lettersToo) is
+-- never switched to a single file. "GameFontHighlightSmallOutline" has no outline in this client,
+-- so the small texts take the game's small outlined family (same size, with a shadow).
+local OUTLINED = {
+  GameFontHighlightSmall = "SystemFont_Shadow_Small_Outline",
+  GameFontNormalSmall = "SystemFont_Shadow_Small_Outline",
+}
 local function OutlineFont(fs, template, lettersToo)
-  local obj = template and _G[template .. "Outline"]
+  local obj = template and (_G[OUTLINED[template] or ""] or _G[template .. "Outline"])
   if obj then fs:SetFontObject(obj) return end
   if lettersToo then return end
   pcall(function()
@@ -1055,6 +1061,11 @@ local holdFrame = CreateFrame("Frame")
 holdFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 holdFrame:SetScript("OnEvent", function(_, event)
+  -- the mana buffs' "+" labels next to the regen: shown in a fight; made after a fight when the
+  -- game was entered in one
+  if ns.BuffPlusShow then ns.BuffPlusShow(event == "PLAYER_REGEN_DISABLED") end
+  ns.regenDirty = true
+  if event == "PLAYER_REGEN_ENABLED" and ns.MakePlus then pcall(ns.MakePlus) end
   if not held then return end
   if event == "PLAYER_REGEN_DISABLED" then
     heldFightSeen = true
@@ -1187,6 +1198,7 @@ local function CreateBar()
   -- regen above normal: a small up arrow after the number, so it is not told by colour alone
   -- time to full mana, after the regen and its arrow (0.9.7)
   bar.fullIn = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.fullIn, "GameFontHighlightSmall", true)
   bar.fullIn:SetPoint("LEFT", bar.regen, "RIGHT", 18, 0)
   bar.fullIn:SetTextColor(0.8, 0.82, 0.86)
   bar.fullIn:Hide()
@@ -1203,6 +1215,23 @@ local function CreateBar()
   bar.regenDown:SetPoint("LEFT", bar.regen, "RIGHT", 0, -3)
   bar.regenDown:Hide()
   bar:Hide()
+  ns.MakePlus()
+end
+
+-- the "+" labels of Blessing of Wisdom and Mana Spring Totem (Regen.lua): after the regen text,
+-- behind its arrow; under the text when it is right-aligned (nothing may grow into the bar)
+function ns.PlacePlus()
+  if not (bar and ns.BuffPlusPlace) then return end
+  if bar.plusBelow then
+    ns.BuffPlusPlace("TOPLEFT", bar.regen, "BOTTOMLEFT", 0, -1)
+  else
+    ns.BuffPlusPlace("LEFT", bar.regen, "RIGHT", bar.plusDx or 3, 0)
+  end
+end
+function ns.MakePlus()
+  if not (bar and ns.BuffPlusCreate) then return end
+  local ok, font = pcall(bar.regen.GetFontObject, bar.regen)
+  if ns.BuffPlusCreate(bar.regenBox, ok and font or nil) then ns.PlacePlus() end
 end
 
 -- colors are re-applied on every layout change (option window, color pick)
@@ -1229,9 +1258,10 @@ local function PaintBar()
   local full = db.barStyle ~= "markers"
   if tex then tex:SetAlpha(full and 1 or 0) end
   bar.bg:SetShown(full)
-  bar.shadow:SetShown(full)
+  local edged = full and db.barBorder ~= false
+  bar.shadow:SetShown(edged)
   bar.gloss:SetShown(full)
-  for _, e in ipairs(bar.border) do e:SetShown(full) end
+  for _, e in ipairs(bar.border) do e:SetShown(edged) end
 end
 
 -- the free bar's saved place; a damaged value counts as "next to the icons"
@@ -1426,7 +1456,8 @@ function ns.PositionBar()
     -- place, counted from every icon that can appear, so they never jump when icons light up)
     bar.regenBox:ClearAllPoints()
     bar.regen:ClearAllPoints()
-    local short = not BarPoint() and Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
+    bar.plusBelow = false
+  local short = not BarPoint() and Span(IconSlots()) > (bar:GetHeight() or 0) + 0.5
     if short then
       local right = db.barSide == "right" -- bar right of the icons: texts right of the bar
       local side, edge, dx = right and "LEFT" or "RIGHT", right and "BOTTOMRIGHT" or "BOTTOMLEFT", right and 4 or -4
@@ -1439,6 +1470,7 @@ function ns.PositionBar()
         bar.regenBox:SetPoint("TOP" .. side, bar.text, "BOTTOM" .. side, 0, -2)
       end
       bar.regen:SetPoint(side, bar.regenBox, side, 0, 0)
+      bar.plusBelow = side == "RIGHT" -- right-aligned text: the "+" labels go under it
     else
       bar.manaBox:SetPoint("TOP", bar, "BOTTOM", 0, -4)
       bar.text:SetPoint("TOP", bar.manaBox, "TOP", 0, 0)
@@ -1480,6 +1512,7 @@ function ns.PositionBar()
     bar.regenBox:SetPoint("LEFT", bar, "RIGHT", 6, 0)
     bar.regen:ClearAllPoints()
     bar.regen:SetPoint("LEFT", bar.regenBox, "LEFT", 0, 0)
+    bar.plusBelow = false
     bar.fsr:ClearAllPoints()
     bar.fsr:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
     bar.fsr:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", 0, 0)
@@ -1511,8 +1544,10 @@ function ns.PositionBar()
       box:SetPoint("CENTER", UIParent, "BOTTOMLEFT", p[1] / scale, p[2] / scale)
       texts[key]:ClearAllPoints()
       texts[key]:SetPoint("CENTER", box, "CENTER", 0, 0)
+      if key == "regen" then bar.plusBelow = false end
     end
   end
+  ns.PlacePlus()
   PaintBar()
   ApplyStrata()
 end
@@ -1560,12 +1595,13 @@ local function FrameButton(onClick, title, tip)
   local b = CreateFrame("Button", nil, anchor)
   b:SetHeight(22)
   ns.Skin.RedButton(b) -- the red button of the game's dialogs (0.9.11)
-  b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-  OutlineFont(b.text, "GameFontHighlightSmall", true)
-  b.text:SetPoint("CENTER")
+  -- gold text, white under the mouse: like the buttons of the settings and the game's dialogs
+  b:SetNormalFontObject("GameFontNormalSmall")
+  b:SetHighlightFontObject("GameFontHighlightSmall")
   function b:SetLabel(text)
-    self.text:SetText(text)
-    self:SetWidth(math.max(60, math.ceil((self.text:GetStringWidth() or 0) + 16)))
+    self:SetText(text)
+    local fs = self:GetFontString()
+    self:SetWidth(math.max(60, math.ceil((fs and fs:GetStringWidth() or 0) + 16)))
   end
   b:SetScript("OnClick", onClick)
   b:SetScript("OnEnter", function(self)
@@ -2055,6 +2091,7 @@ local function UpdateRegenText(visible)
   end
   -- the text shows the casting rate during the rule even when the strip is switched off
   local now, inRule = GetTime(), (ns.FsrLeft and ns.FsrLeft() or 0) > 0
+  if ns.regenDirty then ns.regenDirty, regenNext = nil, 0 end -- a fight began or ended
   if box:IsShown() and now < regenNext and inRule == regenInRule then return end
   regenNext, regenInRule = now + 0.5, inRule
   local text, boosted, lowered
@@ -2075,6 +2112,8 @@ local function UpdateRegenText(visible)
     end
     bar.regenUp:SetShown(boosted and not inRule and true or false)
     bar.regenDown:SetShown(lowered and true or false)
+    local dx = ((boosted and not inRule) or lowered) and 17 or 3 -- room for the arrow
+    if dx ~= bar.plusDx then bar.plusDx = dx; ns.PlacePlus() end
     bar.regen:Show()
     box:Show()
   elseif box:IsShown() then

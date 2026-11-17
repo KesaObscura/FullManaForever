@@ -187,6 +187,79 @@ auraFrame:SetScript("OnEvent", function(_, event, unit)
   ScanBuffs()
 end)
 
+-- In a fight the game itself shows a label of ours next to the regen for as long as one of these
+-- buffs is on the player: "+2.4" for the blessing, "+2.0" for the totem, side by side. The addon
+-- only hands the labels over (out of combat); it never learns which of them show.
+local plus = {}               -- host: our frame the labels sit in; live: the game shows them
+-- { { perSec, { [id] = true, ... } }, ... } weakest first, one entry per amount
+local function ByAmount(list)
+  local seen, out = {}, {}
+  for id, perSec in pairs(list) do
+    local e = seen[perSec]
+    if not e then e = { perSec, {} }; seen[perSec] = e; out[#out + 1] = e end
+    e[2][id] = true
+  end
+  table.sort(out, function(a, b) return a[1] < b[1] end)
+  return out
+end
+-- parent: the box of the regen text; font: its font. True when the labels are in the game's hands.
+function ns.BuffPlusCreate(parent, font)
+  if plus.host or plus.failed then return plus.live or false end
+  if InCombatLockdown and InCombatLockdown() then return false end -- only out of combat
+  local host = CreateFrame("Frame", nil, parent)
+  host:SetSize(1, 12)
+  host:SetAlpha(0)
+  plus.host = host
+  local ok = pcall(function()
+    local c = CreateFrame("AuraContainer", nil, host, "CustomAuraContainerTemplate")
+    c:SetPoint("LEFT", host, "LEFT", 0, 0)
+    c:SetUnit("player")
+    c:SetEnabled(true)
+    local n = 0
+    for _, list in ipairs({ WISDOM, SPRING }) do
+      for _, e in ipairs(ByAmount(list)) do
+        n = n + 1
+        local label = ("+%.1f"):format(e[1])
+        c:AddAuraGroup("fmf" .. n, "HELPFUL", {
+          maxFrameCount = 1,
+          candidateFilters = { includeSpellIDs = e[2] },
+          layout = { groupSpacing = 3 },
+          initializeFrame = function(b)
+            local fs = b:CreateFontString(nil, "OVERLAY")
+            if font then fs:SetFontObject(font) end
+            -- a dark outline and shadow, so the white reads on any ground
+            local file, size = fs:GetFont()
+            if file then fs:SetFont(file, size, "OUTLINE") end
+            fs:SetShadowColor(0, 0, 0, 1)
+            fs:SetShadowOffset(1, -1)
+            fs:SetTextColor(1, 1, 1)
+            fs:SetPoint("CENTER")
+            fs:SetText(label)
+            b:SetSize(math.ceil(fs:GetStringWidth() or 24) + 1, 12)
+            if b.EnableMouse then b:EnableMouse(false) end
+          end,
+        })
+      end
+    end
+    plus.box = c
+  end)
+  if not ok then plus.failed = true; host:Hide() return false end
+  plus.live = true
+  return true
+end
+-- where the labels start: region and its point, our point, offsets (the regen text and its side)
+function ns.BuffPlusPlace(point, region, relPoint, dx, dy)
+  local host = plus.host
+  if not host then return end
+  host:ClearAllPoints()
+  host:SetPoint(point, region, relPoint, dx, dy)
+end
+-- shown in a fight (the summed number takes over outside one)
+function ns.BuffPlusShow(on)
+  if plus.host and plus.live then plus.host:SetAlpha(on and 1 or 0) end
+end
+function ns.BuffPlusLive() return plus.live or false end
+
 -- seconds left of the five-second rule (0 = regen runs at the normal rate)
 function ns.FsrLeft()
   local left = fsrUntil - GetTime()
@@ -302,8 +375,11 @@ function ns.RegenText()
     patPlain, patPlus = "%.1f" .. patUnit, "%.1f|cffffffff+%.1f|r" .. patUnit
   end
   local okF, text
-  if extra > 0 and IsSecret(value) then
+  if extra > 0 and IsSecret(value) and not plus.live then
+    -- no labels from the game: what was known before the fight, as a white "+3.6"
     okF, text = pcall(string.format, patPlus, value, extra)
+  elseif IsSecret(value) then
+    okF, text = pcall(string.format, patPlain, value)
   else
     if extra > 0 and type(value) == "number" then value = value + extra end
     okF, text = pcall(string.format, patPlain, value)

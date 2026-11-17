@@ -10,13 +10,13 @@ function M.noop() end
 for _, name in ipairs({ "SetAtlas", "SetNormalAtlas", "SetPushedAtlas", "SetCheckedAtlas", "SetDisabledCheckedAtlas",
   "SetHighlightAtlas", "SetHorizTile", "SetVertTile", "SetDesaturated", "ClearFocus", "EnableMouseWheel", "Play", "RegisterForDrag", "SetAutoFocus",
   "SetBlendMode", "SetCheckedTexture", "SetDisabledCheckedTexture", "SetClampedToScreen", "SetColorTexture",
-  "SetDuration", "SetFocus", "SetFontObject", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
+  "SetDuration", "SetFocus", "SetFrameLevel", "SetFrameStrata", "SetFromAlpha",
   "SetHighlightFontObject", "HighlightText", "SetHighlightTexture", "SetJustifyH", "SetLooping", "SetMaxLetters",
   "SetMovable", "SetNormalFontObject", "SetNormalTexture", "SetNumeric", "SetOwner", "SetPushedTexture",
   "SetRotation", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
   "SetTextInsets", "SetThumbTexture", "SetToAlpha", "SetToplevel", "SetValueStep", "SetVertexColor",
   "SetWordWrap", "StopMovingOrSizing", "StartMoving", "SetItemByID", "SetJustifyV", "SetMaxLines",
-  "SetObeyStepOnDrag", "SetHitRectInsets", "SetDisabledFontObject" }) do
+  "SetObeyStepOnDrag", "SetHitRectInsets", "SetDisabledFontObject", "SetShadowColor", "SetShadowOffset" }) do
   methods[name] = M.noop
 end
 
@@ -77,6 +77,8 @@ function methods:GetStringHeight() return 12 end
 function methods:GetFontString() self.fs = self.fs or new("FontString", self); return self.fs end
 function methods:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
 function methods:SetFont(f, s, fl) self.font = { f, s, fl } end
+function methods:SetFontObject(o) self.fontObject = o end
+function methods:GetFontObject() return self.fontObject end
 function methods:GetFrameLevel() return self.level or 1 end
 function methods:SetFrameLevel(l) self.level = l end
 function methods:GetChecked() return self.checked end
@@ -185,8 +187,21 @@ function M.reset(opts)
   local S = M.state
   local function count(name) M.calls[name] = (M.calls[name] or 0) + 1 end
 
+  M.auraBox = nil
   _G.CreateFrame = function(kind, name, parent)
     local f = new(kind, parent)
+    -- opts.auraBox: the game's aura container exists (it shows frames of ours while a buff is up)
+    if kind == "AuraContainer" and opts.auraBox then
+      f.groups = {}
+      f.SetUnit = function(self, u) self.unit = u end
+      f.SetEnabled = function(self, on) self.enabled = on end
+      f.AddAuraGroup = function(self, key, filter, o)
+        local b = new("Button", self)
+        o.initializeFrame(b)
+        self.groups[#self.groups + 1] = { key = key, filter = filter, options = o, frame = b }
+      end
+      M.auraBox = f
+    end
     -- M.keepOldNames: like the game, a new frame does not take over a name already in use
     if name and not (M.keepOldNames and _G[name]) then _G[name] = f end
     return f
