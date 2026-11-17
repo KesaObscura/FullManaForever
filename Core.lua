@@ -2129,7 +2129,7 @@ end
 -- the five-second rule the casting rate runs first (0 without talents), then the normal rate.
 -- Drinking: its higher rate runs until the drink aura ends, then the normal rate (Regen.lua).
 -- At full mana the text is hidden by a step curve (alpha), like the fading.
-local timerCurve, timerKey, timerFull, timerFullKey
+local timerCurve, timerKey, timerFull, timerFullMax, timerFullScale
 local function UpdateFullTimer(visible)
   local fs = bar.fullIn
   if not visible or not db.regenText or db.fullTimer == false or InCombatLockdown()
@@ -2149,31 +2149,42 @@ local function UpdateFullTimer(visible)
   -- in game). A spell breaks the drink, so drink and rule never run together.
   local dleft, normal
   if left <= 0 and ns.DrinkLeft then dleft, normal = ns.DrinkLeft() end
-  local pts
+  -- the curve's points (x = share of max mana, y = seconds): two or three, kept in upvalues so
+  -- no table is made per update; the curve is built again only when one of its inputs changed
+  local x2, y1, y2, n = 1, 0, 0, 2
   if dleft and type(normal) == "number" and normal > 0 and normal < base then
     local m1 = dleft * base                                 -- mana still coming from the drink
     if m1 >= max then
-      pts = { { 0, max / base }, { 1, 0 } }
+      y1 = max / base
     else
-      pts = { { 0, dleft + (max - m1) / normal }, { 1 - m1 / max, dleft }, { 1, 0 } }
+      y1, x2, y2, n = dleft + (max - m1) / normal, 1 - m1 / max, dleft, 3
     end
-    left = -dleft -- part of the curve's key (changes while drinking)
+    left = -dleft -- part of the curve's inputs (changes while drinking)
   elseif left > 0 and c > 0 and left * c >= max then
-    pts = { { 0, max / c }, { 1, 0 } }                    -- all of it within the rule
+    y1 = max / c                                           -- all of it within the rule
   elseif left > 0 and c > 0 then
     local m1 = left * c                                    -- mana gained in the rest of the rule
-    pts = { { 0, left + (max - m1) / base }, { 1 - m1 / max, left }, { 1, 0 } }
+    y1, x2, y2, n = left + (max - m1) / base, 1 - m1 / max, left, 3
   elseif left > 0 then
-    pts = { { 0, left + max / base }, { 1, left } }        -- nothing during the rule
+    y1, y2 = left + max / base, left                       -- nothing during the rule
   else
-    pts = { { 0, max / base }, { 1, 0 } }
+    y1 = max / base
   end
-  local key = ("%.2f:%.2f:%.1f:%.2f:%d:%d"):format(base, c, left, type(normal) == "number" and normal or 0, max, Scale())
-  if key ~= timerKey then
+  -- inputs rounded as far as they show: regen to 0.01, the rule or drink to 0.1 s
+  local scale = Scale()
+  local kb, kc, kl = math.floor(base * 100 + 0.5), math.floor(c * 100 + 0.5), math.floor(left * 10 + 0.5)
+  local kn = type(normal) == "number" and math.floor(normal * 100 + 0.5) or 0
+  local tk = timerKey
+  if not tk or tk[1] ~= kb or tk[2] ~= kc or tk[3] ~= kl or tk[4] ~= kn or tk[5] ~= max or tk[6] ~= scale then
     local cv = C_CurveUtil.CreateCurve()
     if Enum and Enum.LuaCurveType and Enum.LuaCurveType.Linear then cv:SetType(Enum.LuaCurveType.Linear) end
-    for _, p in ipairs(pts) do cv:AddPoint(p[1] * Scale(), p[2]) end
-    timerCurve, timerKey = cv, key
+    cv:AddPoint(0, y1)
+    if n == 3 then cv:AddPoint(x2 * scale, y2) end
+    cv:AddPoint(scale, n == 3 and 0 or y2)
+    timerCurve = cv
+    tk = tk or {}
+    tk[1], tk[2], tk[3], tk[4], tk[5], tk[6] = kb, kc, kl, kn, max, scale
+    timerKey = tk
   end
   local ok, secs = TryPower(powerVariant or 1, timerCurve)
   local okF, text = false, nil
@@ -2184,13 +2195,12 @@ local function UpdateFullTimer(visible)
   end
   fs:SetText(text)
   -- hidden at full mana
-  local fkey = max .. ":" .. Scale()
-  if fkey ~= timerFullKey then
+  if max ~= timerFullMax or scale ~= timerFullScale then
     local fc = C_CurveUtil.CreateColorCurve()
     fc:SetType(Enum.LuaCurveType.Step)
     fc:AddPoint(0, CreateColor(1, 1, 1, 1))
-    fc:AddPoint((1 - 0.5 / max) * Scale(), CreateColor(1, 1, 1, 0))
-    timerFull, timerFullKey = fc, fkey
+    fc:AddPoint((1 - 0.5 / max) * scale, CreateColor(1, 1, 1, 0))
+    timerFull, timerFullMax, timerFullScale = fc, max, scale
   end
   ApplyAlpha(fs, PowerColor(timerFull), 0)
   if not fs:IsShown() then fs:Show() end
