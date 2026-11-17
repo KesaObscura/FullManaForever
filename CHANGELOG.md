@@ -1,5 +1,9 @@
 # Changelog
 
+**Full Mana Forever 0.9.14**
+
+- Uses much less memory: the addon now looks at your buffs, your spell book and your spells' cooldowns only when they change, not many times a second
+
 **Full Mana Forever 0.9.13**
 
 - In a fight Blessing of Wisdom and Mana Spring Totem now show next to the regen for exactly as long as they are on you: "17.5/s +3.6 +2.0"
