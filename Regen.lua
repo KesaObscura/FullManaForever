@@ -149,8 +149,10 @@ local function ScanBuffs()
   return true
 end
 -- mana per second from such buffs right now (0 without one)
+local scanDirty = false -- the buffs changed: read again at the next look (one read per burst)
 function ns.BuffRegen()
   local now = GetTime()
+  if scanDirty and ScanBuffs() then scanDirty = false end
   if recheckAt and now >= recheckAt then
     recheckAt = nil
     -- still not readable out of combat: look again in a second
@@ -186,6 +188,10 @@ auraFrame:SetScript("OnEvent", function(_, event, unit)
     recheckAt, settleUntil = now + 1, now + 5
   elseif event == "PLAYER_REGEN_ENABLED" then
     recheckAt = now + 1
+  elseif event == "UNIT_AURA" then
+    -- many at once when buffing or in a fight: read once, at the next update
+    scanDirty = true
+    return
   end
   ScanBuffs()
 end)
