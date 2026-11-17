@@ -171,8 +171,11 @@ auraFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 auraFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 auraFrame:RegisterEvent("PLAYER_REGEN_DISABLED") -- the last look before a fight
 auraFrame:RegisterEvent("PLAYER_DEAD")           -- death takes the buffs
+-- the drink found among the buffs (ns.DrinkLeft); looked for again only after the buffs changed
+local drinkDirty, drinkExp = true, nil
 auraFrame:SetScript("OnEvent", function(_, event, unit)
   if event == "UNIT_AURA" and unit ~= "player" then return end
+  drinkDirty = true
   local now = GetTime()
   if event == "PLAYER_DEAD" then
     wisdom, wisdomUntil, spring = 0, 0, 0
@@ -321,31 +324,44 @@ for _, id in ipairs({ 430, 431, 432, 833, 1133, 1135, 1137, 2639, 18140, 22734, 
 for id = 1249914, 1249925 do DRINK_IDS[id] = true end
 local DRINK_NAME_IDS = { 430, 1249914 }
 local drinkNames
-function ns.DrinkLeft()
-  if InCombatLockdown and InCombatLockdown() then return nil end
-  local get = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
-  if not get then return nil end
-  if drinkNames == nil and C_Spell and C_Spell.GetSpellName then
+-- the end time of a drink among the buffs, nil without one; false when the buffs could not be read
+local function FindDrink(get, now)
+  if (drinkNames == nil or next(drinkNames) == nil) and C_Spell and C_Spell.GetSpellName then
     drinkNames = {}
     for _, sid in ipairs(DRINK_NAME_IDS) do
       local ok, n = pcall(C_Spell.GetSpellName, sid)
       if ok and type(n) == "string" and not IsSecret(n) then drinkNames[n] = true end
     end
   end
-  local now = GetTime()
   for i = 1, 40 do
     local ok, a = pcall(get, "player", i, "HELPFUL")
-    if not ok or a == nil or IsSecret(a) then break end
+    if not ok or IsSecret(a) then return false end
+    if a == nil then return nil end
     local id, name, exp = a.spellId, a.name, a.expirationTime
-    if not IsSecret(id) and not IsSecret(name) and not IsSecret(exp)
-      and (DRINK_IDS[id] or (drinkNames and type(name) == "string" and drinkNames[name]))
+    if IsSecret(id) or IsSecret(name) or IsSecret(exp) then return false end
+    if (DRINK_IDS[id] or (drinkNames and type(name) == "string" and drinkNames[name]))
       and type(exp) == "number" and exp > now then
-      -- after the drink: the lowest regen the game reported lately, plus the mana buffs of now
-      local normal = NormalBase()
-      return exp - now, normal and normal + ns.BuffRegen() or nil
+      return exp
     end
   end
   return nil
+end
+-- The buffs are read once after they changed (every buff change brings an aura event), not on
+-- every update: each buff read makes a new table, ten times a second with many buffs.
+function ns.DrinkLeft()
+  if InCombatLockdown and InCombatLockdown() then drinkDirty = true return nil end
+  local get = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
+  if not get then return nil end
+  local now = GetTime()
+  if drinkDirty then
+    local exp = FindDrink(get, now)
+    if exp == false then return nil end -- not readable now: tried again next time
+    drinkExp, drinkDirty = exp, false
+  end
+  if not drinkExp or drinkExp <= now then return nil end
+  -- after the drink: the lowest regen the game reported lately, plus the mana buffs of now
+  local normal = NormalBase()
+  return drinkExp - now, normal and normal + ns.BuffRegen() or nil
 end
 
 -- base and casting rate as plain numbers (Blessing of Wisdom and Mana Spring included), nil while they are

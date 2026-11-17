@@ -3055,10 +3055,12 @@ test("0.9.8: the Forever teas (Nutritious Drink) count as drinking, by ID and by
     M.tick()
     base, M.state.time = 51, 101
     aura = { spellId = case[1], name = case[2], expirationTime = 111 }
+    M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
     M.tick()
     eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 510) / 15), "drink " .. case[1] .. " not counted")
     -- food without mana is no drink
     aura = { spellId = 1300001, name = "Well Fed", expirationTime = 111 }
+    M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
     M.tick()
     eq(b.fullIn.text, ns.L.fullIn:format(1364 / 51), "a buff taken for a drink")
     _G.C_UnitAuras = nil
@@ -3071,6 +3073,25 @@ test("0.9.8: Mindtap Talisman and Second Wind are in the gear group", function()
   local ns = M.load()
   ok(listed(ns, "gear", 18371), "Mindtap Talisman missing")
   ok(listed(ns, "gear", 11819), "Second Wind missing")
+end)
+
+test("0.9.14: the buffs are read for a drink only after they changed, not on every update", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1879, 0.5, 100
+  _G.GetPowerRegen = function() return 15, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end, GetSpellName = function(id) return id == 430 and "Drink" or nil end }
+  local reads = 0
+  local buffs = { { spellId = 1245, name = "Fortitude", expirationTime = 4000 }, { spellId = 7128, name = "Inner Fire", expirationTime = 4000 } }
+  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) reads = reads + 1 return buffs[i] end }
+  M.tick()
+  local first = reads
+  for _ = 1, 50 do M.state.time = M.state.time + 0.1; M.tick() end
+  eq(reads, first, "the buffs read on every update")
+  M.Fire("UNIT_AURA", "player"); M.tick()
+  ok(reads > first and reads <= first + 3, "the buffs not read again after they changed")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  _G.GetPowerRegen, _G.C_Spell = nil, nil
 end)
 
 test("0.9.7: time to full mana counts the end of drinking (drink aura out of combat)", function()
@@ -3087,13 +3108,18 @@ test("0.9.7: time to full mana counts the end of drinking (drink aura out of com
   -- drinking a new Forever water (unknown ID, same name): 51/s for 10 more seconds, then 15/s
   base, M.state.time = 51, 101
   aura = { spellId = 1249999, name = "Drink", expirationTime = 111 }
+  M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
   M.tick()
   eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 510) / 15), "end of drinking not counted")
   -- enough drink left for all of it
-  aura.expirationTime = 200; M.tick()
+  aura.expirationTime = 200
+  M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
+  M.tick()
   eq(b.fullIn.text, ns.L.fullIn:format(1364 / 51))
   -- the drink is over: the plain rate
-  aura, base = nil, 15; M.tick()
+  aura, base = nil, 15
+  M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
+  M.tick()
   eq(b.fullIn.text, ns.L.fullIn:format(1364 / 15))
   _G.C_UnitAuras = nil
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
