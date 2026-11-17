@@ -2221,6 +2221,34 @@ test("0.9.14: a spell book that changes in a fight is read again after it, not d
   noSpellApis()
 end)
 
+test("0.9.14: the icons take their alpha from a numeric curve; the colour curve stays as the fallback", function()
+  local ns = M.load(nil, { bags = { [3385] = 2 } })
+  M.state.maxMana = 4000
+  local colour, numeric = 0, 0
+  local real = _G.UnitPowerPercent
+  _G.UnitPowerPercent = function(u, p, pr, curve)
+    if type(curve) == "table" and curve.numeric then numeric = numeric + 1 else colour = colour + 1 end
+    return real(u, p, pr, curve)
+  end
+  M.state.manaPct = 0.5; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit at 50 %")
+  ok(numeric > 0, "no numeric curve read")
+  eq(colour, 0, "a colour curve read while the numeric form works")
+  local c0 = colour
+  M.state.manaPct = 0.95; M.tick()
+  ok(not slotVisible(ns, 1), "potion lit at 95 %")
+  -- the numeric form stops working: the colour curves take over, the icon still right
+  _G.UnitPowerPercent = function(u, p, pr, curve)
+    if type(curve) == "table" and curve.numeric then return "x" end
+    colour = colour + 1
+    return real(u, p, pr, curve)
+  end
+  M.state.manaPct = 0.5; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit after the fallback")
+  ok(colour > c0, "the colour curve not used as the fallback")
+  _G.UnitPowerPercent = real
+end)
+
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
 
 test("texts lie above the bar; 'Above other frames' raises the whole display", function()
@@ -2893,11 +2921,12 @@ test("0.9.4: a failing fade shows the bar fully and fades again once it works", 
   M.state.manaPct = 1
   local b = bar(ns)
   M.tick(); eq(b.alpha, 0.3)
-  local real = C_CurveUtil.CreateColorCurve
+  local real, realN = C_CurveUtil.CreateColorCurve, C_CurveUtil.CreateCurve
   C_CurveUtil.CreateColorCurve = function() error("broken") end
+  C_CurveUtil.CreateCurve = function() error("broken") end
   M.state.maxMana = 1200 -- a new curve is needed
   M.tick(); eq(b.alpha, 1, "faded bar after an error")
-  C_CurveUtil.CreateColorCurve = real
+  C_CurveUtil.CreateColorCurve, C_CurveUtil.CreateCurve = real, realN
   M.state.maxMana = 1000
   M.tick(); M.tick()
   ok(b.alpha < 1, "stuck at full after the error was gone")

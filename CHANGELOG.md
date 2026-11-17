@@ -2,7 +2,7 @@
 
 **Full Mana Forever 0.9.14**
 
-- Uses much less memory: the addon now looks at your buffs, your spell book and your spells' cooldowns only when they change, not many times a second
+- Uses far less memory (about a tenth when you stand still): the addon now looks at your buffs, your spell book and your spells' cooldowns only when they change, and the icons ask the game for a plain number instead of a colour
 
 **Full Mana Forever 0.9.13**
 

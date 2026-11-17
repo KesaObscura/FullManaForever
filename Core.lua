@@ -634,6 +634,43 @@ local function HealthColor(curve)
   WarnOnce("health", L.warnHealth)
 end
 
+-- Numeric step curves for the mana: the engine answers with a (secret) number that goes straight
+-- into SetAlpha (seen in game, 17 Nov: steps right, in the first call form). A colour curve
+-- answers with a new colour object on every call (about 1.3 KB each, many per second), so the
+-- numeric form is used while it works; the colour form stays as the fallback.
+local numericOK = true
+local function NumCurve(...)
+  local c = C_CurveUtil.CreateCurve()
+  c:SetType(Enum.LuaCurveType.Step)
+  local pts = select("#", ...)
+  for i = 1, pts, 2 do c:AddPoint((select(i, ...)), (select(i + 1, ...))) end
+  return c
+end
+-- alpha of frame from a numeric curve over the mana; false when that form does not work here
+local function NumAlpha(frame, ncurve)
+  if not numericOK or not ncurve then return false end
+  local ok, a = TryPower(1, ncurve)
+  if ok and (type(a) == "number" or IsSecret(a)) and pcall(frame.SetAlpha, frame, a) then return true end
+  numericOK = false
+  Debug("numeric", "numeric curves do not work: colour curves are used")
+  return false
+end
+-- the numeric twin of BandCurve (alpha 1 while lo < mana% <= hi)
+local function BandNum(lo, hi)
+  if not (C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType) then return nil end
+  local ok, c = pcall(function()
+    if lo and lo >= 0 and lo >= hi then return NumCurve(0, 0) end
+    local s = Scale()
+    if lo and lo >= 0 then
+      if hi < 1 then return NumCurve(0, 0, (lo + EPS) * s, 1, (math.max(hi, 0) + EPS) * s, 0) end
+      return NumCurve(0, 0, (lo + EPS) * s, 1)
+    end
+    if hi < 1 then return NumCurve(0, 1, (math.max(hi, 0) + EPS) * s, 0) end
+    return NumCurve(0, 1)
+  end)
+  return ok and c or nil
+end
+
 -- applies the engine's (secret) alpha; without a usable answer the frame gets failAlpha.
 -- Mana and HP gates fail closed (0): a hidden icon costs nothing, a wrong one wastes a potion.
 local function ApplyAlpha(frame, color, failAlpha)
@@ -1881,8 +1918,10 @@ end
 local function ApplyBand(l, lo, hi)
   lo = lo or -1
   if l.lo ~= lo or l.hi ~= hi then
-    l.curve, l.lo, l.hi = BandCurve(lo >= 0 and lo or nil, hi), lo, hi
+    l.ncurve, l.curve, l.lo, l.hi = BandNum(lo >= 0 and lo or nil, hi), nil, lo, hi
   end
+  if NumAlpha(l, l.ncurve) then return end
+  l.curve = l.curve or BandCurve(lo >= 0 and lo or nil, hi)
   ApplyAlpha(l, PowerColor(l.curve), 0)
 end
 
@@ -2134,7 +2173,7 @@ end
 -- the five-second rule the casting rate runs first (0 without talents), then the normal rate.
 -- Drinking: its higher rate runs until the drink aura ends, then the normal rate (Regen.lua).
 -- At full mana the text is hidden by a step curve (alpha), like the fading.
-local timerCurve, timerKey, timerFull, timerFullMax, timerFullScale
+local timerCurve, timerKey, timerFull, timerFullNum, timerFullMax, timerFullScale
 local function UpdateFullTimer(visible)
   local fs = bar.fullIn
   if not visible or not db.regenText or db.fullTimer == false or InCombatLockdown()
@@ -2201,13 +2240,19 @@ local function UpdateFullTimer(visible)
   fs:SetText(text)
   -- hidden at full mana
   if max ~= timerFullMax or scale ~= timerFullScale then
-    local fc = C_CurveUtil.CreateColorCurve()
-    fc:SetType(Enum.LuaCurveType.Step)
-    fc:AddPoint(0, CreateColor(1, 1, 1, 1))
-    fc:AddPoint((1 - 0.5 / max) * scale, CreateColor(1, 1, 1, 0))
-    timerFull, timerFullMax, timerFullScale = fc, max, scale
+    timerFullNum = numericOK and NumCurve(0, 1, (1 - 0.5 / max) * scale, 0) or nil
+    timerFull, timerFullMax, timerFullScale = nil, max, scale
   end
-  ApplyAlpha(fs, PowerColor(timerFull), 0)
+  if not NumAlpha(fs, timerFullNum) then
+    if not timerFull then
+      local fc = C_CurveUtil.CreateColorCurve()
+      fc:SetType(Enum.LuaCurveType.Step)
+      fc:AddPoint(0, CreateColor(1, 1, 1, 1))
+      fc:AddPoint((1 - 0.5 / max) * scale, CreateColor(1, 1, 1, 0))
+      timerFull = fc
+    end
+    ApplyAlpha(fs, PowerColor(timerFull), 0)
+  end
   if not fs:IsShown() then fs:Show() end
 end
 
@@ -2245,7 +2290,7 @@ end
 -- is only counted, its value never read. The first value after a login is taken at once.
 local FADE_TIME = 1.5
 local fadeA, holdAt, quietFrom = 1, -math.huge, nil
-local fadeCurves, fadeCurveKey = {}, nil
+local fadeCurves, fadeNum, fadeCurveKey = {}, {}, nil
 
 local fadeFrame = CreateFrame("Frame")
 -- protected: a client that refuses the event (UNIT_HEALTH_FREQUENT cannot be registered in
@@ -2300,7 +2345,22 @@ local function UpdateFade()
     return false
   end
   local key = max .. ":" .. Scale()
-  if key ~= fadeCurveKey then wipe(fadeCurves); fadeCurveKey = key end
+  if key ~= fadeCurveKey then wipe(fadeCurves); wipe(fadeNum); fadeCurveKey = key end
+  bar.fadeA = nil -- the alpha comes from the engine (secret): set on every update
+  local n = numericOK and fadeNum[v]
+  if numericOK and not n then
+    n = NumCurve(0, 1, (1 - 0.5 / max) * Scale(), v)
+    fadeNum[v] = n
+  end
+  if n then
+    -- one reading of the engine, its number on the bar and the texts
+    local ok, a = TryPower(1, n)
+    if ok and (type(a) == "number" or IsSecret(a)) and pcall(bar.SetAlpha, bar, a) then
+      for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(a) end
+      return p < 1
+    end
+    numericOK = false
+  end
   local c = fadeCurves[v]
   if not c then
     c = C_CurveUtil.CreateColorCurve()
@@ -2310,7 +2370,6 @@ local function UpdateFade()
     fadeCurves[v] = c
   end
   local color = PowerColor(c)
-  bar.fadeA = nil -- the alpha comes from the engine (secret): set on every update
   ApplyAlpha(bar, color, 1)
   for _, field in pairs(TEXT_KEYS) do ApplyAlpha(bar[field], color, 1) end
   return p < 1
