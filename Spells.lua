@@ -20,6 +20,10 @@ local byID = {}            -- [spell ID] = entry, every rank in the book (ranks 
 local readyAt = {}         -- [entry] = GetTime() when the spell is ready again
 local cdLen = {}           -- [entry] = length of that cooldown (for the countdown on the icon)
 local seen = {}            -- [entry] = true once its cooldown was read out of combat
+-- the game's cooldown is read again only after something may have changed it (a cast, a
+-- cooldown event, the end of a fight, the book) or after a second: each read makes a new table
+local cdStamp = 1          -- raised by those events
+local cdRead = {}          -- [entry] = { stamp, time } of its last read
 local amount = {}          -- [entry] = mana it gives (fit spells, from the description)
 local texture = {}         -- [spell ID] = icon
 local waiting              -- entry whose cooldown starts with the next spell (Inner Focus)
@@ -198,7 +202,11 @@ end
 local function ReadyNow(sp)
   local id = known[sp]
   if not id then return false, 0 end
-  if not InCombatLockdown() then
+  local last, now = cdRead[sp], GetTime()
+  if not InCombatLockdown() and (not last or last[1] ~= cdStamp or now - last[2] >= 1) then
+    last = last or {}
+    last[1], last[2] = cdStamp, now
+    cdRead[sp] = last
     local readable, start, dur, enabled = ReadCooldown(id)
     if readable then
       seen[sp] = true
@@ -416,6 +424,7 @@ end
 frame:RegisterEvent("SPELLS_CHANGED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+frame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 -- Life Tap gives more with more spirit: its mana is read again after gear changes and fights
 local function ReadAmounts()
   if InCombatLockdown() then return end
@@ -424,6 +433,8 @@ local function ReadAmounts()
   end
 end
 frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
+  if event ~= "PLAYER_EQUIPMENT_CHANGED" then cdStamp = cdStamp + 1 end
+  if event == "SPELL_UPDATE_COOLDOWN" then return end
   if event == "UNIT_SPELLCAST_SUCCEEDED" then
     if unit == "player" then OnCast(spellID) end
   elseif event == "SPELLS_CHANGED" or (event == "PLAYER_REGEN_ENABLED" and dirty) then

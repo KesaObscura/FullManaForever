@@ -781,13 +781,16 @@ test("own spell on cooldown: exact out of combat, counted from the cast in comba
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2
   cds[12051] = { 99, 1.5 } -- only the global cooldown
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(spellSlot(ns), "global cooldown hides the spell")
   cds[12051] = { 90, 480 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(not spellSlot(ns), "spell on cooldown shown out of combat")
   -- in combat the game's cooldown is secret: our own count from the cast decides
   cds[12051] = nil
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(spellSlot(ns), "not ready again after its cooldown")
   spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
@@ -919,10 +922,32 @@ end)
 -- 0.8.1 review ---------------------------------------------------------------------
 local function at(t, fn) local real = GetTime; _G.GetTime = function() return t end; fn(); _G.GetTime = real end
 
+test("0.9.14: an own spell's cooldown is read after a change or once a second, not on every update", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local reads = 0
+  spellApis({ 12051 }, { base = { [12051] = 480 } })
+  local get = C_Spell.GetSpellCooldown
+  C_Spell.GetSpellCooldown = function(...) reads = reads + 1 return get(...) end
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2
+  at(100, function() M.tick() end)
+  local first = reads
+  for k = 1, 5 do at(100 + k * 0.1, function() M.tick() end) end
+  eq(reads, first, "read on every update")
+  M.Fire("SPELL_UPDATE_COOLDOWN")
+  at(100.6, function() M.tick() end)
+  eq(reads, first + 1, "not read after a cooldown change")
+  at(101.7, function() M.tick() end)
+  eq(reads, first + 2, "not read again after a second")
+  noSpellApis()
+end)
+
+
 test("every spell cooldown is read before combat, not only the first ready spell's", function()
   local ns = M.load(nil, { class = "MAGE" })
   local cds = spellApis({ 12051, 1259823 }, { base = { [12051] = 480, [1259823] = 120 } })
   cds[1259823] = { 90, 120 } -- Eureka! on cooldown from before the reload
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2; M.tick() -- out of combat: Evocation ready, shown first
   spellApis({ 12051, 1259823 }, { secretCd = true, base = { [12051] = 480, [1259823] = 120 } })
@@ -939,6 +964,7 @@ test("with 'only in combat' the cooldowns are still read out of combat", functio
   local ns = M.load({ onlyCombat = true }, { class = "MAGE" })
   local cds = spellApis({ 12051 }, { base = { [12051] = 480 } })
   cds[12051] = { 90, 480 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2; M.tick()
   spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
@@ -964,6 +990,7 @@ test("Inner Focus: its cooldown starts when the next spell uses the buff", funct
   M.state.manaPct = 0.2; M.tick()
   ok(spellSlot(ns), "Inner Focus not shown when ready")
   cds[14751] = { 0, 0, false } -- buff up, cooldown waits
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(not spellSlot(ns), "shown while its cooldown waits")
   spellApis({ 14751 }, { secretCd = true, base = { [14751] = 180 } })
@@ -1020,6 +1047,7 @@ test("options: spell status names the spell that comes back first", function()
   local ns = M.load(nil, { class = "MAGE" })
   local cds = spellApis({ 12051, 1259823 }, { names = { [12051] = "Evocation", [1259823] = "Eureka" } })
   cds[12051], cds[1259823] = { 90, 480 }, { 90, 120 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   ns.ToggleOptions(true)
   local st
@@ -1066,6 +1094,7 @@ test("the spell marker follows the spell the icon shows", function()
   local ns = M.load({ spellThreshold = 0.5 }, { class = "WARLOCK" })
   local cds = spellApis({ 1259823, 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana." } })
   cds[1259823] = { 90, 120 } -- Eureka! (first in the list) on cooldown: Life Tap is shown
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   M.state.manaPct = 0.9; M.tick()
   local p = bar(ns).ticks[SPELL_SLOT][1].front.points[1]
@@ -1131,6 +1160,7 @@ test("a wand shot's lock shows on the spell icon too, and never hides it", funct
   M.state.manaPct = 0.2
   -- out of combat the game reports the lock on the spell itself: not the spell's cooldown
   cds[1259823] = { 99, 1.8 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.state.cooldowns[3385] = { 99, 1.8 }
   M.tick()
   local vis, l = spellSlot(ns)
@@ -1507,6 +1537,7 @@ test("Inner Focus still waits for the next spell after the spell book changes", 
   M.state.manaPct = 0.2; M.tick()
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 14751)
   cds[14751] = { 0, 0, false } -- buff up, cooldown waits
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   M.Fire("SPELLS_CHANGED") -- a new rank or talent out of combat
   spellApis({ 14751 }, { secretCd = true, base = { [14751] = 180 } })
@@ -1726,6 +1757,7 @@ test("a spell on cooldown has no mark on the bar; every ready spell has its own"
   local ticks = bar(ns).ticks[SPELL_SLOT]
   ok(ticks[1].front.shown and ticks[2].front.shown, "not one mark per ready spell")
   cds[12051], cds[1259823] = { 90, 480 }, { 95, 120 } -- both on cooldown
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   at(100, function() M.tick() end)
   ok(not ticks[1].front.shown and not ticks[2].front.shown, "mark shown while every spell is on cooldown")
   noSpellApis()
