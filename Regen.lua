@@ -227,6 +227,11 @@ function ns.BuffPlusCreate(parent, font)
           initializeFrame = function(b)
             local fs = b:CreateFontString(nil, "OVERLAY")
             if font then fs:SetFontObject(font) end
+            -- a dark outline and shadow, so the white reads on any ground
+            local file, size = fs:GetFont()
+            if file then fs:SetFont(file, size, "OUTLINE") end
+            fs:SetShadowColor(0, 0, 0, 1)
+            fs:SetShadowOffset(1, -1)
             fs:SetTextColor(1, 1, 1)
             fs:SetPoint("CENTER")
             fs:SetText(label)

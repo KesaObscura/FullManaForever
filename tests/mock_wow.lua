@@ -16,7 +16,7 @@ for _, name in ipairs({ "SetAtlas", "SetNormalAtlas", "SetPushedAtlas", "SetChec
   "SetRotation", "SetStatusBarColor", "SetStatusBarTexture", "SetTexCoord",
   "SetTextInsets", "SetThumbTexture", "SetToAlpha", "SetToplevel", "SetValueStep", "SetVertexColor",
   "SetWordWrap", "StopMovingOrSizing", "StartMoving", "SetItemByID", "SetJustifyV", "SetMaxLines",
-  "SetObeyStepOnDrag", "SetHitRectInsets", "SetDisabledFontObject" }) do
+  "SetObeyStepOnDrag", "SetHitRectInsets", "SetDisabledFontObject", "SetShadowColor", "SetShadowOffset" }) do
   methods[name] = M.noop
 end
 

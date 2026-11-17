@@ -2122,6 +2122,9 @@ test("0.9.13: in a fight the game shows the buffs' '+' labels next to the regen,
   for _, g in ipairs(box.groups) do
     eq(g.filter, "HELPFUL"); eq(g.options.maxFrameCount, 1)
     eq(g.frame.mouse, false, "a label takes the mouse")
+    local fs
+    for _, o in ipairs(M.all) do if o.parent == g.frame and o.kind == "FontString" then fs = o end end
+    ok(fs and fs.font and fs.font[3] == "OUTLINE", "a label without an outline (hard to read)")
   end
   -- rank 2 of the blessing and the Greater rank 1 with other amounts are apart; 19854 and 25894 share one
   local function group(id) for _, g in ipairs(box.groups) do if g.options.candidateFilters.includeSpellIDs[id] then return g end end end
