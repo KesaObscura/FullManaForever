@@ -2150,7 +2150,7 @@ test("0.9.13: in a fight the game shows the buffs' '+' labels next to the regen,
   local b, box = bar(ns), M.auraBox
   ok(box, "no aura container made")
   eq(box.unit, "player"); eq(box.enabled, true)
-  eq(#box.groups, 12, "one group per amount: 6 blessing, 4 totem, 2 world buffs")
+  eq(#box.groups, 19, "one group per amount: 6 blessing, 4 totem, 9 other buffs")
   for _, g in ipairs(box.groups) do
     eq(g.filter, "HELPFUL"); eq(g.options.maxFrameCount, 1)
     eq(g.frame.mouse, false, "a label takes the mouse")
