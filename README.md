@@ -164,6 +164,10 @@ budget. The `tests` folder is not part of the release zip (see `.pkgmeta`).
 **Translations**: all texts are in `Locale.lua`. Every language must have exactly the
 keys of `enUS` with the same `%s`/`%d` placeholders; `tests/run.lua` checks that.
 
+## More Forever addons
+
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die for WoW Forever — about how many seconds your target has left, live in combat.
+
 ## License
 
 [MIT](LICENSE)

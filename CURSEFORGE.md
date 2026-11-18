@@ -131,3 +131,7 @@ Vollständig auf Deutsch · Totalmente en español · Entièrement en français 
 - **Português:** Mostra a poção de mana, runa, gema de mana ou feitiço de mana certo quando está pronto e cabe na mana que falta. Barra de mana com a regra dos cinco segundos, regeneração ao vivo e tempo até a mana cheia.
 - **简体中文：** 当合适的法力药水、符文、法力宝石或自身法力技能就绪且恰好补满缺失的法力时将其点亮。带五秒规则、实时法力回复和法力回满时间的法力条。
 - **繁體中文：** 當合適的法力藥水、符文、法力寶石或自身法力技能就緒且剛好補滿缺少的法力時將其點亮。帶五秒規則、即時法力回復和法力回滿時間的法力條。
+
+## More Forever addons
+
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die for WoW Forever — about how many seconds your target has left, live in combat.
