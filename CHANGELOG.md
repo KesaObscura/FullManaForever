@@ -3,9 +3,8 @@
 **Full Mana Forever 0.9.15**
 
 Asked for by players:
-- **Time to full mana in a fight** (new switch *In combat too* under *Time to full mana*, off by default): an estimate counted with your regen from before the fight
+- **Time to full mana in a fight** (new switch *In combat too* under *Time to full mana*, off by default): an estimate counted with your regen from before the fight; the "+" of Blessing of Wisdom and Mana Spring Totem then sit under the regen
 - **What your cast costs:** while you cast a spell, the end of the bar's fill turns darker by the spell's mana cost, so you see where your mana will be when the cast lands (also in combat; not with *Only markers*). A bar faded at full mana shows at once when you start such a cast
-- **World buffs in the regen:** Wisdom of Terenas, Might of Stormwind and Warchief's Blessing count in the regen and the time to full mana like Blessing of Wisdom, with their "+" next to the regen in a fight (under it while *In combat too* shows the time to full)
 
 **Full Mana Forever 0.9.14**
 

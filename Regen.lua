@@ -104,16 +104,9 @@ local WISDOM = {
 -- Mana Spring Totem: the buff on the player while near the totem, 4-10 mana every 2 s, no end
 -- time (it comes and goes with the distance to the totem)
 local SPRING = { [5677] = 4 / 2, [10491] = 6 / 2, [10493] = 8 / 2, [10494] = 10 / 2 }
--- Forever's world buffs with mana every 5 s; each counts on its own, besides a blessing. The game
--- leaves them out of its regen (measured 18 Nov: Wisdom of Terenas, Might of Stormwind), but
--- counts gear and elixirs itself (a trinket and Lesser Wizard Blood): those are not listed here
-local WORLD = {
-  [1307068] = 18 / 5,                                       -- Wisdom of Terenas
-  [460939] = 10 / 5, [460940] = 10 / 5, [1304678] = 10 / 5, -- Might of Stormwind
-  [16609] = 10 / 5, [1304594] = 10 / 5,                     -- Warchief's Blessing
-}
+-- Gear, elixirs and world buffs such as Might of Stormwind raise the game's own regen: they are
+-- in its number already and not listed here (measured 18 Nov)
 local wisdom, wisdomUntil, spring = 0, 0, 0
-local world = {} -- [id] = { per second, end time } of the world buffs on the player
 -- The buffs are read out of combat only: in a fight the game does not tell which buff came or
 -- went, and says "no such buff" for one that is there. The blessing lasts an hour, so what was
 -- known before the fight is kept until it runs out; the totem buff depends on where the player
@@ -153,15 +146,8 @@ local function ScanBuffs()
   local w, wEnds = Strongest(get, WISDOM)
   local s = Strongest(get, SPRING)
   if w == nil or s == nil then return false end
-  local found, changed = {}, false
-  for id, perSec in pairs(WORLD) do
-    local v, ends = Strongest(get, { [id] = perSec })
-    if v == nil then return false end
-    if v > 0 then found[id] = { v, ends } end
-    if (found[id] and found[id][1] or 0) ~= (world[id] and world[id][1] or 0) then changed = true end
-  end
-  if (w ~= wisdom or s ~= spring or changed) and GetTime() < settleUntil then wipe(buckets) end
-  wisdom, wisdomUntil, spring, world = w, wEnds, s, found
+  if (w ~= wisdom or s ~= spring) and GetTime() < settleUntil then wipe(buckets) end
+  wisdom, wisdomUntil, spring = w, wEnds, s
   return true
 end
 -- mana per second from such buffs right now (0 without one)
@@ -177,9 +163,6 @@ function ns.BuffRegen()
   local n = 0
   if wisdom > 0 and now < wisdomUntil then n = n + wisdom end
   if spring > 0 and not AurasHidden() then n = n + spring end
-  for _, e in pairs(world) do
-    if now < e[2] then n = n + e[1] end
-  end
   return n
 end
 local auraFrame = CreateFrame("Frame")
@@ -199,7 +182,7 @@ auraFrame:SetScript("OnEvent", function(_, event, unit)
   drinkDirty = true
   local now = GetTime()
   if event == "PLAYER_DEAD" then
-    wisdom, wisdomUntil, spring, world = 0, 0, 0, {}
+    wisdom, wisdomUntil, spring = 0, 0, 0
     recheckAt = now + 1
     return
   end
@@ -244,7 +227,7 @@ function ns.BuffPlusCreate(parent, font)
     c:SetUnit("player")
     c:SetEnabled(true)
     local n = 0
-    for _, list in ipairs({ WISDOM, SPRING, WORLD }) do
+    for _, list in ipairs({ WISDOM, SPRING }) do
       for _, e in ipairs(ByAmount(list)) do
         n = n + 1
         local label = ("+%.1f"):format(e[1])
