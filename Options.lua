@@ -794,14 +794,14 @@ Build = function()
   ActiveIf(function() return db.fsr end, secLabel, secDD)
   ActiveIf(function() return db.fsr and db.fsrNum ~= false end, SizeStepper("fsrScale"))
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
-    function(v) db.regenText = v end, L.tipRegen), PAD, 26)
+    function(v) db.regenText = v; ns.PlacePlus() end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))
   -- time to full mana next to the regen, out of combat (0.9.7)
   c.Row(Check(col, L.optFullTimer, function() return db.fullTimer ~= false end,
-    function(v) db.fullTimer = v; ns.RefreshOptions() end, L.tipFullTimer, function() return db.regenText end), PAD + 26, 26)
+    function(v) db.fullTimer = v; ns.PlacePlus(); ns.RefreshOptions() end, L.tipFullTimer, function() return db.regenText end), PAD + 26, 26)
   -- also in a fight, as an estimate (0.9.15, off by default: owner)
   c.Row(Check(col, L.optFullTimerCombat, function() return db.fullTimerCombat end,
-    function(v) db.fullTimerCombat = v end, L.tipFullTimerCombat,
+    function(v) db.fullTimerCombat = v; ns.PlacePlus() end, L.tipFullTimerCombat,
     function() return db.regenText and db.fullTimer ~= false end), PAD + 52, 26)
 
   ------------------------------------------------------------ right column

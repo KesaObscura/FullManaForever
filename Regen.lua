@@ -104,18 +104,13 @@ local WISDOM = {
 -- Mana Spring Totem: the buff on the player while near the totem, 4-10 mana every 2 s, no end
 -- time (it comes and goes with the distance to the totem)
 local SPRING = { [5677] = 4 / 2, [10491] = 6 / 2, [10493] = 8 / 2, [10494] = 10 / 2 }
--- other buffs with mana every few seconds (world buffs, elixirs, ...); each counts on its own,
--- besides a blessing (the game itself does not count them in its regen, measured 18 Nov)
+-- Forever's world buffs with mana every 5 s; each counts on its own, besides a blessing. The game
+-- leaves them out of its regen (measured 18 Nov: Wisdom of Terenas, Might of Stormwind), but
+-- counts gear and elixirs itself (a trinket and Lesser Wizard Blood): those are not listed here
 local WORLD = {
-  [1307068] = 18 / 5,                                   -- Wisdom of Terenas
+  [1307068] = 18 / 5,                                       -- Wisdom of Terenas
   [460939] = 10 / 5, [460940] = 10 / 5, [1304678] = 10 / 5, -- Might of Stormwind
-  [16609] = 10 / 5, [1304594] = 10 / 5,                 -- Warchief's Blessing
-  [1250932] = 10 / 5,                                   -- Elixir of sinister regeneration
-  [1250942] = 3 / 5, [1250944] = 6 / 5, [1250948] = 20 / 5, -- Elixirs of wizard blood
-  [24268] = 60 / 5,                                     -- Marli's Brain Boost (30 s)
-  [19634] = 50 / 3,                                     -- Mana renewal (15 s)
-  [446088] = 24 / 5,                                    -- Leyline attunement
-  [1307259] = 15 / 5,                                   -- Mana well (seated nearby)
+  [16609] = 10 / 5, [1304594] = 10 / 5,                     -- Warchief's Blessing
 }
 local wisdom, wisdomUntil, spring = 0, 0, 0
 local world = {} -- [id] = { per second, end time } of the world buffs on the player

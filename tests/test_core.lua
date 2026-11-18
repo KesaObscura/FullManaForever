@@ -2150,7 +2150,7 @@ test("0.9.13: in a fight the game shows the buffs' '+' labels next to the regen,
   local b, box = bar(ns), M.auraBox
   ok(box, "no aura container made")
   eq(box.unit, "player"); eq(box.enabled, true)
-  eq(#box.groups, 19, "one group per amount: 6 blessing, 4 totem, 9 other buffs")
+  eq(#box.groups, 12, "one group per amount: 6 blessing, 4 totem, 2 world buffs")
   for _, g in ipairs(box.groups) do
     eq(g.filter, "HELPFUL"); eq(g.options.maxFrameCount, 1)
     eq(g.frame.mouse, false, "a label takes the mouse")
@@ -3322,4 +3322,16 @@ test("cast cost: a cast at full mana shows the faded bar at once, it fades again
   eq(b.alpha, 0.3, "not faded again after the cast")
   _G.C_Spell, _G.UnitCastingInfo = nil, nil
   M.state.time = nil
+end)
+
+test("0.9.15: with the time to full in a fight the '+' labels go under the regen, not into the timer", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT, auraBox = true })
+  local b = bar(ns)
+  local host = M.upvalue(ns.BuffPlusPlace, "plus").host
+  ok(host, "no label host")
+  eq(host.points[1][1], "LEFT", "labels not next to the regen by default")
+  ns.db.fullTimerCombat = true; ns.PlacePlus()
+  eq(host.points[1][1], "TOPLEFT"); eq(host.points[1][2], b.regen); eq(host.points[1][3], "BOTTOMLEFT")
+  ns.db.fullTimer = false; ns.PlacePlus()
+  eq(host.points[1][1], "LEFT", "labels moved down without a timer")
 end)

@@ -1277,7 +1277,9 @@ end
 -- behind its arrow; under the text when it is right-aligned (nothing may grow into the bar)
 function ns.PlacePlus()
   if not (bar and ns.BuffPlusPlace) then return end
-  if bar.plusBelow then
+  -- with the time to full mana in a fight the labels would run into it: they go under the regen
+  local timerInFight = db.regenText and db.fullTimer ~= false and db.fullTimerCombat
+  if bar.plusBelow or timerInFight then
     ns.BuffPlusPlace("TOPLEFT", bar.regen, "BOTTOMLEFT", 0, -1)
   else
     ns.BuffPlusPlace("LEFT", bar.regen, "RIGHT", bar.plusDx or 3, 0)
