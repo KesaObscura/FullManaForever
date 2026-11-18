@@ -100,9 +100,9 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 ## Tested so far
 
-- **In the live game** since launch (4 Nov) and in the beta, priest level 16–26: in combat, solo, in a party and in a full dungeon run.
+- **In the live game** since launch (4 Nov) and in the beta, priest level 16–32: in combat, solo, in a party and in a full dungeon run.
 - Potions (also a second potion after the 2-minute cooldown in the same fight), wanding, Eureka! and Inner Focus, Read Leyline on a Skyborne mage.
-- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Mana Spring Totem, Resurrection Sickness; fading out of combat; time to full mana while drinking.
+- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Blessing of Wisdom, Mana Spring Totem, Resurrection Sickness; fading out of combat; time to full mana while drinking and in a fight; the cast cost on the bar, also in combat.
 - Profiles across several characters, `/fmf hold`, the icon order, the item list as priest, mage and druid.
 - "Low mana!" and "Out of mana!" in the party chat.
 - The bar over the mana bar of Forever Unit Frames (only markers, moved separately, above other frames).
