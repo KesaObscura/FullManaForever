@@ -1,9 +1,14 @@
 # Changelog
 
+**Full Mana Forever 0.9.14**
+
+- Uses far less memory (about a tenth when you stand still): the addon now looks at your buffs, your spell book and your spells' cooldowns only when they change, and the icons ask the game for a plain number instead of a colour
+- Fading: when your mana fills up the bar now fades once, a moment later, instead of fading, coming back and fading again
+
 **Full Mana Forever 0.9.13**
 
 - In a fight Blessing of Wisdom and Mana Spring Totem now show next to the regen for exactly as long as they are on you: "17.5/s +3.6 +2.0"
-- A blessing gained or lost during a fight shows at once, and so does walking away from the totem
+- A blessing gained or lost during a fight shows at once; walking away from the totem shows a few seconds later, when the game takes its buff off
 - The texts at the mana bar (mana numbers, seconds, regen, time to full mana) get a dark outline, so they read on any ground
 - The Lock and Settings buttons of the unlocked frame get gold text, like the settings window
 

@@ -781,13 +781,16 @@ test("own spell on cooldown: exact out of combat, counted from the cast in comba
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2
   cds[12051] = { 99, 1.5 } -- only the global cooldown
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(spellSlot(ns), "global cooldown hides the spell")
   cds[12051] = { 90, 480 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(not spellSlot(ns), "spell on cooldown shown out of combat")
   -- in combat the game's cooldown is secret: our own count from the cast decides
   cds[12051] = nil
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(spellSlot(ns), "not ready again after its cooldown")
   spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
@@ -919,10 +922,32 @@ end)
 -- 0.8.1 review ---------------------------------------------------------------------
 local function at(t, fn) local real = GetTime; _G.GetTime = function() return t end; fn(); _G.GetTime = real end
 
+test("0.9.14: an own spell's cooldown is read after a change or once a second, not on every update", function()
+  local ns = M.load(nil, { class = "MAGE" })
+  local reads = 0
+  spellApis({ 12051 }, { base = { [12051] = 480 } })
+  local get = C_Spell.GetSpellCooldown
+  C_Spell.GetSpellCooldown = function(...) reads = reads + 1 return get(...) end
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.2
+  at(100, function() M.tick() end)
+  local first = reads
+  for k = 1, 5 do at(100 + k * 0.1, function() M.tick() end) end
+  eq(reads, first, "read on every update")
+  M.Fire("SPELL_UPDATE_COOLDOWN")
+  at(100.6, function() M.tick() end)
+  eq(reads, first + 1, "not read after a cooldown change")
+  at(101.7, function() M.tick() end)
+  eq(reads, first + 2, "not read again after a second")
+  noSpellApis()
+end)
+
+
 test("every spell cooldown is read before combat, not only the first ready spell's", function()
   local ns = M.load(nil, { class = "MAGE" })
   local cds = spellApis({ 12051, 1259823 }, { base = { [12051] = 480, [1259823] = 120 } })
   cds[1259823] = { 90, 120 } -- Eureka! on cooldown from before the reload
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2; M.tick() -- out of combat: Evocation ready, shown first
   spellApis({ 12051, 1259823 }, { secretCd = true, base = { [12051] = 480, [1259823] = 120 } })
@@ -939,6 +964,7 @@ test("with 'only in combat' the cooldowns are still read out of combat", functio
   local ns = M.load({ onlyCombat = true }, { class = "MAGE" })
   local cds = spellApis({ 12051 }, { base = { [12051] = 480 } })
   cds[12051] = { 90, 480 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   M.state.manaPct = 0.2; M.tick()
   spellApis({ 12051 }, { secretCd = true, base = { [12051] = 480 } })
@@ -964,6 +990,7 @@ test("Inner Focus: its cooldown starts when the next spell uses the buff", funct
   M.state.manaPct = 0.2; M.tick()
   ok(spellSlot(ns), "Inner Focus not shown when ready")
   cds[14751] = { 0, 0, false } -- buff up, cooldown waits
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   ok(not spellSlot(ns), "shown while its cooldown waits")
   spellApis({ 14751 }, { secretCd = true, base = { [14751] = 180 } })
@@ -1020,6 +1047,7 @@ test("options: spell status names the spell that comes back first", function()
   local ns = M.load(nil, { class = "MAGE" })
   local cds = spellApis({ 12051, 1259823 }, { names = { [12051] = "Evocation", [1259823] = "Eureka" } })
   cds[12051], cds[1259823] = { 90, 480 }, { 90, 120 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   ns.ToggleOptions(true)
   local st
@@ -1066,6 +1094,7 @@ test("the spell marker follows the spell the icon shows", function()
   local ns = M.load({ spellThreshold = 0.5 }, { class = "WARLOCK" })
   local cds = spellApis({ 1259823, 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana." } })
   cds[1259823] = { 90, 120 } -- Eureka! (first in the list) on cooldown: Life Tap is shown
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   ns.Spells.Rebuild()
   M.state.manaPct = 0.9; M.tick()
   local p = bar(ns).ticks[SPELL_SLOT][1].front.points[1]
@@ -1131,6 +1160,7 @@ test("a wand shot's lock shows on the spell icon too, and never hides it", funct
   M.state.manaPct = 0.2
   -- out of combat the game reports the lock on the spell itself: not the spell's cooldown
   cds[1259823] = { 99, 1.8 }
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.state.cooldowns[3385] = { 99, 1.8 }
   M.tick()
   local vis, l = spellSlot(ns)
@@ -1507,6 +1537,7 @@ test("Inner Focus still waits for the next spell after the spell book changes", 
   M.state.manaPct = 0.2; M.tick()
   M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 14751)
   cds[14751] = { 0, 0, false } -- buff up, cooldown waits
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   M.tick()
   M.Fire("SPELLS_CHANGED") -- a new rank or talent out of combat
   spellApis({ 14751 }, { secretCd = true, base = { [14751] = 180 } })
@@ -1726,6 +1757,7 @@ test("a spell on cooldown has no mark on the bar; every ready spell has its own"
   local ticks = bar(ns).ticks[SPELL_SLOT]
   ok(ticks[1].front.shown and ticks[2].front.shown, "not one mark per ready spell")
   cds[12051], cds[1259823] = { 90, 480 }, { 95, 120 } -- both on cooldown
+  M.Fire("SPELL_UPDATE_COOLDOWN") -- the game tells of every cooldown change
   at(100, function() M.tick() end)
   ok(not ticks[1].front.shown and not ticks[2].front.shown, "mark shown while every spell is on cooldown")
   noSpellApis()
@@ -2168,6 +2200,53 @@ test("0.9.13: entered the game in a fight: the '+' labels are made when it ends;
   ok(not ns.BuffPlusLive())
   M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
   ok(M.auraBox and ns.BuffPlusLive(), "no container after the fight")
+end)
+
+test("0.9.14: a spell book that changes in a fight is read again after it, not during it", function()
+  local ns = M.load({ oomChat = "auto" }, { bags = POT })
+  local reads = 0
+  local book = C_SpellBook
+  local apis = spellApis({ 12051 }, { base = { [12051] = 480 } })
+  local nl = C_SpellBook and C_SpellBook.GetNumSpellBookSkillLines
+  if not nl then return end -- this mock has no spell book lines: nothing to count
+  C_SpellBook.GetNumSpellBookSkillLines = function(...) reads = reads + 1 return nl(...) end
+  M.state.group, M.state.combat = true, true
+  M.Fire("PLAYER_REGEN_DISABLED")
+  ns.OomTick(1)
+  local first = reads
+  for _ = 1, 5 do M.Fire("SPELLS_CHANGED"); ns.OomTick(1) end
+  ok(first > 0, "the book never read"); eq(reads, first, "the book read again during the fight")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  eq(reads, first + 1, "the book not read after the fight")
+  noSpellApis()
+end)
+
+test("0.9.14: the icons take their alpha from a numeric curve; the colour curve stays as the fallback", function()
+  local ns = M.load(nil, { bags = { [3385] = 2 } })
+  M.state.maxMana = 4000
+  local colour, numeric = 0, 0
+  local real = _G.UnitPowerPercent
+  _G.UnitPowerPercent = function(u, p, pr, curve)
+    if type(curve) == "table" and curve.numeric then numeric = numeric + 1 else colour = colour + 1 end
+    return real(u, p, pr, curve)
+  end
+  M.state.manaPct = 0.5; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit at 50 %")
+  ok(numeric > 0, "no numeric curve read")
+  eq(colour, 0, "a colour curve read while the numeric form works")
+  local c0 = colour
+  M.state.manaPct = 0.95; M.tick()
+  ok(not slotVisible(ns, 1), "potion lit at 95 %")
+  -- the numeric form stops working: the colour curves take over, the icon still right
+  _G.UnitPowerPercent = function(u, p, pr, curve)
+    if type(curve) == "table" and curve.numeric then return "x" end
+    colour = colour + 1
+    return real(u, p, pr, curve)
+  end
+  M.state.manaPct = 0.5; M.tick()
+  ok(slotVisible(ns, 1), "potion not lit after the fallback")
+  ok(colour > c0, "the colour curve not used as the fallback")
+  _G.UnitPowerPercent = real
 end)
 
 -- 0.9.0: the bar with unit frames of other addons (a comment on CurseForge)
@@ -2778,39 +2857,43 @@ test("0.9.4: out of combat the bar and its texts fade at full mana, come back wh
   for _, a in ipairs({ alphas() }) do eq(a, 1, "not back after mana was spent") end
   M.state.maxMana = 1208; M.state.manaPct = 1207 / 1208; at(115)
   eq(b.alpha, 1, "one missing point counted as full")
-  -- the mana fills up: the events stop and the bar fades smoothly over 1.5 s
+  -- the mana fills up: the events stop, and after a short wait the bar fades smoothly over 1.5 s
+  -- (one late mana update right after "full" must not bring it back)
   M.state.manaPct = 1; power(120)
   eq(b.alpha, 1, "faded while the mana was still changing")
-  at(120.5); local mid = b.alpha
+  at(121.5); eq(b.alpha, 1, "faded before the wait was over")
+  power(121.6) -- the game's late update after the mana is full
+  eq(b.alpha, 1)
+  at(124.6); local mid = b.alpha
   ok(mid < 1 and mid > 0.3, "no smooth fade when the mana filled up: " .. tostring(mid))
-  at(121); ok(b.alpha < mid and b.alpha > 0.3, "fade does not go on: " .. tostring(b.alpha))
+  at(125.1); ok(b.alpha < mid and b.alpha > 0.3, "fade does not go on: " .. tostring(b.alpha))
   ok(select(2, ns.FadeAlpha()), "fade not updated on every frame")
-  at(121.6); eq(b.alpha, 0.3)
-  M.state.time = 121.7; M.Fire("UNIT_POWER_FREQUENT", "player", "ENERGY"); at(121.8)
+  at(125.7); eq(b.alpha, 0.3)
+  M.state.time = 125.8; M.Fire("UNIT_POWER_FREQUENT", "player", "ENERGY"); at(125.9)
   eq(b.alpha, 0.3, "energy in cat form brought the mana bar back")
   ok(not select(2, ns.FadeAlpha()), "frame update left running after the fade")
   -- a fight shows everything at once, even at full mana; after it the bar fades smoothly
-  M.state.combat = true; at(130)
+  M.state.combat = true; at(132.5)
   for _, a in ipairs({ alphas() }) do eq(a, 1, "faded in combat") end
-  M.state.combat = false; at(130.5)
+  M.state.combat = false; at(135.5)
   ok(b.alpha < 1 and b.alpha > 0.3, "no smooth fade after the fight: " .. tostring(b.alpha))
-  at(132); eq(b.alpha, 0.3)
+  at(137); eq(b.alpha, 0.3)
   -- with the settings open the fading shows as it is: a change is seen at once (owner, 6 Nov)
-  ns.ToggleOptions(true); at(133)
+  ns.ToggleOptions(true); at(138)
   eq(b.alpha, 0.3, "settings window stops the fading")
-  ns.db.fadeAlpha = 0.6; at(133.1)
+  ns.db.fadeAlpha = 0.6; at(138.1)
   eq(b.alpha, 0.6, "a change of the setting not seen at once")
-  ns.ToggleOptions(); ns.db.fadeAlpha = 0.3; at(133.2)
+  ns.ToggleOptions(); ns.db.fadeAlpha = 0.3; at(138.2)
   eq(b.alpha, 0.3)
   -- without "only at full mana": fades with mana missing too, mana changes do not count
   M.state.manaPct = 0.5
   ns.db.fadeFull = false
-  power(134)
+  power(139)
   eq(b.alpha, 0.3, "not faded with mana missing while 'only at full mana' is off")
   -- the unlocked frame and the default never fade
-  ns.db.locked = false; at(135)
+  ns.db.locked = false; at(140)
   eq(b.alpha, 1, "unlocked frame faded")
-  ns.db.locked = true; ns.db.fadeAlpha = 1; at(140)
+  ns.db.locked = true; ns.db.fadeAlpha = 1; at(145)
   eq(b.alpha, 1, "faded with the setting off")
   M.state.maxMana, M.state.time = 1000, nil
 end)
@@ -2842,11 +2925,12 @@ test("0.9.4: a failing fade shows the bar fully and fades again once it works", 
   M.state.manaPct = 1
   local b = bar(ns)
   M.tick(); eq(b.alpha, 0.3)
-  local real = C_CurveUtil.CreateColorCurve
+  local real, realN = C_CurveUtil.CreateColorCurve, C_CurveUtil.CreateCurve
   C_CurveUtil.CreateColorCurve = function() error("broken") end
+  C_CurveUtil.CreateCurve = function() error("broken") end
   M.state.maxMana = 1200 -- a new curve is needed
   M.tick(); eq(b.alpha, 1, "faded bar after an error")
-  C_CurveUtil.CreateColorCurve = real
+  C_CurveUtil.CreateColorCurve, C_CurveUtil.CreateCurve = real, realN
   M.state.maxMana = 1000
   M.tick(); M.tick()
   ok(b.alpha < 1, "stuck at full after the error was gone")
@@ -3055,10 +3139,12 @@ test("0.9.8: the Forever teas (Nutritious Drink) count as drinking, by ID and by
     M.tick()
     base, M.state.time = 51, 101
     aura = { spellId = case[1], name = case[2], expirationTime = 111 }
+    M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
     M.tick()
     eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 510) / 15), "drink " .. case[1] .. " not counted")
     -- food without mana is no drink
     aura = { spellId = 1300001, name = "Well Fed", expirationTime = 111 }
+    M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
     M.tick()
     eq(b.fullIn.text, ns.L.fullIn:format(1364 / 51), "a buff taken for a drink")
     _G.C_UnitAuras = nil
@@ -3071,6 +3157,25 @@ test("0.9.8: Mindtap Talisman and Second Wind are in the gear group", function()
   local ns = M.load()
   ok(listed(ns, "gear", 18371), "Mindtap Talisman missing")
   ok(listed(ns, "gear", 11819), "Second Wind missing")
+end)
+
+test("0.9.14: the buffs are read for a drink only after they changed, not on every update", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1879, 0.5, 100
+  _G.GetPowerRegen = function() return 15, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end, GetSpellName = function(id) return id == 430 and "Drink" or nil end }
+  local reads = 0
+  local buffs = { { spellId = 1245, name = "Fortitude", expirationTime = 4000 }, { spellId = 7128, name = "Inner Fire", expirationTime = 4000 } }
+  _G.C_UnitAuras = { GetAuraDataByIndex = function(_, i) reads = reads + 1 return buffs[i] end }
+  M.tick()
+  local first = reads
+  for _ = 1, 50 do M.state.time = M.state.time + 0.1; M.tick() end
+  eq(reads, first, "the buffs read on every update")
+  M.Fire("UNIT_AURA", "player"); M.tick()
+  ok(reads > first and reads <= first + 3, "the buffs not read again after they changed")
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  _G.GetPowerRegen, _G.C_Spell = nil, nil
 end)
 
 test("0.9.7: time to full mana counts the end of drinking (drink aura out of combat)", function()
@@ -3087,13 +3192,18 @@ test("0.9.7: time to full mana counts the end of drinking (drink aura out of com
   -- drinking a new Forever water (unknown ID, same name): 51/s for 10 more seconds, then 15/s
   base, M.state.time = 51, 101
   aura = { spellId = 1249999, name = "Drink", expirationTime = 111 }
+  M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
   M.tick()
   eq(b.fullIn.text, ns.L.fullIn:format(10 + (1364 - 510) / 15), "end of drinking not counted")
   -- enough drink left for all of it
-  aura.expirationTime = 200; M.tick()
+  aura.expirationTime = 200
+  M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
+  M.tick()
   eq(b.fullIn.text, ns.L.fullIn:format(1364 / 51))
   -- the drink is over: the plain rate
-  aura, base = nil, 15; M.tick()
+  aura, base = nil, 15
+  M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
+  M.tick()
   eq(b.fullIn.text, ns.L.fullIn:format(1364 / 15))
   _G.C_UnitAuras = nil
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil

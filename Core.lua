@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.13"
+ns.VERSION = "0.9.14"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -634,6 +634,43 @@ local function HealthColor(curve)
   WarnOnce("health", L.warnHealth)
 end
 
+-- Numeric step curves for the mana: the engine answers with a (secret) number that goes straight
+-- into SetAlpha (seen in game, 17 Nov: steps right, in the first call form). A colour curve
+-- answers with a new colour object on every call (about 1.3 KB each, many per second), so the
+-- numeric form is used while it works; the colour form stays as the fallback.
+local numericOK = true
+local function NumCurve(...)
+  local c = C_CurveUtil.CreateCurve()
+  c:SetType(Enum.LuaCurveType.Step)
+  local pts = select("#", ...)
+  for i = 1, pts, 2 do c:AddPoint((select(i, ...)), (select(i + 1, ...))) end
+  return c
+end
+-- alpha of frame from a numeric curve over the mana; false when that form does not work here
+local function NumAlpha(frame, ncurve)
+  if not numericOK or not ncurve then return false end
+  local ok, a = TryPower(1, ncurve)
+  if ok and (type(a) == "number" or IsSecret(a)) and pcall(frame.SetAlpha, frame, a) then return true end
+  numericOK = false
+  Debug("numeric", "numeric curves do not work: colour curves are used")
+  return false
+end
+-- the numeric twin of BandCurve (alpha 1 while lo < mana% <= hi)
+local function BandNum(lo, hi)
+  if not (C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType) then return nil end
+  local ok, c = pcall(function()
+    if lo and lo >= 0 and lo >= hi then return NumCurve(0, 0) end
+    local s = Scale()
+    if lo and lo >= 0 then
+      if hi < 1 then return NumCurve(0, 0, (lo + EPS) * s, 1, (math.max(hi, 0) + EPS) * s, 0) end
+      return NumCurve(0, 0, (lo + EPS) * s, 1)
+    end
+    if hi < 1 then return NumCurve(0, 1, (math.max(hi, 0) + EPS) * s, 0) end
+    return NumCurve(0, 1)
+  end)
+  return ok and c or nil
+end
+
 -- applies the engine's (secret) alpha; without a usable answer the frame gets failAlpha.
 -- Mana and HP gates fail closed (0): a hidden icon costs nothing, a wrong one wastes a potion.
 local function ApplyAlpha(frame, color, failAlpha)
@@ -929,9 +966,12 @@ local function PickMeasures()
   if #oomBook == 0 and now - oomRead >= 2 then oomBookDirty = true end
   local lowAt, outAt = LowAt(), OutAt()
   local key = ("%s:%.3f:%s:%.3f"):format(tostring(db.oomLow ~= false), lowAt, tostring(db.oomOut ~= false), outAt)
-  if not oomBookDirty and max == oomMax and key == oomKey then return end
+  -- a changed book (forms, new ranks) is read again only out of combat, or in a fight while the
+  -- list is still empty: each read makes a few hundred tables, and the event can come often
+  local read = oomBookDirty and (#oomBook == 0 or not InCombatLockdown())
+  if not read and max == oomMax and key == oomKey then return end
   oomKey = key
-  if oomBookDirty then
+  if read then
     local ok, list = pcall(ReadBook)
     oomBook = ok and list or {}
     oomBookDirty = false
@@ -1024,6 +1064,8 @@ oomFrame:SetScript("OnEvent", function(_, event, a1, a2, a3)
   if event == "PLAYER_REGEN_ENABLED" then
     oomLast, lowLast = nil, nil
     if next(oomBad) then wipe(oomBad); oomMax = nil end -- blocked spells count again
+    -- a book that changed during the fight is read now (once), ready for the next one
+    if oomBookDirty and db and db.oomChat ~= nil and db.oomChat ~= "off" then pcall(PickMeasures) end
     return
   end
   if not db or db.oomChat == nil or db.oomChat == "off" then return end
@@ -1876,8 +1918,10 @@ end
 local function ApplyBand(l, lo, hi)
   lo = lo or -1
   if l.lo ~= lo or l.hi ~= hi then
-    l.curve, l.lo, l.hi = BandCurve(lo >= 0 and lo or nil, hi), lo, hi
+    l.ncurve, l.curve, l.lo, l.hi = BandNum(lo >= 0 and lo or nil, hi), nil, lo, hi
   end
+  if NumAlpha(l, l.ncurve) then return end
+  l.curve = l.curve or BandCurve(lo >= 0 and lo or nil, hi)
   ApplyAlpha(l, PowerColor(l.curve), 0)
 end
 
@@ -2129,7 +2173,7 @@ end
 -- the five-second rule the casting rate runs first (0 without talents), then the normal rate.
 -- Drinking: its higher rate runs until the drink aura ends, then the normal rate (Regen.lua).
 -- At full mana the text is hidden by a step curve (alpha), like the fading.
-local timerCurve, timerKey, timerFull, timerFullKey
+local timerCurve, timerKey, timerFull, timerFullNum, timerFullMax, timerFullScale
 local function UpdateFullTimer(visible)
   local fs = bar.fullIn
   if not visible or not db.regenText or db.fullTimer == false or InCombatLockdown()
@@ -2149,31 +2193,42 @@ local function UpdateFullTimer(visible)
   -- in game). A spell breaks the drink, so drink and rule never run together.
   local dleft, normal
   if left <= 0 and ns.DrinkLeft then dleft, normal = ns.DrinkLeft() end
-  local pts
+  -- the curve's points (x = share of max mana, y = seconds): two or three, kept in upvalues so
+  -- no table is made per update; the curve is built again only when one of its inputs changed
+  local x2, y1, y2, n = 1, 0, 0, 2
   if dleft and type(normal) == "number" and normal > 0 and normal < base then
     local m1 = dleft * base                                 -- mana still coming from the drink
     if m1 >= max then
-      pts = { { 0, max / base }, { 1, 0 } }
+      y1 = max / base
     else
-      pts = { { 0, dleft + (max - m1) / normal }, { 1 - m1 / max, dleft }, { 1, 0 } }
+      y1, x2, y2, n = dleft + (max - m1) / normal, 1 - m1 / max, dleft, 3
     end
-    left = -dleft -- part of the curve's key (changes while drinking)
+    left = -dleft -- part of the curve's inputs (changes while drinking)
   elseif left > 0 and c > 0 and left * c >= max then
-    pts = { { 0, max / c }, { 1, 0 } }                    -- all of it within the rule
+    y1 = max / c                                           -- all of it within the rule
   elseif left > 0 and c > 0 then
     local m1 = left * c                                    -- mana gained in the rest of the rule
-    pts = { { 0, left + (max - m1) / base }, { 1 - m1 / max, left }, { 1, 0 } }
+    y1, x2, y2, n = left + (max - m1) / base, 1 - m1 / max, left, 3
   elseif left > 0 then
-    pts = { { 0, left + max / base }, { 1, left } }        -- nothing during the rule
+    y1, y2 = left + max / base, left                       -- nothing during the rule
   else
-    pts = { { 0, max / base }, { 1, 0 } }
+    y1 = max / base
   end
-  local key = ("%.2f:%.2f:%.1f:%.2f:%d:%d"):format(base, c, left, type(normal) == "number" and normal or 0, max, Scale())
-  if key ~= timerKey then
+  -- inputs rounded as far as they show: regen to 0.01, the rule or drink to 0.1 s
+  local scale = Scale()
+  local kb, kc, kl = math.floor(base * 100 + 0.5), math.floor(c * 100 + 0.5), math.floor(left * 10 + 0.5)
+  local kn = type(normal) == "number" and math.floor(normal * 100 + 0.5) or 0
+  local tk = timerKey
+  if not tk or tk[1] ~= kb or tk[2] ~= kc or tk[3] ~= kl or tk[4] ~= kn or tk[5] ~= max or tk[6] ~= scale then
     local cv = C_CurveUtil.CreateCurve()
     if Enum and Enum.LuaCurveType and Enum.LuaCurveType.Linear then cv:SetType(Enum.LuaCurveType.Linear) end
-    for _, p in ipairs(pts) do cv:AddPoint(p[1] * Scale(), p[2]) end
-    timerCurve, timerKey = cv, key
+    cv:AddPoint(0, y1)
+    if n == 3 then cv:AddPoint(x2 * scale, y2) end
+    cv:AddPoint(scale, n == 3 and 0 or y2)
+    timerCurve = cv
+    tk = tk or {}
+    tk[1], tk[2], tk[3], tk[4], tk[5], tk[6] = kb, kc, kl, kn, max, scale
+    timerKey = tk
   end
   local ok, secs = TryPower(powerVariant or 1, timerCurve)
   local okF, text = false, nil
@@ -2184,15 +2239,20 @@ local function UpdateFullTimer(visible)
   end
   fs:SetText(text)
   -- hidden at full mana
-  local fkey = max .. ":" .. Scale()
-  if fkey ~= timerFullKey then
-    local fc = C_CurveUtil.CreateColorCurve()
-    fc:SetType(Enum.LuaCurveType.Step)
-    fc:AddPoint(0, CreateColor(1, 1, 1, 1))
-    fc:AddPoint((1 - 0.5 / max) * Scale(), CreateColor(1, 1, 1, 0))
-    timerFull, timerFullKey = fc, fkey
+  if max ~= timerFullMax or scale ~= timerFullScale then
+    timerFullNum = numericOK and NumCurve(0, 1, (1 - 0.5 / max) * scale, 0) or nil
+    timerFull, timerFullMax, timerFullScale = nil, max, scale
   end
-  ApplyAlpha(fs, PowerColor(timerFull), 0)
+  if not NumAlpha(fs, timerFullNum) then
+    if not timerFull then
+      local fc = C_CurveUtil.CreateColorCurve()
+      fc:SetType(Enum.LuaCurveType.Step)
+      fc:AddPoint(0, CreateColor(1, 1, 1, 1))
+      fc:AddPoint((1 - 0.5 / max) * scale, CreateColor(1, 1, 1, 0))
+      timerFull = fc
+    end
+    ApplyAlpha(fs, PowerColor(timerFull), 0)
+  end
   if not fs:IsShown() then fs:Show() end
 end
 
@@ -2229,8 +2289,11 @@ end
 -- changes and stops once it is full, so the fade starts when the mana has filled up; the event
 -- is only counted, its value never read. The first value after a login is taken at once.
 local FADE_TIME = 1.5
+-- the fade starts this long after the last reason to show: the game sends one more mana update
+-- a moment after the mana is full, which made the bar come back and fade a second time
+local FADE_WAIT = 2.5
 local fadeA, holdAt, quietFrom = 1, -math.huge, nil
-local fadeCurves, fadeCurveKey = {}, nil
+local fadeCurves, fadeNum, fadeCurveKey = {}, {}, nil
 
 local fadeFrame = CreateFrame("Frame")
 -- protected: a client that refuses the event (UNIT_HEALTH_FREQUENT cannot be registered in
@@ -2267,7 +2330,7 @@ local function UpdateFade()
   local combatOff = InCombatLockdown() and not (db.fadeCombat and db.fadeFull ~= false)
   local off = a >= 1 or not db.locked or combatOff or false
   if off then holdAt = now end
-  local p = (now - holdAt) / FADE_TIME
+  local p = (now - holdAt - FADE_WAIT) / FADE_TIME
   if p > 1 then p = 1 elseif p < 0 then p = 0 end
   -- eased, in steps of 2 % (each step of the curve below is built once)
   local v = math.floor((1 - (1 - a) * (1 - (1 - p) * (1 - p))) * 50 + 0.5) / 50
@@ -2285,7 +2348,22 @@ local function UpdateFade()
     return false
   end
   local key = max .. ":" .. Scale()
-  if key ~= fadeCurveKey then wipe(fadeCurves); fadeCurveKey = key end
+  if key ~= fadeCurveKey then wipe(fadeCurves); wipe(fadeNum); fadeCurveKey = key end
+  bar.fadeA = nil -- the alpha comes from the engine (secret): set on every update
+  local n = numericOK and fadeNum[v]
+  if numericOK and not n then
+    n = NumCurve(0, 1, (1 - 0.5 / max) * Scale(), v)
+    fadeNum[v] = n
+  end
+  if n then
+    -- one reading of the engine, its number on the bar and the texts
+    local ok, a = TryPower(1, n)
+    if ok and (type(a) == "number" or IsSecret(a)) and pcall(bar.SetAlpha, bar, a) then
+      for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(a) end
+      return p < 1
+    end
+    numericOK = false
+  end
   local c = fadeCurves[v]
   if not c then
     c = C_CurveUtil.CreateColorCurve()
@@ -2295,7 +2373,6 @@ local function UpdateFade()
     fadeCurves[v] = c
   end
   local color = PowerColor(c)
-  bar.fadeA = nil -- the alpha comes from the engine (secret): set on every update
   ApplyAlpha(bar, color, 1)
   for _, field in pairs(TEXT_KEYS) do ApplyAlpha(bar[field], color, 1) end
   return p < 1

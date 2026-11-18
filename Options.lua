@@ -264,11 +264,12 @@ local function Stepper(parent, x, text, get, set, o)
     s.edit:SetText(tostring(math.floor(v * (o.scale or 1) + 0.5)))
     s.value:Hide(); s.edit:Show(); s.edit:SetFocus(); s.edit:HighlightText()
   end)
+  local buttons = { { s.minus, -1 }, { s.plus, 1 } } -- made once, not on every refresh
   s.Refresh = function()
     local v = get()
     s.value:SetText(o.fmt(v))
     -- a button that would not change anything is greyed out
-    for _, b in ipairs({ { s.minus, -1 }, { s.plus, 1 } }) do
+    for _, b in ipairs(buttons) do
       local on = step(v, b[2]) ~= v
       b[1]:SetEnabled(on)
       b[1]:SetAlpha(on and 1 or 0.35)

@@ -83,7 +83,7 @@ function methods:GetFrameLevel() return self.level or 1 end
 function methods:SetFrameLevel(l) self.level = l end
 function methods:GetChecked() return self.checked end
 function methods:SetChecked(v) self.checked = v end
-function methods:SetAlpha(a) self.alpha = a end
+function methods:SetAlpha(a) if type(a) == "table" and a.v ~= nil and getmetatable(a) then a = a.v end self.alpha = a end
 function methods:SetScale(v) self.scale = v end
 function methods:GetScale() return self.scale or 1 end
 function methods:SetEnabled(v) self.enabled = v and true or false end
@@ -220,14 +220,20 @@ function M.reset(opts)
       local pts = {}
       return {
         numeric = true,
-        SetType = M.noop,
+        -- a step curve keeps the value of the last point at or below x (seen in game, 17 Nov)
+        SetType = function(self, t) self.step = t == 1 end,
         AddPoint = function(_, x, y)
           assert(not isSecret(x) and not isSecret(y), "secret point")
           pts[#pts + 1] = { x, y }
           table.sort(pts, function(p, q) return p[1] < q[1] end)
         end,
-        Evaluate = function(_, x)
+        Evaluate = function(self, x)
           assert(not isSecret(x), "Evaluate refuses secrets")
+          if self.step then
+            local r = pts[1][2]
+            for _, p in ipairs(pts) do if x >= p[1] then r = p[2] end end
+            return r
+          end
           if x <= pts[1][1] then return pts[1][2] end
           for i = 2, #pts do
             if x <= pts[i][1] then
