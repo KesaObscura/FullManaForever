@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.9.15**
+
+Asked for by players:
+- **Time to full mana in a fight** (new switch *In combat too* under *Time to full mana*, off by default): an estimate counted with your regen from before the fight
+
 **Full Mana Forever 0.9.14**
 
 - Uses far less memory (about a tenth when you stand still): the addon now looks at your buffs, your spell book and your spells' cooldowns only when they change, and the icons ask the game for a plain number instead of a colour

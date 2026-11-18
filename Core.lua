@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.14"
+ns.VERSION = "0.9.15"
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -39,6 +39,7 @@ local DEFAULTS = {
   oomOut     = true,    -- "Out of mana!" below oomOutAt, or when a cast fails for lack of mana
   oomOutAt   = 0.05,
   fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
+  fullTimerCombat = false, -- the same in a fight, as an estimate (0.9.15, asked for by a player)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
   fsrNum     = true,    -- the rule's seconds next to the strip (off: only the strip, 0.9.0)
@@ -2176,12 +2177,18 @@ end
 local timerCurve, timerKey, timerFull, timerFullNum, timerFullMax, timerFullScale
 local function UpdateFullTimer(visible)
   local fs = bar.fullIn
-  if not visible or not db.regenText or db.fullTimer == false or InCombatLockdown()
+  local fight = InCombatLockdown()
+  if not visible or not db.regenText or db.fullTimer == false or (fight and not db.fullTimerCombat)
     or not ns.RegenRates or not (C_CurveUtil and C_CurveUtil.CreateCurve) then
     if fs:IsShown() then fs:Hide() end
     return
   end
-  local base, casting = ns.RegenRates()
+  local base, casting
+  if fight then
+    if ns.CombatRates then base, casting = ns.CombatRates() end
+  else
+    base, casting = ns.RegenRates()
+  end
   local max = UnitPowerMax("player", MANA)
   if type(base) ~= "number" or base <= 0 or IsSecret(max) or type(max) ~= "number" or max <= 0 then
     if fs:IsShown() then fs:Hide() end
@@ -2216,7 +2223,10 @@ local function UpdateFullTimer(visible)
   end
   -- inputs rounded as far as they show: regen to 0.01, the rule or drink to 0.1 s
   local scale = Scale()
-  local kb, kc, kl = math.floor(base * 100 + 0.5), math.floor(c * 100 + 0.5), math.floor(left * 10 + 0.5)
+  -- in a fight the rule runs almost all the time: its seconds count in half-second steps there,
+  -- so the curve is not built anew on every update
+  local kl = fight and math.floor(left * 2 + 0.5) * 5 or math.floor(left * 10 + 0.5)
+  local kb, kc = math.floor(base * 100 + 0.5), math.floor(c * 100 + 0.5)
   local kn = type(normal) == "number" and math.floor(normal * 100 + 0.5) or 0
   local tk = timerKey
   if not tk or tk[1] ~= kb or tk[2] ~= kc or tk[3] ~= kl or tk[4] ~= kn or tk[5] ~= max or tk[6] ~= scale then

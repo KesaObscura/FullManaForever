@@ -34,7 +34,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 - **Five-second rule.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it) — in whole seconds (5, 4, 3 ...) or with tenths, or just the strip without the number. The strip runs down smoothly.
 ### Know when to drink: live mana regen and time to full mana
 
-- **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included.
+- **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included. Switch on *In combat too* for an estimate in a fight as well.
 - **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight they show next to the number for as long as they are on you: "17.5/s +3.6 +2.0"). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.

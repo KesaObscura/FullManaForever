@@ -372,12 +372,27 @@ end
 
 -- base and casting rate as plain numbers (Blessing of Wisdom and Mana Spring included), nil while they are
 -- secret (in combat): for the time to full mana (0.9.7), which only shows out of combat
+local lastBase, lastCasting -- the game's own rates the last time they were readable
 function ns.RegenRates()
   local ok, base, casting = ManaRegen()
   if not ok or IsSecret(base) or type(base) ~= "number" then return nil end
   if IsSecret(casting) or type(casting) ~= "number" then casting = 0 end
+  lastBase, lastCasting = base, casting
   local extra = ns.BuffRegen()
   return base + extra, casting + extra
+end
+
+-- the same in a fight, where the game's rates cannot be read: an estimate from the rates seen
+-- before the fight (the lower of the last one and the normal one, so a Spirit Tap of the last
+-- kill does not make it look faster), plus the mana buffs known now. Nil while it would be a
+-- guess too far: nothing seen yet, or own Evocation / Read Leyline running.
+function ns.CombatRates()
+  if not lastBase or lastBase <= 0 or GetTime() < boostUntil then return nil end
+  local base = lastBase
+  local normal = NormalBase()
+  if normal and normal > 0 and normal < base then base = normal end
+  local extra = ns.BuffRegen()
+  return base + extra, (lastCasting or 0) + extra
 end
 
 local patUnit, patPlain, patPlus

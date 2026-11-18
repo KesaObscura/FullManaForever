@@ -3178,6 +3178,30 @@ test("0.9.14: the buffs are read for a drink only after they changed, not on eve
   _G.GetPowerRegen, _G.C_Spell = nil, nil
 end)
 
+test("0.9.15: time to full mana in a fight only with 'In combat too', counted with the rate from before the fight", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 0.5, 100
+  _G.GetPowerRegen = function() return 20, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local b = bar(ns)
+  M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(500 / 20), "no time out of combat")
+  -- the fight: the game's rate is secret
+  M.state.combat = true
+  _G.GetPowerRegen = function() return M.secret(20), M.secret(0) end
+  M.tick()
+  ok(not b.fullIn.shown, "time shown in a fight with the setting off")
+  ns.db.fullTimerCombat = true; M.tick()
+  ok(b.fullIn.shown, "no time in a fight with the setting on")
+  eq(b.fullIn.text, ns.L.fullIn:format(500 / 20), "not the rate from before the fight")
+  -- own Evocation: no estimate while it runs
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051); M.tick()
+  ok(not b.fullIn.shown, "an estimate shown during Evocation")
+  M.state.combat = false
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
 test("0.9.7: time to full mana counts the end of drinking (drink aura out of combat)", function()
   local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
   M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
