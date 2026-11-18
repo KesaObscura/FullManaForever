@@ -3301,3 +3301,25 @@ test("0.9.15: Wisdom of Terenas and Might of Stormwind add their mana, also with
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
   _G.GetPowerRegen, _G.C_Spell = nil, nil
 end)
+
+test("cast cost: a cast at full mana shows the faded bar at once, it fades again after the cast", function()
+  local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
+  M.state.manaPct = 1
+  local casting
+  _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 255 } } end }
+  _G.UnitCastingInfo = function() return casting end
+  local b = bar(ns)
+  M.state.time = 100; M.tick()
+  eq(b.alpha, 0.3, "not faded at full mana")
+  casting = "Heal"
+  M.state.time = 101; M.Fire("UNIT_SPELLCAST_START", "player", "g", 6063)
+  eq(b.alpha, 1, "faded bar not shown when the cast starts")
+  ok(b.costDark.shown, "cost part not shown at full mana")
+  casting = nil
+  M.state.time = 103; M.Fire("UNIT_SPELLCAST_STOP", "player", "g", 6063)
+  eq(b.alpha, 1, "faded right at the end of the cast")
+  M.state.time = 110; M.tick()
+  eq(b.alpha, 0.3, "not faded again after the cast")
+  _G.C_Spell, _G.UnitCastingInfo = nil, nil
+  M.state.time = nil
+end)

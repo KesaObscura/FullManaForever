@@ -2353,6 +2353,9 @@ local function SetFadeAlpha(a)
   for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(a) end
 end
 
+-- mana cost of the spell being cast, 0 when none (channels pay when they start)
+local castCost = 0
+
 -- returns true while a fade-out is running (then it is updated on every frame)
 local function UpdateFade()
   local now = GetTime()
@@ -2362,7 +2365,8 @@ local function UpdateFade()
   -- in combat only with "Also in combat" (and "Only at full mana": a fight never hides a bar
   -- with mana missing)
   local combatOff = InCombatLockdown() and not (db.fadeCombat and db.fadeFull ~= false)
-  local off = a >= 1 or not db.locked or combatOff or false
+  -- a cast that costs mana shows the bar at once, also at full mana (its cost part with it)
+  local off = a >= 1 or not db.locked or combatOff or castCost > 0 or false
   if off then holdAt = now end
   local p = (now - holdAt - FADE_WAIT) / FADE_TIME
   if p > 1 then p = 1 elseif p < 0 then p = 0 end
@@ -2433,8 +2437,6 @@ FadeOnUpdate = function() RunFade() end
 -- for the tests: the faded alpha and whether it is updated on every frame right now
 function ns.FadeAlpha() return fadeA, fadeFrame.running and true or false end
 
--- mana cost of the spell being cast, 0 when none (channels pay when they start)
-local castCost = 0
 local function UpdateCost()
   if not bar then return end
   local max = bar.maxMana
@@ -2480,6 +2482,7 @@ castFrame:SetScript("OnEvent", function(_, event, unit, _, spellID)
     if not (ok and name) then castCost = 0 end
   end
   pcall(UpdateCost)
+  if bar then RunFade() end
 end)
 
 local function UpdateBar(maxMana)
