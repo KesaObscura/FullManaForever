@@ -2150,7 +2150,7 @@ test("0.9.13: in a fight the game shows the buffs' '+' labels next to the regen,
   local b, box = bar(ns), M.auraBox
   ok(box, "no aura container made")
   eq(box.unit, "player"); eq(box.enabled, true)
-  eq(#box.groups, 10, "one group per amount: 6 blessing, 4 totem")
+  eq(#box.groups, 12, "one group per amount: 6 blessing, 4 totem, 2 world buffs")
   for _, g in ipairs(box.groups) do
     eq(g.filter, "HELPFUL"); eq(g.options.maxFrameCount, 1)
     eq(g.frame.mouse, false, "a label takes the mouse")
@@ -3229,6 +3229,74 @@ test("0.9.7: time to full mana counts the end of drinking (drink aura out of com
   M.Fire("UNIT_AURA", "player") -- the game tells of every buff change
   M.tick()
   eq(b.fullIn.text, ns.L.fullIn:format(1364 / 15))
+  _G.C_UnitAuras = nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  _G.GetPowerRegen, _G.C_Spell = nil, nil
+end)
+
+test("cast cost: a darker part at the end of the fill while a spell is cast", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.80
+  local casting
+  _G.C_Spell = { GetSpellPowerCost = function(id) if id == 6063 then return { { type = 0, cost = 255 } } end
+    if id == 1 then return { { type = 3, cost = 40 } } end return {} end }
+  _G.UnitCastingInfo = function() return casting end
+  local b = bar(ns)
+  M.tick()
+  ok(not b.costDark.shown and not b.costAfter.shown, "cost part shown without a cast")
+  casting = "Heal"
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", 6063)
+  eq(ns.CastCost(), 255)
+  ok(b.costDark.shown and b.costAfter.shown, "cost part not shown")
+  eq(b.costDark.min, 0); eq(b.costDark.max, 1000)
+  eq(b.costAfter.min, 255, "upper bar does not count from the cost"); eq(b.costAfter.max, 1255)
+  ok(b.costAfter.value ~= nil and b.costDark.value ~= nil, "mana not passed to the cost bars")
+  -- another unit's cast changes nothing
+  M.Fire("UNIT_SPELLCAST_START", "target", "g", 1)
+  eq(ns.CastCost(), 255)
+  casting = nil
+  M.Fire("UNIT_SPELLCAST_STOP", "player", "g", 6063)
+  eq(ns.CastCost(), 0)
+  ok(not b.costDark.shown and not b.costAfter.shown, "cost part stays after the cast")
+  -- a spell without mana cost, and a secret ID: nothing
+  casting = "X"
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", 1)
+  eq(ns.CastCost(), 0)
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", M.secret(6063))
+  eq(ns.CastCost(), 0)
+  -- "only markers": no cost part
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", 6063)
+  ok(b.costDark.shown, "cost part missing")
+  ns.db.barStyle = "markers"; M.tick()
+  ok(not b.costDark.shown and not b.costAfter.shown, "cost part in the markers style")
+  _G.C_Spell, _G.UnitCastingInfo = nil, nil
+  M.state.manaPct = 1
+end)
+
+test("0.9.15: Wisdom of Terenas and Might of Stormwind add their mana, also with a blessing", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 942 / 1999, 100
+  _G.GetPowerRegen = function() return 15.1, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local auras = {}
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) return auras[id] end }
+  M.tick()
+  auras[1307068] = { spellId = 1307068, expirationTime = 3700 } -- 18 every 5 s = 3.6
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "18.7" .. ns.L.regenUnit, "Wisdom of Terenas not added")
+  auras[460939] = { spellId = 460939, expirationTime = 3700 }   -- 10 every 5 s = 2.0
+  auras[19742] = { spellId = 19742, expirationTime = 3700 }     -- blessing rank 1, 2.4
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "23.1" .. ns.L.regenUnit, "world buffs and blessing not added up")
+  -- kept in a fight until they run out
+  M.state.combat = true
+  _G.GetPowerRegen = function() return M.secret(15.1), M.secret(0) end
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function() return nil end }
+  M.Fire("UNIT_AURA", "player")
+  eq((ns.RegenText()), "15.1|cffffffff+8.0|r" .. ns.L.regenUnit, "world buffs not kept in a fight")
+  M.state.combat = false
+  M.state.time = 3701
+  eq((ns.RegenText()), "15.1" .. ns.L.regenUnit, "world buffs counted after they ran out")
   _G.C_UnitAuras = nil
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
   _G.GetPowerRegen, _G.C_Spell = nil, nil

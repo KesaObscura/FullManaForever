@@ -4,6 +4,8 @@
 
 Asked for by players:
 - **Time to full mana in a fight** (new switch *In combat too* under *Time to full mana*, off by default): an estimate counted with your regen from before the fight
+- **What your cast costs:** while you cast a spell, the end of the bar's fill turns darker by the spell's mana cost, so you see where your mana will be when the cast lands (also in combat; not with *Only markers*)
+- **Wisdom of Terenas and Might of Stormwind** count in the regen and the time to full mana like Blessing of Wisdom, with their "+" next to the regen in a fight
 
 **Full Mana Forever 0.9.14**
 

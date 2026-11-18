@@ -1221,6 +1221,18 @@ local function CreateBar()
   bar.fsr:SetStatusBarColor(1, 0.82, 0.2)
   bar.fsr:SetMinMaxValues(0, ns.FSR_SECONDS or 5)
   bar.fsr:Hide()
+  -- cost of the spell being cast (0.9.15): a darker part at the end of the fill. The dark bar
+  -- shows the mana now; the bar over it counts from the cost up, so it ends where the mana will
+  -- be after the cast
+  bar.costDark = CreateFrame("StatusBar", nil, bar)
+  bar.costAfter = CreateFrame("StatusBar", nil, bar)
+  for k, b in ipairs({ bar.costDark, bar.costAfter }) do
+    b:SetAllPoints()
+    b:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+    b:SetFrameLevel((bar:GetFrameLevel() or 1) + k)
+    b:EnableMouse(false)
+    b:Hide()
+  end
   -- the three texts (mana numbers, the rule's seconds, the regen) live on their own frames:
   -- they show without the bar and can be dragged ("Move texts freely"). Scaling a frame
   -- changes the text size and keeps the game's font family (a font file set by hand would
@@ -1296,6 +1308,16 @@ local function PaintBar()
     end
   end)
   if not ok then bar:SetStatusBarColor(c.top[1], c.top[2], c.top[3], fa) end
+  -- the cost part: the bar's own colour, darker; the bar over it like the fill
+  bar.costDark:SetStatusBarColor(c.bottom[1] * 0.42, c.bottom[2] * 0.42, c.bottom[3] * 0.5, 1)
+  local after = bar.costAfter:GetStatusBarTexture()
+  if not (after and pcall(function()
+    if vertical then
+      after:SetGradient("HORIZONTAL", CreateColor(c.top[1], c.top[2], c.top[3], 1), CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1))
+    else
+      after:SetGradient("VERTICAL", CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1), CreateColor(c.top[1], c.top[2], c.top[3], 1))
+    end
+  end)) then bar.costAfter:SetStatusBarColor(c.top[1], c.top[2], c.top[3], 1) end
   -- "only markers": the fill, background, shadow, gloss and border vanish; the markers, the
   -- five-second strip and the texts stay (laid over another addon's mana bar)
   local full = db.barStyle ~= "markers"
@@ -1484,6 +1506,8 @@ function ns.PositionBar()
   bar.text:ClearAllPoints()
   bar.gloss:ClearAllPoints()
   bar:SetOrientation(vertical and "VERTICAL" or "HORIZONTAL")
+  bar.costDark:SetOrientation(vertical and "VERTICAL" or "HORIZONTAL")
+  bar.costAfter:SetOrientation(vertical and "VERTICAL" or "HORIZONTAL")
   if vertical then
     if db.barSide == "right" then
       bar:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 6, 0)
@@ -2409,6 +2433,55 @@ FadeOnUpdate = function() RunFade() end
 -- for the tests: the faded alpha and whether it is updated on every frame right now
 function ns.FadeAlpha() return fadeA, fadeFrame.running and true or false end
 
+-- mana cost of the spell being cast, 0 when none (channels pay when they start)
+local castCost = 0
+local function UpdateCost()
+  if not bar then return end
+  local max = bar.maxMana
+  local show = castCost > 0 and db.barStyle ~= "markers" and bar:IsShown() and type(max) == "number" and max > 0
+  if show then
+    bar.costDark:SetMinMaxValues(0, max)
+    bar.costAfter:SetMinMaxValues(castCost, max + castCost)
+    local mana = UnitPower("player", MANA)
+    show = pcall(bar.costDark.SetValue, bar.costDark, mana) and pcall(bar.costAfter.SetValue, bar.costAfter, mana)
+  end
+  bar.costDark:SetShown(show and true or false)
+  bar.costAfter:SetShown(show and true or false)
+end
+ns.UpdateCost = UpdateCost
+-- for the tests
+function ns.CastCost() return castCost end
+
+local function ManaCost(spellID)
+  if type(spellID) ~= "number" or IsSecret(spellID) or not (C_Spell and C_Spell.GetSpellPowerCost) then return 0 end
+  local ok, t = pcall(C_Spell.GetSpellPowerCost, spellID)
+  if not ok or type(t) ~= "table" or IsSecret(t) then return 0 end
+  for _, ci in pairs(t) do
+    if type(ci) == "table" and ci.type == MANA and type(ci.cost) == "number" and not IsSecret(ci.cost) then
+      return ci.cost > 0 and ci.cost or 0
+    end
+  end
+  return 0
+end
+
+local castFrame = CreateFrame("Frame")
+for _, e in ipairs({ "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED",
+  "UNIT_SPELLCAST_INTERRUPTED" }) do
+  if castFrame.RegisterUnitEvent then pcall(castFrame.RegisterUnitEvent, castFrame, e, "player")
+  else pcall(castFrame.RegisterEvent, castFrame, e) end
+end
+castFrame:SetScript("OnEvent", function(_, event, unit, _, spellID)
+  if unit ~= "player" then return end
+  if event == "UNIT_SPELLCAST_START" then
+    castCost = ManaCost(spellID)
+  else
+    -- a cast that ended while another one runs keeps the running one's cost
+    local ok, name = pcall(UnitCastingInfo, "player")
+    if not (ok and name) then castCost = 0 end
+  end
+  pcall(UpdateCost)
+end)
+
 local function UpdateBar(maxMana)
   if not bar then return end
   if not BarVisible() then bar:Hide() return end
@@ -2472,6 +2545,7 @@ local function UpdateBar(maxMana)
     for k = used + 1, #ticks do HideTick(ticks[k]) end
   end
   bar:Show()
+  UpdateCost()
 end
 
 -- optional sound when the mana potion cooldown is over (item cooldowns are readable in combat,
