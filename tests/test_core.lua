@@ -3335,3 +3335,9 @@ test("0.9.15: with the time to full in a fight the '+' labels go under the regen
   ns.db.fullTimer = false; ns.PlacePlus()
   eq(host.points[1][1], "LEFT", "labels moved down without a timer")
 end)
+
+test("the commit of a test build shows next to the version; none when run from the repository", function()
+  local ns = M.load(nil, { bags = POT })
+  eq(ns.BUILD, nil, "placeholder taken for a commit")
+  eq(ns.VersionText(), ns.VERSION)
+end)

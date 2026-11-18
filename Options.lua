@@ -528,7 +528,7 @@ Build = function()
   -- a reset question never waits for the next opening (0.9.2)
   win:SetScript("OnHide", function() ask:Hide(); winHiddenAt = GetTime(); UpdateShade() end)
 
-  local title = Label(win, "Full Mana Forever  |cff888888v" .. ns.VERSION .. "|r", "GameFontNormalLarge")
+  local title = Label(win, "Full Mana Forever  |cff888888v" .. ns.VersionText() .. "|r", "GameFontNormalLarge")
   Skin.PlaceTitle(title, win, PAD)
   local close = CloseButton(win)
   Skin.PlaceClose(close, win)

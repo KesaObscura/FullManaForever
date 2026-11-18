@@ -3,7 +3,7 @@
 WoW: Forever addon (client 1.60.1, interface 16001). Plain Lua 5.1, no libraries.
 Files load in TOC order: Locale.lua → Data.lua → Regen.lua → Spells.lua → Profiles.lua → Core.lua →
 Options.lua → Library.lua → Diag.lua. Spells.lua: own mana spells (0.8.0). Profiles.lua (0.8.3):
-`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, dbVersion, optPoint, probe)
+`FullManaForeverDB` holds account keys (language, custom, debug, scale100, seenVersion, seenBuild, dbVersion, optPoint, probe)
 plus `profiles[Shared|Name Surname-Realm]` and `chars[key]` = {profile, class, level, seen, name, realm}; Core's
 `db` is the active profile, `acct` the root; `ns.ApplyProfile` re-reads everything on a switch. Regen.lua: five-second rule and regen text; Diag.lua: `/fmf probe 5sr`
 and `/fmf log` (kept in releases for bug reports).
@@ -28,8 +28,9 @@ and `/fmf log` (kept in releases for bug reports).
   the item list.
 - **Run the tests after every change:** `lua5.1 tests/run.lua` must end with `0 failed`.
 - **After every change, hand the owner a test zip** built from the committed state:
-  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!docs' ':!.gitignore' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
-  (same contents as `.pkgmeta` packages).
+  `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!docs' ':!.gitignore' ':!.gitattributes' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
+  (same contents as `.pkgmeta` packages). Git writes the commit into `Core.lua` (`ns.BUILD`, export-subst):
+  the login line then reads "v0.9.15 (e2035ae)".
 - Work on the session branch; `main` changes only through a PR the owner merges with **Squash
   and merge** (owner, 15 Oct: no merge commits with the branch name in `main`); after the merge
   reset the session branch to `main`.

@@ -10,6 +10,11 @@
 local ADDON, ns = ...
 local L = ns.L
 ns.VERSION = "0.9.15"
+-- the commit a zip was built from: git fills it in when it packs the zip (export-subst)
+local build = "$Format:%h$"
+ns.BUILD = build:find("^%$") == nil and build ~= "" and build or nil
+-- "0.9.15 (e2035ae)"; the bare version when run from the repository
+function ns.VersionText() return ns.BUILD and (ns.VERSION .. " (" .. ns.BUILD .. ")") or ns.VERSION end
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -2673,7 +2678,7 @@ local function Probe()
     if IsSecret(v) then return "SECRET" end
     return tostring(v)
   end
-  P("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VERSION, tostring(InCombatLockdown()),
+  P("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VersionText(), tostring(InCombatLockdown()),
     tostring(IsSecret(UnitPower("player", MANA))), tostring(IsSecret(UnitPowerMax("player", MANA))))
   P("API: UnitPowerPercent=%s UnitHealthPercent=%s C_CurveUtil=%s LuaCurveType=%s",
     yn(UnitPowerPercent), yn(UnitHealthPercent), yn(C_CurveUtil and C_CurveUtil.CreateColorCurve),
@@ -2914,7 +2919,7 @@ end
 function FullManaForever_OnCompartmentEnter(_, frame)
   local L = ns.L
   GameTooltip:SetOwner(frame or UIParent, "ANCHOR_LEFT")
-  GameTooltip:AddDoubleLine("Full Mana Forever", "v" .. ns.VERSION, 0.4, 0.7, 1, 1, 0.82, 0)
+  GameTooltip:AddDoubleLine("Full Mana Forever", "v" .. ns.VersionText(), 0.4, 0.7, 1, 1, 0.82, 0)
   GameTooltip:AddDoubleLine(L.cmpLeft, L.cmpSettings, 1, 0.82, 0, 1, 1, 1)
   GameTooltip:AddDoubleLine(L.cmpRight, L.libTitle, 1, 0.82, 0, 1, 1, 1)
   GameTooltip:Show()
@@ -3036,9 +3041,10 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     -- (settings from before 0.8.3 have no seenVersion: those players get the version line)
     if freshInstall then
       Print(L.firstRun)
-    elseif acct.seenVersion ~= ns.VERSION then
-      Print(L.loaded, ns.VERSION)
+    elseif acct.seenVersion ~= ns.VERSION or (ns.BUILD and acct.seenBuild ~= ns.BUILD) then
+      -- also after a new test build of the same version
+      Print(L.loaded, ns.VersionText())
     end
-    acct.seenVersion = ns.VERSION
+    acct.seenVersion, acct.seenBuild = ns.VERSION, ns.BUILD
   end
 end)
