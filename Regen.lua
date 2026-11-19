@@ -414,7 +414,8 @@ function ns.RegenText()
     patPlain, patPlus = "%.1f" .. patUnit, "%.1f|cffffffff+%.1f|r" .. patUnit
   end
   local okF, text
-  if extra > 0 and IsSecret(value) and not plus.live then
+  local plusOn = not (ns.db and ns.db.regenPlus == false)
+  if extra > 0 and IsSecret(value) and not plus.live and plusOn then
     -- no labels from the game: what was known before the fight, as a white "+3.6"
     okF, text = pcall(string.format, patPlus, value, extra)
   elseif IsSecret(value) then

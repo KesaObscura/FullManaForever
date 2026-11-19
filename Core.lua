@@ -45,6 +45,7 @@ local DEFAULTS = {
   oomOutAt   = 0.05,
   fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
   fullTimerCombat = false, -- the same in a fight, as an estimate (0.9.15, asked for by a player)
+  regenPlus  = true,    -- in a fight the blessing's and totem's "+" next to the regen (0.9.15)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
   fsrNum     = true,    -- the rule's seconds next to the strip (off: only the strip, 0.9.0)
@@ -1111,7 +1112,7 @@ holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 holdFrame:SetScript("OnEvent", function(_, event)
   -- the mana buffs' "+" labels next to the regen: shown in a fight; made after a fight when the
   -- game was entered in one
-  if ns.BuffPlusShow then ns.BuffPlusShow(event == "PLAYER_REGEN_DISABLED") end
+  if ns.BuffPlusShow then ns.BuffPlusShow(event == "PLAYER_REGEN_DISABLED" and db and db.regenPlus ~= false) end
   ns.regenDirty = true
   if event == "PLAYER_REGEN_ENABLED" and ns.MakePlus then pcall(ns.MakePlus) end
   if not held then return end

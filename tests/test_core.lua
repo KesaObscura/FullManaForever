@@ -3312,3 +3312,35 @@ test("the commit of a test build shows next to the version; none when run from t
   eq(ns.BUILD, nil, "placeholder taken for a commit")
   eq(ns.VersionText(), ns.VERSION)
 end)
+
+test("0.9.15: the blessing's '+' in a fight can be switched off; then the plain regen number", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT, auraBox = true })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 942 / 1999, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura = { spellId = 19850, expirationTime = 3700 }
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if id == aura.spellId then return aura end end }
+  M.tick(); M.Fire("UNIT_AURA", "player")
+  eq(ns.db.regenPlus, true, "switch not on by default")
+  local host = M.upvalue(ns.BuffPlusPlace, "plus").host
+  -- on: the game's labels show in a fight
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  eq(host.alpha, 1, "labels hidden in a fight while switched on")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  eq(host.alpha, 0)
+  -- off: no labels in a fight, and no white "+" either when the game gives no labels
+  ns.db.regenPlus = false
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  eq(host.alpha, 0, "labels shown although switched off")
+  M.upvalue(ns.BuffPlusPlace, "plus").live = false
+  _G.GetPowerRegen = function() return M.secret(17.5), M.secret(0) end
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "white + shown although switched off")
+  ns.db.regenPlus = true
+  eq((ns.RegenText()), "17.5|cffffffff+3.6|r" .. ns.L.regenUnit)
+  -- out of combat the blessing still counts in the one number
+  M.state.combat = false; _G.GetPowerRegen = function() return 17.5, 0 end
+  ns.db.regenPlus = false
+  eq((ns.RegenText()), "21.1" .. ns.L.regenUnit, "blessing lost out of combat")
+  _G.C_UnitAuras, _G.GetPowerRegen, _G.C_Spell = nil, nil, nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+end)

@@ -796,6 +796,14 @@ Build = function()
   c.Row(Check(col, L.optRegen, function() return db.regenText end,
     function(v) db.regenText = v; ns.PlacePlus() end, L.tipRegen), PAD, 26)
   ActiveIf(function() return db.regenText end, SizeStepper("regenScale"))
+  -- the blessing's and totem's "+" next to the regen in a fight; off: the plain number (0.9.15,
+  -- asked for by a player)
+  c.Row(Check(col, L.optRegenPlus, function() return db.regenPlus ~= false end,
+    function(v)
+      db.regenPlus = v
+      if ns.BuffPlusShow then ns.BuffPlusShow(v and InCombatLockdown() and true or false) end
+      ns.regenDirty = true
+    end, L.tipRegenPlus, function() return db.regenText end), PAD + 26, 26)
   -- time to full mana next to the regen, out of combat (0.9.7)
   c.Row(Check(col, L.optFullTimer, function() return db.fullTimer ~= false end,
     function(v) db.fullTimer = v; ns.PlacePlus(); ns.RefreshOptions() end, L.tipFullTimer, function() return db.regenText end), PAD + 26, 26)
