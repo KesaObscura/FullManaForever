@@ -324,10 +324,11 @@ end
 -- the names the game gives the drink spells (430 "Drink" and 1249914 "Nutritious Drink" in the
 -- client's language), so new drink IDs with these names match too, or by the spell IDs below:
 -- 430, 431, 432, 1133, 1135, 1137, 22734 (seen in game 10 Nov); the Forever teas (Nutritious
--- Drink 1249914-1249925), rations, biscuits and other drinks with mana (scan 11 Nov).
+-- Drink 1249914-1249925), rations, biscuits and other drinks with mana (scan 11 Nov), Refreshing
+-- Red Apple 29055 (scan 19 Nov).
 local DRINK_IDS = {}
 for _, id in ipairs({ 430, 431, 432, 833, 1133, 1135, 1137, 2639, 18140, 22734, 23540, 23541,
-  23542, 23692, 23698, 24384, 24409, 24410, 24411, 25692, 25693, 29029, 461632, 1226814,
+  23542, 23692, 23698, 24384, 24409, 24410, 24411, 25692, 25693, 29029, 29055, 461632, 1226814,
   1269354, 1290859, 1290860, 1290861, 1291782 }) do DRINK_IDS[id] = true end
 for id = 1249914, 1249925 do DRINK_IDS[id] = true end
 local DRINK_NAME_IDS = { 430, 1249914 }
