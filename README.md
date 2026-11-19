@@ -167,7 +167,7 @@ keys of `enUS` with the same `%s`/`%d` placeholders; `tests/run.lua` checks that
 
 ## More Forever addons
 
-- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die for WoW Forever — about how many seconds your target has left, live in combat.
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die (TTD) for WoW Forever — about how many seconds your target and every enemy on its nameplate has left, live in combat.
 
 ## License
 
