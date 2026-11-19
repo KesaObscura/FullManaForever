@@ -3344,3 +3344,17 @@ test("0.9.15: the blessing's '+' in a fight can be switched off; then the plain 
   _G.C_UnitAuras, _G.GetPowerRegen, _G.C_Spell = nil, nil, nil
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
 end)
+
+test("'Only markers': a secret alpha of the fill does not hide the bar and its markers", function()
+  local ns = M.load({ barStyle = "markers" }, { bags = POT })
+  M.state.manaPct = 0.9; M.tick()
+  local b = bar(ns)
+  local tex = b:GetStatusBarTexture()
+  -- the game hands the alpha out as a secret: comparing it fails like this
+  tex.GetAlpha = function() error("attempt to compare a secret number value") end
+  M.tick()
+  ok(b.shown, "bar hidden after a secret alpha")
+  ok(b.ticks[1][1].front.shown, "potion marker gone")
+  eq(tex.alpha, 0, "fill visible with only markers")
+  eq(#M.warnings(), 0, "warning: " .. table.concat(M.warnings(), "|"))
+end)

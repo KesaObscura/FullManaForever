@@ -2510,10 +2510,11 @@ local function UpdateBar(maxMana)
     WarnOnce("barvalue", L.warnPower)
   end
   -- "only markers": the game may give the fill texture back its alpha when the bar changes
-  -- (form change, a new texture); kept transparent on every update
+  -- (form change, a new texture); kept transparent on every update. Its alpha is not read back:
+  -- the game may hand it out as a secret that cannot be compared
   if db.barStyle == "markers" then
     local tex = bar:GetStatusBarTexture()
-    if tex and tex:GetAlpha() ~= 0 then tex:SetAlpha(0) end
+    if tex then tex:SetAlpha(0) end
   end
   UpdateFsrStrip()
   local vertical = db.vertical and true or false
