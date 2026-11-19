@@ -1,20 +1,24 @@
 **The right mana potion at the right moment — for World of Warcraft: Forever (WoW Forever, Classic+).**
 
-A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana Tide, ...) lights up the moment it is ready **and** fits into your missing mana: nothing is wasted. Plus a compact mana bar with the **five-second rule (5SR)**, your **live mana regen per second, also in combat**, and the **time to full mana** while you drink. For healers and every other mana user: priests, druids, shamans, paladins, mages, warlocks and hunters.
+A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana Tide, ...) lights up the moment it is ready **and** fits into your missing mana, so you do not waste it. Plus a compact mana bar with the **five-second rule (5SR)**, your **live mana regen per second, also in combat**, the **time to full mana** (in a fight as an estimate) and **what your cast costs**. For healers and every other mana user: priests, druids, shamans, paladins, mages, warlocks and hunters.
 
 ![A mana potion lights up the moment it fits into your missing mana](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/mana-potion-at-the-right-moment.png)
 
+**New in 0.9.15:** see what your cast costs on the bar; time to full mana in a fight too.
+
 *Features asked for in the comments get built. Tell us what you need: comment here or open an issue on [GitHub](https://github.com/KesaObscura/FullManaForever/issues).*
 
-## What it does
+*Also for WoW Forever: [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever) — time to die (TTD): about how many seconds your target and every enemy on its nameplate has left, live in combat.*
 
-### Potions, runes, gems and your own spells
+## Features: mana potions, mana bar, five-second rule
+
+### Mana potions, runes, gems and your own mana spells
 
 - **Icons that light up at the right time.** One icon per cooldown group: mana potions, Demonic/Dark Runes, mage mana gems, other mana consumables, and use effects of equipped gear.
 - **Right potion for the deficit.** With several potions in your bags, the icon shows the **strongest potion that will not overflow**: a weak one when you are slightly down, a strong one when you are low.
 - **One simple setting: When to light up.** *No waste* waits until the whole potion fits. *More per fight* uses the average restore, so you drink earlier and fit more potions into a long fight. *Strongest only* keeps it simple.
 - **Runes are safe.** A rune is only shown when you will keep a configurable share of your health after its damage (30 % by default).
-- **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Read Leyline (Skyborne) light up when the spell is ready and your mana is at or below its own threshold (a sensible default per spell, changeable in the list). Two spells ready at once? Each gets its own icon. Life Tap lights up like a potion when its mana fits, with the same health check as runes. Forever hides spell cooldowns from addons in combat, so the addon counts them from your cast — never too early.
+- **Your own mana spells too.** Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the racials Eureka! (gnome) and Read Leyline (Skyborne) light up when the spell is ready and your mana is at or below its own threshold (a sensible default per spell, changeable in the list). Two spells ready at once? Each gets its own icon. Life Tap lights up like a potion when its mana fits, with the same health check as runes.
 - **See it coming.** Potions, runes, gems, gear and your own spells already show in the last seconds of their cooldown — grey, counting down like your action bar — so you are ready the moment they light up. 5 seconds by default, up to 120 (the whole potion cooldown), or off.
 - **Made for wanding.** Each wand shot blocks potions and spells for a moment. The icon stays lit and shows that short wait as a sweep, like the action bar: the potion fits, stop shooting and drink.
 - **"Low mana!" and "Out of mana!" to your group.** Switch it on (party chat, raid chat or both) and the addon warns your group in a fight, at most every 30 seconds each. Each warning has its own switch and its own mark (30 % and 5 % of your mana by default). Off by default.
@@ -29,13 +33,14 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ### Mana bar and five-second rule (5SR)
 
-- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons stand in the order they light up, so lit icons never leave a gap. Icons in a row or in a column, growing either way (to the left they start at the bar's far end), bar under, above, left or right; bar color, with or without its border, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable, and every number can be typed in. While you cast, the end of the fill turns darker by the spell's mana cost: you see where your mana will be when the cast lands, also in combat. Nothing is shown while you are dead or a ghost.
-- **Works with unit frame addons.** In four steps: set *Style* to *Only markers* (under the mana bar), unlock the frame and tick *Move the bar separately*, drag the bar onto your unit frame's mana bar and match length and thickness to it, then tick *Above other frames*. *Only markers* hides the bar's fill, background and border: lay the potion markers and the five-second strip over the mana bar of your unit frame. *Move the bar separately* gives the bar its own place apart from the icons, and *Above other frames* draws everything on top.
+- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons stand in the order they light up, so lit icons never leave a gap. Icons in a row or in a column, growing either way (to the left they start at the bar's far end), bar under, above, left or right; bar color, with or without its border, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable, and every number can be typed in. Nothing is shown while you are dead or a ghost.
+- **See what your cast costs.** While you cast, the end of the fill turns darker by the spell's mana cost: you see where your mana will be when the cast lands, also in combat. A bar faded at full mana shows at once when you start such a cast.
+- **Works with unit frame addons.** *Only markers* hides the bar's fill, background and border: lay the potion markers and the five-second strip over the mana bar of your unit frame (see the FAQ for the four steps).
 - **Five-second rule.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it) — in whole seconds (5, 4, 3 ...) or with tenths, or just the strip without the number. The strip runs down smoothly.
 ### Know when to drink: live mana regen and time to full mana
 
 - **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included. Switch on *In combat too* for an estimate in a fight as well.
-- **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight they show next to the number for as long as they are on you: "17.5/s +3.6 +2.0"; one switch turns that off). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
+- **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight they show next to the number for as long as they are on you: "17.5/s +3.6 +2.0"; one switch turns that off). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
 
@@ -43,7 +48,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ![Regen colours: blue normal, green while drinking, red under Resurrection Sickness](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/live-mana-regen-five-second-rule.png)
 
-### Comfort
+### Settings, item list and profiles
 
 - **Settings that explain themselves.** Hover any option for a short explanation. *Reset position* and *Reset size* undo your experiments in one click.
 - **Items and spells.** See every supported item with icon, restore value and whether you carry it. Turn single items off (for example to save expensive potions) or add your own item to any category. Your class's mana spells are listed too, each with its own threshold, and if you do not have one yet, the list says why: the level, a talent or the trainer.
@@ -57,11 +62,11 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 Forever's mana regen is continuous: there are no 2-second mana ticks, and addons cannot read your mana or regen in combat, so classic mana tick and mp5 trackers do not work here. Full Mana Forever shows what really counts in Forever: the **five-second rule** countdown after each spell and the **regen running right now, per second**, in and out of combat.
 
-## Built for WoW Forever's addon rules
+## Made for WoW Forever
 
-Forever hides your current mana, your buffs and your spell cooldowns from addons in combat. Full Mana Forever is built for these rules: the right icon still lights up at the right moment. No automation: the addon never uses an item or casts for you, you press the button.
+Works in combat and follows Forever's addon rules: the right icon lights up at the right moment. No automation: the addon never uses an item or casts for you, you press the button.
 
-## Supported items (checked against the Forever database)
+## Supported mana potions, runes, gems and gear
 
 - **Mana potions** (shared cooldown, read from the game): Major, Major Rejuvenation, Superior, Combat, Greater, Mana, Lesser, Minor, Minor Rejuvenation, the battleground draughts (Major/Superior Mana Draught), Dreamless Sleep and Greater Dreamless Sleep (off by default — they put you to sleep for 12 s), Wildvine Potion (off by default — it may restore nothing).
 - **Runes:** Demonic Rune, Dark Rune.
@@ -95,7 +100,7 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 - **Why does the icon not light up at 90 % mana?** *No waste*: it waits until the whole potion fits into your missing mana. Want to drink earlier? Switch *When to light up* to *More per fight*.
 - **Different settings for my healer and my mage?** Yes: each character can have its own profile, or copy another character's settings.
 - **How do I save my expensive potions?** Switch single items off in `/fmf items`, or hold potions for one fight with `/fmf hold`.
-- **Does it work with my unit frames?** Yes: *Style: Only markers*, *Move the bar separately* and *Above other frames* lay the markers and the five-second strip over your unit frame's mana bar; type the exact length and thickness.
+- **Does it work with my unit frames?** Yes, in four steps: set *Style* to *Only markers* (under the mana bar), unlock the frame and tick *Move the bar separately*, drag the bar onto your unit frame's mana bar and type its exact length and thickness, then tick *Above other frames*.
 - **Does a healing potion block my mana potion?** Yes, in Forever they share the 2-minute cooldown; the icon then shows the wait.
 - **How long do I have to drink?** Out of combat the regen shows "full in ~N s": the time until your mana is full at the current rate.
 
