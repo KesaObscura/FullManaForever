@@ -117,6 +117,8 @@ local function BugLink()
 end
 
 local function WarnOnce(key, msg)
+  -- /fmf selftest while it runs: its errors are collected instead of printed
+  if ns.selfTestNote then ns.selfTestNote(msg) return end
   if not warned[key] then
     warned[key] = true
     Print("|cffff4444" .. msg .. "|r")
@@ -2661,6 +2663,141 @@ function ns.InvalidateCurves()
 end
 
 ------------------------------------------------------------------------
+-- self-test (/fmf selftest): every setting in turn, each for a moment, its errors collected;
+-- the settings are put back at the end, also after a /reload in between
+------------------------------------------------------------------------
+do
+local selfTest -- running: steps, position, collected errors, the settings to put back
+local SELFTEST_WAIT = 0.3 -- seconds per setting: a few updates and fade frames
+local function SelfTestSteps()
+  local steps = {}
+  local function add(key, ...)
+    for _, v in ipairs({ ... }) do steps[#steps + 1] = { { key, v } } end
+  end
+  for _, k in ipairs({ "onlyCombat", "showIcons", "iconsCombat", "fadeFull", "fadeCombat", "showBar",
+    "fsr", "regenText", "fullTimer", "fullTimerCombat", "regenPlus", "fsrNum", "fsrWhole", "textFree",
+    "manaTextOn", "vertical", "barBorder", "barFree", "onTop" }) do
+    add(k, not db[k])
+  end
+  add("pickMode", "fit", "strongest")
+  add("thresholdMode", "max", "avg")
+  add("manaText", "number", "percent", "both")
+  add("barPosition", "below", "above")
+  add("barSide", "left", "right")
+  add("iconGrow", "normal", "reverse")
+  for _, c in ipairs(ns.BAR_COLORS) do add("barColor", c.key) end
+  add("barStyle", "full", "markers")
+  add("fadeAlpha", 1, 0.3, 0)
+  add("barLength", 0, 80, 400)
+  add("barThickness", 4, 40)
+  add("iconSize", 24, 80)
+  add("iconGap", 0, 20)
+  add("manaScale", 0.5, 2)
+  add("fsrScale", 0.5, 2)
+  add("regenScale", 0.5, 2)
+  -- a few settings that work together
+  steps[#steps + 1] = { { "vertical", true }, { "barSide", "left" }, { "barStyle", "markers" } }
+  steps[#steps + 1] = { { "vertical", true }, { "barSide", "right" }, { "iconGrow", "reverse" } }
+  steps[#steps + 1] = { { "barStyle", "markers" }, { "barFree", true }, { "onTop", true } }
+  steps[#steps + 1] = { { "regenText", true }, { "fullTimer", true }, { "fullTimerCombat", true },
+    { "regenPlus", false } }
+  steps[#steps + 1] = { { "fadeAlpha", 0 }, { "fadeFull", false }, { "fadeCombat", true } }
+  return steps
+end
+local function SelfTestRestore(backup)
+  for k, v in pairs(backup) do
+    if v == "__nil" then db[k] = nil else db[k] = v end
+  end
+  db.selftestBackup = nil
+  pcall(ns.Layout, true)
+  if ns.RefreshOptions then pcall(ns.RefreshOptions) end
+end
+local function SelfTestLabel(step)
+  local parts = {}
+  for _, p in ipairs(step) do parts[#parts + 1] = p[1] .. "=" .. tostring(p[2]) end
+  return table.concat(parts, " ")
+end
+local function SelfTestFinish(stopped)
+  local t = selfTest
+  selfTest = nil
+  ns.selfTestNote = nil
+  if t.oldHandler then pcall(seterrorhandler, t.oldHandler) end
+  SelfTestRestore(t.backup)
+  wipe(warned)
+  local n = 0
+  for _ in pairs(t.seen) do n = n + 1 end
+  Print(("self-test %s: %d of %d settings in %.0f s (%s), your settings are back. %s"):format(
+    stopped and "stopped" or "done", t.i, #t.steps, GetTime() - t.start, t.fight and "in combat" or "out of combat",
+    n == 0 and "|cff44ff44No errors.|r" or ("|cffff4444" .. n .. " error(s):|r")))
+  for _, e in ipairs(t.list) do Print("|cffff4444" .. e .. "|r") end
+  if n > 0 then BugLink() end
+end
+local function SelfTestNext()
+  local t = selfTest
+  if not t then return end
+  if t.i >= #t.steps then SelfTestFinish(false) return end
+  t.i = t.i + 1
+  local step = t.steps[t.i]
+  t.label = SelfTestLabel(step)
+  for k, v in pairs(t.backup) do
+    if v == "__nil" then db[k] = nil else db[k] = v end
+  end
+  for _, p in ipairs(step) do db[p[1]] = p[2] end
+  local ok, err = pcall(ns.Layout, true)
+  if not ok then t.Note(tostring(err)) end
+  ok, err = pcall(Update)
+  if not ok then t.Note(tostring(err)) end
+  if t.i % 10 == 0 then Print(("self-test: %d of %d"):format(t.i, #t.steps)) end
+  C_Timer.After(SELFTEST_WAIT, SelfTestNext)
+end
+function ns.SelfTest(arg)
+  if arg == "stop" then
+    if selfTest then SelfTestFinish(true) end
+    return
+  end
+  if selfTest or not bar then return end
+  local steps = SelfTestSteps()
+  local backup = {}
+  for _, step in ipairs(steps) do
+    for _, p in ipairs(step) do
+      if backup[p[1]] == nil then
+        local v = db[p[1]]
+        if v == nil then backup[p[1]] = "__nil" else backup[p[1]] = v end
+      end
+    end
+  end
+  db.selftestBackup = backup -- put back at the next login if the test does not finish
+  local t = { steps = steps, i = 0, backup = backup, list = {}, seen = {}, start = GetTime(),
+    fight = InCombatLockdown() }
+  function t.Note(msg)
+    local line = t.label .. ": " .. tostring(msg)
+    if not t.seen[line] then t.seen[line] = true; t.list[#t.list + 1] = line end
+  end
+  selfTest = t
+  ns.selfTestNote = t.Note
+  -- errors outside the addon's own protection (frame scripts) are noted too
+  local okH, old = pcall(geterrorhandler)
+  if okH and old and seterrorhandler then
+    t.oldHandler = old
+    pcall(seterrorhandler, function(e)
+      if selfTest then selfTest.Note(e) end
+      return old(e)
+    end)
+  end
+  Print(("self-test: %d settings, about %.0f s. Your settings come back at the end. /fmf selftest stop ends it."):format(
+    #steps, #steps * SELFTEST_WAIT))
+  SelfTestNext()
+end
+-- a self-test cut off by a /reload or logout: the settings it changed come back
+function ns.SelfTestRecover()
+  local backup = db and db.selftestBackup
+  if type(backup) ~= "table" then return end
+  SelfTestRestore(backup)
+  Print("self-test was cut off: your settings are back.")
+end
+end
+
+------------------------------------------------------------------------
 -- probe
 ------------------------------------------------------------------------
 -- /fmf probe: printed to the chat and kept in the saved variables (the last 3 runs), so a bug
@@ -2821,6 +2958,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
   elseif cmd == "item" then
     if not args[2] or not args[3] then Print(L.itemUsage) return end
     ns.AddCustom(args[2], args[3], args[4])
+  elseif cmd == "selftest" then
+    ns.SelfTest(args[2])
   elseif cmd == "probe" and args[2] == "5sr" then
     if ns.Probe5SR then ns.Probe5SR() end
   elseif cmd == "log" then
@@ -3038,6 +3177,7 @@ boot:SetScript("OnEvent", function(self, event, arg1)
       if not ok then Print(L.warnOptions, tostring(err)) end
     end
     C_Timer.NewTicker(0.1, SafeUpdate)
+    ns.SelfTestRecover()
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     -- a short tip on the very first login, afterwards one line only when the version changes
     -- (settings from before 0.8.3 have no seenVersion: those players get the version line)

@@ -3358,3 +3358,35 @@ test("'Only markers': a secret alpha of the fill does not hide the bar and its m
   eq(tex.alpha, 0, "fill visible with only markers")
   eq(#M.warnings(), 0, "warning: " .. table.concat(M.warnings(), "|"))
 end)
+
+test("/fmf selftest walks the settings, reports errors and puts every setting back", function()
+  local ns = M.load({ barStyle = "full", vertical = false, fadeAlpha = 1 }, { bags = POT })
+  M.state.manaPct = 0.8; M.tick()
+  local before = {}
+  for k, v in pairs(ns.db) do if type(v) ~= "table" then before[k] = v end end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("selftest")
+  local all = table.concat(M.printed, "\n")
+  ok(all:find("self-test done", 1, true), "no end line: " .. all)
+  ok(all:find("No errors", 1, true), "errors in a clean run: " .. all)
+  for k, v in pairs(before) do eq(ns.db[k], v, "setting not put back: " .. k) end
+  eq(ns.db.selftestBackup, nil, "backup left in the settings")
+  -- an error in one setting is named with that setting
+  local b = bar(ns)
+  local real = b.costDark.SetShown
+  b.costDark.SetShown = function(self, v)
+    if ns.db.barStyle == "markers" then error("boom") end
+    return real(self, v)
+  end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("selftest")
+  all = table.concat(M.printed, "\n")
+  ok(all:find("barStyle=markers", 1, true) and all:find("boom", 1, true), "error not reported with its setting: " .. all)
+  b.costDark.SetShown = real
+  for k, v in pairs(before) do eq(ns.db[k], v, "setting not put back after errors: " .. k) end
+  -- cut off by a reload: the settings come back at the next login
+  ns.db.selftestBackup = { barStyle = "full", vertical = "__nil" }
+  ns.db.barStyle, ns.db.vertical = "markers", true
+  ns.SelfTestRecover()
+  eq(ns.db.barStyle, "full"); eq(ns.db.vertical, nil); eq(ns.db.selftestBackup, nil)
+end)

@@ -9,6 +9,7 @@ Asked for by players:
 Also new:
 - **What your cast costs:** while you cast a spell, the end of the bar's fill turns darker by the spell's mana cost, so you see where your mana will be when the cast lands (also in combat; not with *Only markers*). A bar faded at full mana shows at once when you start such a cast
 - **New icon**, sharper and clearer at every size, in one style with the other Forever addons
+- **`/fmf selftest`:** tries every setting for a moment and lists any error, for bug reports (about 20 s; your settings come back at the end)
 
 Fixed:
 - *Only markers*: the markers and the five-second strip no longer vanish

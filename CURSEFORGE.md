@@ -82,6 +82,7 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 | `/fmf reset` | move the icons and the texts back to the default position |
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
 | `/fmf probe` | print API status for bug reports (also kept in the settings file) |
+| `/fmf selftest` | tries every setting for a moment and lists any error (about 20 s; your settings come back at the end) |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap (left-click: settings, right-click: items and spells).
