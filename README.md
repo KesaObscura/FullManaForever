@@ -127,6 +127,7 @@ otherwise the game does not load it.
 | `/fmf probe` | print API status for bug reports (also kept in the settings file, the last 3 runs) |
 | `/fmf log on` / `/fmf log off` | record what the game reports (casts, regen, in a group also the group's casts) for a bug report; `/fmf log clear` empties it |
 | `/fmf probe 5sr` | 30 seconds of casts and regen in the chat, for bug reports |
+| `/fmf selftest` | tries every setting for a moment and lists any error (about 20 s; your settings come back at the end), for bug reports |
 | `/fmf log chat` | test whether the addon may send addon messages to your group (an invisible message to the party or raid, also in combat); the answer goes into the log |
 | `/fmf debug` | debug messages on/off |
 | `/fmf scale` | switch the curve scale 0..1 / 0..100 (only if icons never react) |
@@ -163,6 +164,10 @@ budget. The `tests` folder is not part of the release zip (see `.pkgmeta`).
 
 **Translations**: all texts are in `Locale.lua`. Every language must have exactly the
 keys of `enUS` with the same `%s`/`%d` placeholders; `tests/run.lua` checks that.
+
+## More Forever addons
+
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die for WoW Forever — about how many seconds your target has left, live in combat.
 
 ## License
 

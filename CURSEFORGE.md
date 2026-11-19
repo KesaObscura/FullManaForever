@@ -29,13 +29,13 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ### Mana bar and five-second rule (5SR)
 
-- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons stand in the order they light up, so lit icons never leave a gap. Icons in a row or in a column, growing either way (to the left they start at the bar's far end), bar under, above, left or right; bar color, with or without its border, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable, and every number can be typed in. Nothing is shown while you are dead or a ghost.
+- **Mana bar with markers.** A compact mana bar with the current value and a marker for every potion step. Icons stand in the order they light up, so lit icons never leave a gap. Icons in a row or in a column, growing either way (to the left they start at the bar's far end), bar under, above, left or right; bar color, with or without its border, thickness and length (auto: room for the groups you switched on), icon size and spacing are adjustable, and every number can be typed in. While you cast, the end of the fill turns darker by the spell's mana cost: you see where your mana will be when the cast lands, also in combat. Nothing is shown while you are dead or a ghost.
 - **Works with unit frame addons.** In four steps: set *Style* to *Only markers* (under the mana bar), unlock the frame and tick *Move the bar separately*, drag the bar onto your unit frame's mana bar and match length and thickness to it, then tick *Above other frames*. *Only markers* hides the bar's fill, background and border: lay the potion markers and the five-second strip over the mana bar of your unit frame. *Move the bar separately* gives the bar its own place apart from the icons, and *Above other frames* draws everything on top.
 - **Five-second rule.** After a spell that costs mana, a gold strip and the seconds next to the mana bar count down the 5 seconds of reduced regen (wands, potions and food do not start it) — in whole seconds (5, 4, 3 ...) or with tenths, or just the strip without the number. The strip runs down smoothly.
 ### Know when to drink: live mana regen and time to full mana
 
-- **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included.
-- **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight they show next to the number for as long as they are on you: "17.5/s +3.6 +2.0"). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
+- **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included. Switch on *In combat too* for an estimate in a fight as well.
+- **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight they show next to the number for as long as they are on you: "17.5/s +3.6 +2.0"; one switch turns that off). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline, as Forever hides the value from addons in combat) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
 
@@ -82,6 +82,7 @@ Forever hides your current mana, your buffs and your spell cooldowns from addons
 | `/fmf reset` | move the icons and the texts back to the default position |
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
 | `/fmf probe` | print API status for bug reports (also kept in the settings file) |
+| `/fmf selftest` | tries every setting for a moment and lists any error (about 20 s; your settings come back at the end) |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap (left-click: settings, right-click: items and spells).
@@ -100,9 +101,9 @@ The settings are also in *Options → AddOns → Full Mana Forever* and in the a
 
 ## Tested so far
 
-- **In the live game** since launch (4 Nov) and in the beta, priest level 16–26: in combat, solo, in a party and in a full dungeon run.
+- **In the live game** since launch (4 Nov) and in the beta, priest level 16–32: in combat, solo, in a party and in a full dungeon run.
 - Potions (also a second potion after the 2-minute cooldown in the same fight), wanding, Eureka! and Inner Focus, Read Leyline on a Skyborne mage.
-- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Mana Spring Totem, Resurrection Sickness; fading out of combat; time to full mana while drinking.
+- Five-second rule and the regen colours: drinking, Spirit Tap, Read Leyline, Blessing of Wisdom, Mana Spring Totem, Resurrection Sickness; fading out of combat; time to full mana while drinking and in a fight; the cast cost on the bar, also in combat.
 - Profiles across several characters, `/fmf hold`, the icon order, the item list as priest, mage and druid.
 - "Low mana!" and "Out of mana!" in the party chat.
 - The bar over the mana bar of Forever Unit Frames (only markers, moved separately, above other frames).
@@ -131,3 +132,7 @@ Vollständig auf Deutsch · Totalmente en español · Entièrement en français 
 - **Português:** Mostra a poção de mana, runa, gema de mana ou feitiço de mana certo quando está pronto e cabe na mana que falta. Barra de mana com a regra dos cinco segundos, regeneração ao vivo e tempo até a mana cheia.
 - **简体中文：** 当合适的法力药水、符文、法力宝石或自身法力技能就绪且恰好补满缺失的法力时将其点亮。带五秒规则、实时法力回复和法力回满时间的法力条。
 - **繁體中文：** 當合適的法力藥水、符文、法力寶石或自身法力技能就緒且剛好補滿缺少的法力時將其點亮。帶五秒規則、即時法力回復和法力回滿時間的法力條。
+
+## More Forever addons
+
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die for WoW Forever — about how many seconds your target has left, live in combat.

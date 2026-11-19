@@ -104,6 +104,8 @@ local WISDOM = {
 -- Mana Spring Totem: the buff on the player while near the totem, 4-10 mana every 2 s, no end
 -- time (it comes and goes with the distance to the totem)
 local SPRING = { [5677] = 4 / 2, [10491] = 6 / 2, [10493] = 8 / 2, [10494] = 10 / 2 }
+-- Gear, elixirs and world buffs such as Might of Stormwind raise the game's own regen: they are
+-- in its number already and not listed here (measured 18 Nov)
 local wisdom, wisdomUntil, spring = 0, 0, 0
 -- The buffs are read out of combat only: in a fight the game does not tell which buff came or
 -- went, and says "no such buff" for one that is there. The blessing lasts an hour, so what was
@@ -372,12 +374,27 @@ end
 
 -- base and casting rate as plain numbers (Blessing of Wisdom and Mana Spring included), nil while they are
 -- secret (in combat): for the time to full mana (0.9.7), which only shows out of combat
+local lastBase, lastCasting -- the game's own rates the last time they were readable
 function ns.RegenRates()
   local ok, base, casting = ManaRegen()
   if not ok or IsSecret(base) or type(base) ~= "number" then return nil end
   if IsSecret(casting) or type(casting) ~= "number" then casting = 0 end
+  lastBase, lastCasting = base, casting
   local extra = ns.BuffRegen()
   return base + extra, casting + extra
+end
+
+-- the same in a fight, where the game's rates cannot be read: an estimate from the rates seen
+-- before the fight (the lower of the last one and the normal one, so a Spirit Tap of the last
+-- kill does not make it look faster), plus the mana buffs known now. Nil while it would be a
+-- guess too far: nothing seen yet, or own Evocation / Read Leyline running.
+function ns.CombatRates()
+  if not lastBase or lastBase <= 0 or GetTime() < boostUntil then return nil end
+  local base = lastBase
+  local normal = NormalBase()
+  if normal and normal > 0 and normal < base then base = normal end
+  local extra = ns.BuffRegen()
+  return base + extra, (lastCasting or 0) + extra
 end
 
 local patUnit, patPlain, patPlus
@@ -397,7 +414,8 @@ function ns.RegenText()
     patPlain, patPlus = "%.1f" .. patUnit, "%.1f|cffffffff+%.1f|r" .. patUnit
   end
   local okF, text
-  if extra > 0 and IsSecret(value) and not plus.live then
+  local plusOn = not (ns.db and ns.db.regenPlus == false)
+  if extra > 0 and IsSecret(value) and not plus.live and plusOn then
     -- no labels from the game: what was known before the fight, as a white "+3.6"
     okF, text = pcall(string.format, patPlus, value, extra)
   elseif IsSecret(value) then

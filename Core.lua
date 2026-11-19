@@ -9,7 +9,12 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.14"
+ns.VERSION = "0.9.15"
+-- the commit a zip was built from: git fills it in when it packs the zip (export-subst)
+local build = "$Format:%h$"
+ns.BUILD = build:find("^%$") == nil and build ~= "" and build or nil
+-- "0.9.15 (e2035ae)"; the bare version when run from the repository
+function ns.VersionText() return ns.BUILD and (ns.VERSION .. " (" .. ns.BUILD .. ")") or ns.VERSION end
 local PREFIX = "|cff4fa3ffFMF|r: "
 local MANA = 0 -- Enum.PowerType.Mana
 local MAX_LAYERS = 4 -- items stacked in one slot (one per distinct restore value)
@@ -39,6 +44,8 @@ local DEFAULTS = {
   oomOut     = true,    -- "Out of mana!" below oomOutAt, or when a cast fails for lack of mana
   oomOutAt   = 0.05,
   fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
+  fullTimerCombat = false, -- the same in a fight, as an estimate (0.9.15, asked for by a player)
+  regenPlus  = true,    -- in a fight the blessing's and totem's "+" next to the regen (0.9.15)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
   fsrNum     = true,    -- the rule's seconds next to the strip (off: only the strip, 0.9.0)
@@ -110,6 +117,8 @@ local function BugLink()
 end
 
 local function WarnOnce(key, msg)
+  -- /fmf selftest while it runs: its errors are collected instead of printed
+  if ns.selfTestNote then ns.selfTestNote(msg) return end
   if not warned[key] then
     warned[key] = true
     Print("|cffff4444" .. msg .. "|r")
@@ -1105,7 +1114,7 @@ holdFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 holdFrame:SetScript("OnEvent", function(_, event)
   -- the mana buffs' "+" labels next to the regen: shown in a fight; made after a fight when the
   -- game was entered in one
-  if ns.BuffPlusShow then ns.BuffPlusShow(event == "PLAYER_REGEN_DISABLED") end
+  if ns.BuffPlusShow then ns.BuffPlusShow(event == "PLAYER_REGEN_DISABLED" and db and db.regenPlus ~= false) end
   ns.regenDirty = true
   if event == "PLAYER_REGEN_ENABLED" and ns.MakePlus then pcall(ns.MakePlus) end
   if not held then return end
@@ -1220,6 +1229,18 @@ local function CreateBar()
   bar.fsr:SetStatusBarColor(1, 0.82, 0.2)
   bar.fsr:SetMinMaxValues(0, ns.FSR_SECONDS or 5)
   bar.fsr:Hide()
+  -- cost of the spell being cast (0.9.15): a darker part at the end of the fill. The dark bar
+  -- shows the mana now; the bar over it counts from the cost up, so it ends where the mana will
+  -- be after the cast
+  bar.costDark = CreateFrame("StatusBar", nil, bar)
+  bar.costAfter = CreateFrame("StatusBar", nil, bar)
+  for k, b in ipairs({ bar.costDark, bar.costAfter }) do
+    b:SetAllPoints()
+    b:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+    b:SetFrameLevel((bar:GetFrameLevel() or 1) + k)
+    b:EnableMouse(false)
+    b:Hide()
+  end
   -- the three texts (mana numbers, the rule's seconds, the regen) live on their own frames:
   -- they show without the bar and can be dragged ("Move texts freely"). Scaling a frame
   -- changes the text size and keeps the game's font family (a font file set by hand would
@@ -1264,7 +1285,9 @@ end
 -- behind its arrow; under the text when it is right-aligned (nothing may grow into the bar)
 function ns.PlacePlus()
   if not (bar and ns.BuffPlusPlace) then return end
-  if bar.plusBelow then
+  -- with the time to full mana in a fight the labels would run into it: they go under the regen
+  local timerInFight = db.regenText and db.fullTimer ~= false and db.fullTimerCombat
+  if bar.plusBelow or timerInFight then
     ns.BuffPlusPlace("TOPLEFT", bar.regen, "BOTTOMLEFT", 0, -1)
   else
     ns.BuffPlusPlace("LEFT", bar.regen, "RIGHT", bar.plusDx or 3, 0)
@@ -1295,6 +1318,16 @@ local function PaintBar()
     end
   end)
   if not ok then bar:SetStatusBarColor(c.top[1], c.top[2], c.top[3], fa) end
+  -- the cost part: the bar's own colour, darker; the bar over it like the fill
+  bar.costDark:SetStatusBarColor(c.bottom[1] * 0.42, c.bottom[2] * 0.42, c.bottom[3] * 0.5, 1)
+  local after = bar.costAfter:GetStatusBarTexture()
+  if not (after and pcall(function()
+    if vertical then
+      after:SetGradient("HORIZONTAL", CreateColor(c.top[1], c.top[2], c.top[3], 1), CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1))
+    else
+      after:SetGradient("VERTICAL", CreateColor(c.bottom[1], c.bottom[2], c.bottom[3], 1), CreateColor(c.top[1], c.top[2], c.top[3], 1))
+    end
+  end)) then bar.costAfter:SetStatusBarColor(c.top[1], c.top[2], c.top[3], 1) end
   -- "only markers": the fill, background, shadow, gloss and border vanish; the markers, the
   -- five-second strip and the texts stay (laid over another addon's mana bar)
   local full = db.barStyle ~= "markers"
@@ -1483,6 +1516,8 @@ function ns.PositionBar()
   bar.text:ClearAllPoints()
   bar.gloss:ClearAllPoints()
   bar:SetOrientation(vertical and "VERTICAL" or "HORIZONTAL")
+  bar.costDark:SetOrientation(vertical and "VERTICAL" or "HORIZONTAL")
+  bar.costAfter:SetOrientation(vertical and "VERTICAL" or "HORIZONTAL")
   if vertical then
     if db.barSide == "right" then
       bar:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 6, 0)
@@ -2176,12 +2211,18 @@ end
 local timerCurve, timerKey, timerFull, timerFullNum, timerFullMax, timerFullScale
 local function UpdateFullTimer(visible)
   local fs = bar.fullIn
-  if not visible or not db.regenText or db.fullTimer == false or InCombatLockdown()
+  local fight = InCombatLockdown()
+  if not visible or not db.regenText or db.fullTimer == false or (fight and not db.fullTimerCombat)
     or not ns.RegenRates or not (C_CurveUtil and C_CurveUtil.CreateCurve) then
     if fs:IsShown() then fs:Hide() end
     return
   end
-  local base, casting = ns.RegenRates()
+  local base, casting
+  if fight then
+    if ns.CombatRates then base, casting = ns.CombatRates() end
+  else
+    base, casting = ns.RegenRates()
+  end
   local max = UnitPowerMax("player", MANA)
   if type(base) ~= "number" or base <= 0 or IsSecret(max) or type(max) ~= "number" or max <= 0 then
     if fs:IsShown() then fs:Hide() end
@@ -2216,7 +2257,10 @@ local function UpdateFullTimer(visible)
   end
   -- inputs rounded as far as they show: regen to 0.01, the rule or drink to 0.1 s
   local scale = Scale()
-  local kb, kc, kl = math.floor(base * 100 + 0.5), math.floor(c * 100 + 0.5), math.floor(left * 10 + 0.5)
+  -- in a fight the rule runs almost all the time: its seconds count in half-second steps there,
+  -- so the curve is not built anew on every update
+  local kl = fight and math.floor(left * 2 + 0.5) * 5 or math.floor(left * 10 + 0.5)
+  local kb, kc = math.floor(base * 100 + 0.5), math.floor(c * 100 + 0.5)
   local kn = type(normal) == "number" and math.floor(normal * 100 + 0.5) or 0
   local tk = timerKey
   if not tk or tk[1] ~= kb or tk[2] ~= kc or tk[3] ~= kl or tk[4] ~= kn or tk[5] ~= max or tk[6] ~= scale then
@@ -2319,6 +2363,9 @@ local function SetFadeAlpha(a)
   for _, field in pairs(TEXT_KEYS) do bar[field]:SetAlpha(a) end
 end
 
+-- mana cost of the spell being cast, 0 when none (channels pay when they start)
+local castCost = 0
+
 -- returns true while a fade-out is running (then it is updated on every frame)
 local function UpdateFade()
   local now = GetTime()
@@ -2328,7 +2375,8 @@ local function UpdateFade()
   -- in combat only with "Also in combat" (and "Only at full mana": a fight never hides a bar
   -- with mana missing)
   local combatOff = InCombatLockdown() and not (db.fadeCombat and db.fadeFull ~= false)
-  local off = a >= 1 or not db.locked or combatOff or false
+  -- a cast that costs mana shows the bar at once, also at full mana (its cost part with it)
+  local off = a >= 1 or not db.locked or combatOff or castCost > 0 or false
   if off then holdAt = now end
   local p = (now - holdAt - FADE_WAIT) / FADE_TIME
   if p > 1 then p = 1 elseif p < 0 then p = 0 end
@@ -2399,6 +2447,54 @@ FadeOnUpdate = function() RunFade() end
 -- for the tests: the faded alpha and whether it is updated on every frame right now
 function ns.FadeAlpha() return fadeA, fadeFrame.running and true or false end
 
+local function UpdateCost()
+  if not bar then return end
+  local max = bar.maxMana
+  local show = castCost > 0 and db.barStyle ~= "markers" and bar:IsShown() and type(max) == "number" and max > 0
+  if show then
+    bar.costDark:SetMinMaxValues(0, max)
+    bar.costAfter:SetMinMaxValues(castCost, max + castCost)
+    local mana = UnitPower("player", MANA)
+    show = pcall(bar.costDark.SetValue, bar.costDark, mana) and pcall(bar.costAfter.SetValue, bar.costAfter, mana)
+  end
+  bar.costDark:SetShown(show and true or false)
+  bar.costAfter:SetShown(show and true or false)
+end
+ns.UpdateCost = UpdateCost
+-- for the tests
+function ns.CastCost() return castCost end
+
+local function ManaCost(spellID)
+  if type(spellID) ~= "number" or IsSecret(spellID) or not (C_Spell and C_Spell.GetSpellPowerCost) then return 0 end
+  local ok, t = pcall(C_Spell.GetSpellPowerCost, spellID)
+  if not ok or type(t) ~= "table" or IsSecret(t) then return 0 end
+  for _, ci in pairs(t) do
+    if type(ci) == "table" and ci.type == MANA and type(ci.cost) == "number" and not IsSecret(ci.cost) then
+      return ci.cost > 0 and ci.cost or 0
+    end
+  end
+  return 0
+end
+
+local castFrame = CreateFrame("Frame")
+for _, e in ipairs({ "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED",
+  "UNIT_SPELLCAST_INTERRUPTED" }) do
+  if castFrame.RegisterUnitEvent then pcall(castFrame.RegisterUnitEvent, castFrame, e, "player")
+  else pcall(castFrame.RegisterEvent, castFrame, e) end
+end
+castFrame:SetScript("OnEvent", function(_, event, unit, _, spellID)
+  if unit ~= "player" then return end
+  if event == "UNIT_SPELLCAST_START" then
+    castCost = ManaCost(spellID)
+  else
+    -- a cast that ended while another one runs keeps the running one's cost
+    local ok, name = pcall(UnitCastingInfo, "player")
+    if not (ok and name) then castCost = 0 end
+  end
+  pcall(UpdateCost)
+  if bar then RunFade() end
+end)
+
 local function UpdateBar(maxMana)
   if not bar then return end
   if not BarVisible() then bar:Hide() return end
@@ -2416,10 +2512,11 @@ local function UpdateBar(maxMana)
     WarnOnce("barvalue", L.warnPower)
   end
   -- "only markers": the game may give the fill texture back its alpha when the bar changes
-  -- (form change, a new texture); kept transparent on every update
+  -- (form change, a new texture); kept transparent on every update. Its alpha is not read back:
+  -- the game may hand it out as a secret that cannot be compared
   if db.barStyle == "markers" then
     local tex = bar:GetStatusBarTexture()
-    if tex and tex:GetAlpha() ~= 0 then tex:SetAlpha(0) end
+    if tex then tex:SetAlpha(0) end
   end
   UpdateFsrStrip()
   local vertical = db.vertical and true or false
@@ -2462,6 +2559,7 @@ local function UpdateBar(maxMana)
     for k = used + 1, #ticks do HideTick(ticks[k]) end
   end
   bar:Show()
+  UpdateCost()
 end
 
 -- optional sound when the mana potion cooldown is over (item cooldowns are readable in combat,
@@ -2565,6 +2663,141 @@ function ns.InvalidateCurves()
 end
 
 ------------------------------------------------------------------------
+-- self-test (/fmf selftest): every setting in turn, each for a moment, its errors collected;
+-- the settings are put back at the end, also after a /reload in between
+------------------------------------------------------------------------
+do
+local selfTest -- running: steps, position, collected errors, the settings to put back
+local SELFTEST_WAIT = 0.3 -- seconds per setting: a few updates and fade frames
+local function SelfTestSteps()
+  local steps = {}
+  local function add(key, ...)
+    for _, v in ipairs({ ... }) do steps[#steps + 1] = { { key, v } } end
+  end
+  for _, k in ipairs({ "onlyCombat", "showIcons", "iconsCombat", "fadeFull", "fadeCombat", "showBar",
+    "fsr", "regenText", "fullTimer", "fullTimerCombat", "regenPlus", "fsrNum", "fsrWhole", "textFree",
+    "manaTextOn", "vertical", "barBorder", "barFree", "onTop" }) do
+    add(k, not db[k])
+  end
+  add("pickMode", "fit", "strongest")
+  add("thresholdMode", "max", "avg")
+  add("manaText", "number", "percent", "both")
+  add("barPosition", "below", "above")
+  add("barSide", "left", "right")
+  add("iconGrow", "normal", "reverse")
+  for _, c in ipairs(ns.BAR_COLORS) do add("barColor", c.key) end
+  add("barStyle", "full", "markers")
+  add("fadeAlpha", 1, 0.3, 0)
+  add("barLength", 0, 80, 400)
+  add("barThickness", 4, 40)
+  add("iconSize", 24, 80)
+  add("iconGap", 0, 20)
+  add("manaScale", 0.5, 2)
+  add("fsrScale", 0.5, 2)
+  add("regenScale", 0.5, 2)
+  -- a few settings that work together
+  steps[#steps + 1] = { { "vertical", true }, { "barSide", "left" }, { "barStyle", "markers" } }
+  steps[#steps + 1] = { { "vertical", true }, { "barSide", "right" }, { "iconGrow", "reverse" } }
+  steps[#steps + 1] = { { "barStyle", "markers" }, { "barFree", true }, { "onTop", true } }
+  steps[#steps + 1] = { { "regenText", true }, { "fullTimer", true }, { "fullTimerCombat", true },
+    { "regenPlus", false } }
+  steps[#steps + 1] = { { "fadeAlpha", 0 }, { "fadeFull", false }, { "fadeCombat", true } }
+  return steps
+end
+local function SelfTestRestore(backup)
+  for k, v in pairs(backup) do
+    if v == "__nil" then db[k] = nil else db[k] = v end
+  end
+  db.selftestBackup = nil
+  pcall(ns.Layout, true)
+  if ns.RefreshOptions then pcall(ns.RefreshOptions) end
+end
+local function SelfTestLabel(step)
+  local parts = {}
+  for _, p in ipairs(step) do parts[#parts + 1] = p[1] .. "=" .. tostring(p[2]) end
+  return table.concat(parts, " ")
+end
+local function SelfTestFinish(stopped)
+  local t = selfTest
+  selfTest = nil
+  ns.selfTestNote = nil
+  if t.oldHandler then pcall(seterrorhandler, t.oldHandler) end
+  SelfTestRestore(t.backup)
+  wipe(warned)
+  local n = 0
+  for _ in pairs(t.seen) do n = n + 1 end
+  Print(("self-test %s: %d of %d settings in %.0f s (%s), your settings are back. %s"):format(
+    stopped and "stopped" or "done", t.i, #t.steps, GetTime() - t.start, t.fight and "in combat" or "out of combat",
+    n == 0 and "|cff44ff44No errors.|r" or ("|cffff4444" .. n .. " error(s):|r")))
+  for _, e in ipairs(t.list) do Print("|cffff4444" .. e .. "|r") end
+  if n > 0 then BugLink() end
+end
+local function SelfTestNext()
+  local t = selfTest
+  if not t then return end
+  if t.i >= #t.steps then SelfTestFinish(false) return end
+  t.i = t.i + 1
+  local step = t.steps[t.i]
+  t.label = SelfTestLabel(step)
+  for k, v in pairs(t.backup) do
+    if v == "__nil" then db[k] = nil else db[k] = v end
+  end
+  for _, p in ipairs(step) do db[p[1]] = p[2] end
+  local ok, err = pcall(ns.Layout, true)
+  if not ok then t.Note(tostring(err)) end
+  ok, err = pcall(Update)
+  if not ok then t.Note(tostring(err)) end
+  if t.i % 10 == 0 then Print(("self-test: %d of %d"):format(t.i, #t.steps)) end
+  C_Timer.After(SELFTEST_WAIT, SelfTestNext)
+end
+function ns.SelfTest(arg)
+  if arg == "stop" then
+    if selfTest then SelfTestFinish(true) end
+    return
+  end
+  if selfTest or not bar then return end
+  local steps = SelfTestSteps()
+  local backup = {}
+  for _, step in ipairs(steps) do
+    for _, p in ipairs(step) do
+      if backup[p[1]] == nil then
+        local v = db[p[1]]
+        if v == nil then backup[p[1]] = "__nil" else backup[p[1]] = v end
+      end
+    end
+  end
+  db.selftestBackup = backup -- put back at the next login if the test does not finish
+  local t = { steps = steps, i = 0, backup = backup, list = {}, seen = {}, start = GetTime(),
+    fight = InCombatLockdown() }
+  function t.Note(msg)
+    local line = t.label .. ": " .. tostring(msg)
+    if not t.seen[line] then t.seen[line] = true; t.list[#t.list + 1] = line end
+  end
+  selfTest = t
+  ns.selfTestNote = t.Note
+  -- errors outside the addon's own protection (frame scripts) are noted too
+  local okH, old = pcall(geterrorhandler)
+  if okH and old and seterrorhandler then
+    t.oldHandler = old
+    pcall(seterrorhandler, function(e)
+      if selfTest then selfTest.Note(e) end
+      return old(e)
+    end)
+  end
+  Print(("self-test: %d settings, about %.0f s. Your settings come back at the end. /fmf selftest stop ends it."):format(
+    #steps, #steps * SELFTEST_WAIT))
+  SelfTestNext()
+end
+-- a self-test cut off by a /reload or logout: the settings it changed come back
+function ns.SelfTestRecover()
+  local backup = db and db.selftestBackup
+  if type(backup) ~= "table" then return end
+  SelfTestRestore(backup)
+  Print("self-test was cut off: your settings are back.")
+end
+end
+
+------------------------------------------------------------------------
 -- probe
 ------------------------------------------------------------------------
 -- /fmf probe: printed to the chat and kept in the saved variables (the last 3 runs), so a bug
@@ -2584,7 +2817,7 @@ local function Probe()
     if IsSecret(v) then return "SECRET" end
     return tostring(v)
   end
-  P("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VERSION, tostring(InCombatLockdown()),
+  P("v%s combat=%s  secretMana=%s  secretMax=%s", ns.VersionText(), tostring(InCombatLockdown()),
     tostring(IsSecret(UnitPower("player", MANA))), tostring(IsSecret(UnitPowerMax("player", MANA))))
   P("API: UnitPowerPercent=%s UnitHealthPercent=%s C_CurveUtil=%s LuaCurveType=%s",
     yn(UnitPowerPercent), yn(UnitHealthPercent), yn(C_CurveUtil and C_CurveUtil.CreateColorCurve),
@@ -2725,6 +2958,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
   elseif cmd == "item" then
     if not args[2] or not args[3] then Print(L.itemUsage) return end
     ns.AddCustom(args[2], args[3], args[4])
+  elseif cmd == "selftest" then
+    ns.SelfTest(args[2])
   elseif cmd == "probe" and args[2] == "5sr" then
     if ns.Probe5SR then ns.Probe5SR() end
   elseif cmd == "log" then
@@ -2825,7 +3060,7 @@ end
 function FullManaForever_OnCompartmentEnter(_, frame)
   local L = ns.L
   GameTooltip:SetOwner(frame or UIParent, "ANCHOR_LEFT")
-  GameTooltip:AddDoubleLine("Full Mana Forever", "v" .. ns.VERSION, 0.4, 0.7, 1, 1, 0.82, 0)
+  GameTooltip:AddDoubleLine("Full Mana Forever", "v" .. ns.VersionText(), 0.4, 0.7, 1, 1, 0.82, 0)
   GameTooltip:AddDoubleLine(L.cmpLeft, L.cmpSettings, 1, 0.82, 0, 1, 1, 1)
   GameTooltip:AddDoubleLine(L.cmpRight, L.libTitle, 1, 0.82, 0, 1, 1, 1)
   GameTooltip:Show()
@@ -2942,14 +3177,16 @@ boot:SetScript("OnEvent", function(self, event, arg1)
       if not ok then Print(L.warnOptions, tostring(err)) end
     end
     C_Timer.NewTicker(0.1, SafeUpdate)
+    ns.SelfTestRecover()
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
     -- a short tip on the very first login, afterwards one line only when the version changes
     -- (settings from before 0.8.3 have no seenVersion: those players get the version line)
     if freshInstall then
       Print(L.firstRun)
-    elseif acct.seenVersion ~= ns.VERSION then
-      Print(L.loaded, ns.VERSION)
+    elseif acct.seenVersion ~= ns.VERSION or (ns.BUILD and acct.seenBuild ~= ns.BUILD) then
+      -- also after a new test build of the same version
+      Print(L.loaded, ns.VersionText())
     end
-    acct.seenVersion = ns.VERSION
+    acct.seenVersion, acct.seenBuild = ns.VERSION, ns.BUILD
   end
 end)

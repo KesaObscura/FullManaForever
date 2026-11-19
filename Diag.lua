@@ -198,7 +198,7 @@ local function HeaderText()
   local okL, lvl = Call(UnitLevel, "player")
   local okM, max = Call(UnitPowerMax, "player", MANA)
   return ("v%s %s %s level=%s maxMana=%s combat=%s API: GetPowerRegen=%s C_Spell.GetSpellPowerCost=%s C_UnitAuras=%s"):format(
-    ns.VERSION, Show(class), Show(race), okL and Show(lvl) or "?", okM and Show(max) or "?",
+    ns.VersionText(), Show(class), Show(race), okL and Show(lvl) or "?", okM and Show(max) or "?",
     tostring(InCombatLockdown()), tostring(GetPowerRegen ~= nil),
     tostring(C_Spell ~= nil and C_Spell.GetSpellPowerCost ~= nil), tostring(C_UnitAuras ~= nil))
     .. HealthText() .. (" ScaleTo100=%s percent=%s"):format(tostring(CurveConstants ~= nil and CurveConstants.ScaleTo100 ~= nil),

@@ -3178,6 +3178,30 @@ test("0.9.14: the buffs are read for a drink only after they changed, not on eve
   _G.GetPowerRegen, _G.C_Spell = nil, nil
 end)
 
+test("0.9.15: time to full mana in a fight only with 'In combat too', counted with the rate from before the fight", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 0.5, 100
+  _G.GetPowerRegen = function() return 20, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local b = bar(ns)
+  M.tick()
+  eq(b.fullIn.text, ns.L.fullIn:format(500 / 20), "no time out of combat")
+  -- the fight: the game's rate is secret
+  M.state.combat = true
+  _G.GetPowerRegen = function() return M.secret(20), M.secret(0) end
+  M.tick()
+  ok(not b.fullIn.shown, "time shown in a fight with the setting off")
+  ns.db.fullTimerCombat = true; M.tick()
+  ok(b.fullIn.shown, "no time in a fight with the setting on")
+  eq(b.fullIn.text, ns.L.fullIn:format(500 / 20), "not the rate from before the fight")
+  -- own Evocation: no estimate while it runs
+  M.Fire("UNIT_SPELLCAST_SUCCEEDED", "player", "g", 12051); M.tick()
+  ok(not b.fullIn.shown, "an estimate shown during Evocation")
+  M.state.combat = false
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+  noRegenApis()
+end)
+
 test("0.9.7: time to full mana counts the end of drinking (drink aura out of combat)", function()
   local ns = M.load({ fadeAlpha = 1 }, { bags = POT })
   M.state.maxMana, M.state.manaPct, M.state.time = 1879, 515 / 1879, 100
@@ -3208,4 +3232,161 @@ test("0.9.7: time to full mana counts the end of drinking (drink aura out of com
   _G.C_UnitAuras = nil
   M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
   _G.GetPowerRegen, _G.C_Spell = nil, nil
+end)
+
+test("cast cost: a darker part at the end of the fill while a spell is cast", function()
+  local ns = M.load(nil, { bags = POT })
+  M.state.manaPct = 0.80
+  local casting
+  _G.C_Spell = { GetSpellPowerCost = function(id) if id == 6063 then return { { type = 0, cost = 255 } } end
+    if id == 1 then return { { type = 3, cost = 40 } } end return {} end }
+  _G.UnitCastingInfo = function() return casting end
+  local b = bar(ns)
+  M.tick()
+  ok(not b.costDark.shown and not b.costAfter.shown, "cost part shown without a cast")
+  casting = "Heal"
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", 6063)
+  eq(ns.CastCost(), 255)
+  ok(b.costDark.shown and b.costAfter.shown, "cost part not shown")
+  eq(b.costDark.min, 0); eq(b.costDark.max, 1000)
+  eq(b.costAfter.min, 255, "upper bar does not count from the cost"); eq(b.costAfter.max, 1255)
+  ok(b.costAfter.value ~= nil and b.costDark.value ~= nil, "mana not passed to the cost bars")
+  -- another unit's cast changes nothing
+  M.Fire("UNIT_SPELLCAST_START", "target", "g", 1)
+  eq(ns.CastCost(), 255)
+  casting = nil
+  M.Fire("UNIT_SPELLCAST_STOP", "player", "g", 6063)
+  eq(ns.CastCost(), 0)
+  ok(not b.costDark.shown and not b.costAfter.shown, "cost part stays after the cast")
+  -- a spell without mana cost, and a secret ID: nothing
+  casting = "X"
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", 1)
+  eq(ns.CastCost(), 0)
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", M.secret(6063))
+  eq(ns.CastCost(), 0)
+  -- "only markers": no cost part
+  M.Fire("UNIT_SPELLCAST_START", "player", "g", 6063)
+  ok(b.costDark.shown, "cost part missing")
+  ns.db.barStyle = "markers"; M.tick()
+  ok(not b.costDark.shown and not b.costAfter.shown, "cost part in the markers style")
+  _G.C_Spell, _G.UnitCastingInfo = nil, nil
+  M.state.manaPct = 1
+end)
+
+test("cast cost: a cast at full mana shows the faded bar at once, it fades again after the cast", function()
+  local ns = M.load({ fadeAlpha = 0.3 }, { bags = POT })
+  M.state.manaPct = 1
+  local casting
+  _G.C_Spell = { GetSpellPowerCost = function() return { { type = 0, cost = 255 } } end }
+  _G.UnitCastingInfo = function() return casting end
+  local b = bar(ns)
+  M.state.time = 100; M.tick()
+  eq(b.alpha, 0.3, "not faded at full mana")
+  casting = "Heal"
+  M.state.time = 101; M.Fire("UNIT_SPELLCAST_START", "player", "g", 6063)
+  eq(b.alpha, 1, "faded bar not shown when the cast starts")
+  ok(b.costDark.shown, "cost part not shown at full mana")
+  casting = nil
+  M.state.time = 103; M.Fire("UNIT_SPELLCAST_STOP", "player", "g", 6063)
+  eq(b.alpha, 1, "faded right at the end of the cast")
+  M.state.time = 110; M.tick()
+  eq(b.alpha, 0.3, "not faded again after the cast")
+  _G.C_Spell, _G.UnitCastingInfo = nil, nil
+  M.state.time = nil
+end)
+
+test("0.9.15: with the time to full in a fight the '+' labels go under the regen, not into the timer", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT, auraBox = true })
+  local b = bar(ns)
+  local host = M.upvalue(ns.BuffPlusPlace, "plus").host
+  ok(host, "no label host")
+  eq(host.points[1][1], "LEFT", "labels not next to the regen by default")
+  ns.db.fullTimerCombat = true; ns.PlacePlus()
+  eq(host.points[1][1], "TOPLEFT"); eq(host.points[1][2], b.regen); eq(host.points[1][3], "BOTTOMLEFT")
+  ns.db.fullTimer = false; ns.PlacePlus()
+  eq(host.points[1][1], "LEFT", "labels moved down without a timer")
+end)
+
+test("the commit of a test build shows next to the version; none when run from the repository", function()
+  local ns = M.load(nil, { bags = POT })
+  eq(ns.BUILD, nil, "placeholder taken for a commit")
+  eq(ns.VersionText(), ns.VERSION)
+end)
+
+test("0.9.15: the blessing's '+' in a fight can be switched off; then the plain regen number", function()
+  local ns = M.load({ fadeAlpha = 1 }, { bags = POT, auraBox = true })
+  M.state.maxMana, M.state.manaPct, M.state.time = 1999, 942 / 1999, 100
+  _G.GetPowerRegen = function() return 17.5, 0 end
+  _G.C_Spell = { GetSpellPowerCost = function() return {} end }
+  local aura = { spellId = 19850, expirationTime = 3700 }
+  _G.C_UnitAuras = { GetPlayerAuraBySpellID = function(id) if id == aura.spellId then return aura end end }
+  M.tick(); M.Fire("UNIT_AURA", "player")
+  eq(ns.db.regenPlus, true, "switch not on by default")
+  local host = M.upvalue(ns.BuffPlusPlace, "plus").host
+  -- on: the game's labels show in a fight
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  eq(host.alpha, 1, "labels hidden in a fight while switched on")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  eq(host.alpha, 0)
+  -- off: no labels in a fight, and no white "+" either when the game gives no labels
+  ns.db.regenPlus = false
+  M.state.combat = true; M.Fire("PLAYER_REGEN_DISABLED")
+  eq(host.alpha, 0, "labels shown although switched off")
+  M.upvalue(ns.BuffPlusPlace, "plus").live = false
+  _G.GetPowerRegen = function() return M.secret(17.5), M.secret(0) end
+  eq((ns.RegenText()), "17.5" .. ns.L.regenUnit, "white + shown although switched off")
+  ns.db.regenPlus = true
+  eq((ns.RegenText()), "17.5|cffffffff+3.6|r" .. ns.L.regenUnit)
+  -- out of combat the blessing still counts in the one number
+  M.state.combat = false; _G.GetPowerRegen = function() return 17.5, 0 end
+  ns.db.regenPlus = false
+  eq((ns.RegenText()), "21.1" .. ns.L.regenUnit, "blessing lost out of combat")
+  _G.C_UnitAuras, _G.GetPowerRegen, _G.C_Spell = nil, nil, nil
+  M.state.maxMana, M.state.manaPct, M.state.time = 1000, 1, nil
+end)
+
+test("'Only markers': a secret alpha of the fill does not hide the bar and its markers", function()
+  local ns = M.load({ barStyle = "markers" }, { bags = POT })
+  M.state.manaPct = 0.9; M.tick()
+  local b = bar(ns)
+  local tex = b:GetStatusBarTexture()
+  -- the game hands the alpha out as a secret: comparing it fails like this
+  tex.GetAlpha = function() error("attempt to compare a secret number value") end
+  M.tick()
+  ok(b.shown, "bar hidden after a secret alpha")
+  ok(b.ticks[1][1].front.shown, "potion marker gone")
+  eq(tex.alpha, 0, "fill visible with only markers")
+  eq(#M.warnings(), 0, "warning: " .. table.concat(M.warnings(), "|"))
+end)
+
+test("/fmf selftest walks the settings, reports errors and puts every setting back", function()
+  local ns = M.load({ barStyle = "full", vertical = false, fadeAlpha = 1 }, { bags = POT })
+  M.state.manaPct = 0.8; M.tick()
+  local before = {}
+  for k, v in pairs(ns.db) do if type(v) ~= "table" then before[k] = v end end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("selftest")
+  local all = table.concat(M.printed, "\n")
+  ok(all:find("self-test done", 1, true), "no end line: " .. all)
+  ok(all:find("No errors", 1, true), "errors in a clean run: " .. all)
+  for k, v in pairs(before) do eq(ns.db[k], v, "setting not put back: " .. k) end
+  eq(ns.db.selftestBackup, nil, "backup left in the settings")
+  -- an error in one setting is named with that setting
+  local b = bar(ns)
+  local real = b.costDark.SetShown
+  b.costDark.SetShown = function(self, v)
+    if ns.db.barStyle == "markers" then error("boom") end
+    return real(self, v)
+  end
+  M.printed = {}
+  SlashCmdList.FULLMANAFOREVER("selftest")
+  all = table.concat(M.printed, "\n")
+  ok(all:find("barStyle=markers", 1, true) and all:find("boom", 1, true), "error not reported with its setting: " .. all)
+  b.costDark.SetShown = real
+  for k, v in pairs(before) do eq(ns.db[k], v, "setting not put back after errors: " .. k) end
+  -- cut off by a reload: the settings come back at the next login
+  ns.db.selftestBackup = { barStyle = "full", vertical = "__nil" }
+  ns.db.barStyle, ns.db.vertical = "markers", true
+  ns.SelfTestRecover()
+  eq(ns.db.barStyle, "full"); eq(ns.db.vertical, nil); eq(ns.db.selftestBackup, nil)
 end)
