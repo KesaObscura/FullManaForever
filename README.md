@@ -16,7 +16,7 @@ shows the **five-second rule (5SR)**, your **live mana regen per second, also in
 
 ![A mana potion lights up when it fits into the missing mana](docs/images/mana-potion-at-the-right-moment.png)
 
-*Also for WoW Forever: [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever) — time to die (TTD): about how many seconds your target and every enemy on its nameplate has left, live in combat.*
+*Also for WoW Forever: [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever) — time to die (TTD): about how many seconds your target and every enemy have left, live in combat, also above their nameplates.*
 
 | Right potion for the missing mana | Live regen and five-second rule | Own mana spells |
 |---|---|---|
@@ -169,7 +169,7 @@ keys of `enUS` with the same `%s`/`%d` placeholders; `tests/run.lua` checks that
 
 ## More Forever addons
 
-- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die (TTD) for WoW Forever — about how many seconds your target and every enemy on its nameplate has left, live in combat.
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die (TTD) for WoW Forever — about how many seconds your target and every enemy have left, live in combat, also above their nameplates.
 
 ## License
 

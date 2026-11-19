@@ -8,7 +8,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 *Features asked for in the comments get built. Tell us what you need: comment here or open an issue on [GitHub](https://github.com/KesaObscura/FullManaForever/issues).*
 
-*Also for WoW Forever: [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever) — time to die (TTD): about how many seconds your target and every enemy on its nameplate has left, live in combat.*
+*Also for WoW Forever: [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever) — time to die (TTD): about how many seconds your target and every enemy have left, live in combat, also above their nameplates.*
 
 ## Features: mana potions, mana bar, five-second rule
 
@@ -140,4 +140,4 @@ Vollständig auf Deutsch · Totalmente en español · Entièrement en français 
 
 ## More Forever addons
 
-- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die (TTD) for WoW Forever — about how many seconds your target and every enemy on its nameplate has left, live in combat.
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die (TTD) for WoW Forever — about how many seconds your target and every enemy have left, live in combat, also above their nameplates.
