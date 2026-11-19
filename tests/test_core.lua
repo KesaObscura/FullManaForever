@@ -3390,3 +3390,14 @@ test("/fmf selftest walks the settings, reports errors and puts every setting ba
   ns.SelfTestRecover()
   eq(ns.db.barStyle, "full"); eq(ns.db.vertical, nil); eq(ns.db.selftestBackup, nil)
 end)
+
+test("/fmf selftest covers every setting: a new one goes into its steps or, with a reason, into its skip list", function()
+  local ns = M.load(nil, { bags = POT })
+  local keys = ns.SelfTestKeys()
+  for k in pairs(ns.DEFAULTS) do
+    ok(keys[k] or ns.SELFTEST_SKIP[k], "setting not in /fmf selftest (add it to SelfTestSteps or SELFTEST_SKIP): " .. k)
+  end
+  for k in pairs(ns.SELFTEST_SKIP) do
+    ok(not keys[k], "setting both tested and skipped: " .. k)
+  end
+end)

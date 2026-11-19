@@ -2669,6 +2669,17 @@ end
 do
 local selfTest -- running: steps, position, collected errors, the settings to put back
 local SELFTEST_WAIT = 0.3 -- seconds per setting: a few updates and fade frames
+-- settings the self-test leaves alone, with the reason; every other setting must be in its steps
+-- (a test checks it: a new setting goes into SelfTestSteps or, with a reason, here)
+ns.SELFTEST_SKIP = {
+  point = "frame position", textPoints = "dragged text positions", barPoint = "free bar position",
+  locked = "unlocking shows the test frame", oomChat = "writes to the group chat",
+  oomLow = "group chat", oomLowAt = "group chat", oomOut = "group chat", oomOutAt = "group chat",
+  potionSound = "plays a sound", potionSoundKind = "plays a sound",
+  spellThr = "per-spell table", spellOff = "per-spell table", enabled = "groups table",
+  disabled = "items table",
+}
+ns.DEFAULTS = DEFAULTS
 local function SelfTestSteps()
   local steps = {}
   local function add(key, ...)
@@ -2676,7 +2687,7 @@ local function SelfTestSteps()
   end
   for _, k in ipairs({ "onlyCombat", "showIcons", "iconsCombat", "fadeFull", "fadeCombat", "showBar",
     "fsr", "regenText", "fullTimer", "fullTimerCombat", "regenPlus", "fsrNum", "fsrWhole", "textFree",
-    "manaTextOn", "vertical", "barBorder", "barFree", "onTop" }) do
+    "manaTextOn", "vertical", "barBorder", "barFree", "onTop", "showSolo", "showParty", "showRaid" }) do
     add(k, not db[k])
   end
   add("pickMode", "fit", "strongest")
@@ -2695,6 +2706,8 @@ local function SelfTestSteps()
   add("manaScale", 0.5, 2)
   add("fsrScale", 0.5, 2)
   add("regenScale", 0.5, 2)
+  add("cdShow", 0, 30)
+  add("runeMargin", 0, 0.6)
   -- a few settings that work together
   steps[#steps + 1] = { { "vertical", true }, { "barSide", "left" }, { "barStyle", "markers" } }
   steps[#steps + 1] = { { "vertical", true }, { "barSide", "right" }, { "iconGrow", "reverse" } }
@@ -2749,6 +2762,14 @@ local function SelfTestNext()
   if not ok then t.Note(tostring(err)) end
   if t.i % 10 == 0 then Print(("self-test: %d of %d"):format(t.i, #t.steps)) end
   C_Timer.After(SELFTEST_WAIT, SelfTestNext)
+end
+-- for the tests: every setting the steps touch
+function ns.SelfTestKeys()
+  local keys = {}
+  for _, step in ipairs(SelfTestSteps()) do
+    for _, p in ipairs(step) do keys[p[1]] = true end
+  end
+  return keys
 end
 function ns.SelfTest(arg)
   if arg == "stop" then
