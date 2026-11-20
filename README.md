@@ -16,6 +16,8 @@ shows the **five-second rule (5SR)**, your **live mana regen per second, also in
 
 ![A mana potion lights up when it fits into the missing mana](docs/images/mana-potion-at-the-right-moment.png)
 
+*Also for WoW Forever: [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever) — time to die (TTD): about how many seconds your target and every enemy have left, live in combat, also above their nameplates.*
+
 | Right potion for the missing mana | Live regen and five-second rule | Own mana spells |
 |---|---|---|
 | ![Several potions: the strongest one that will not overflow lights up](docs/images/right-mana-potion-for-missing-mana.png) | ![Regen colours: blue normal, green while drinking, red under Resurrection Sickness](docs/images/live-mana-regen-five-second-rule.png) | ![Evocation, Innervate, Eureka! and other mana spells](docs/images/own-mana-spells-evocation-innervate.png) |
@@ -167,7 +169,7 @@ keys of `enUS` with the same `%s`/`%d` placeholders; `tests/run.lua` checks that
 
 ## More Forever addons
 
-- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die for WoW Forever — about how many seconds your target has left, live in combat.
+- [Last Breath Forever](https://www.curseforge.com/wow/addons/last-breath-forever): time to die (TTD) for WoW Forever — about how many seconds your target and every enemy have left, live in combat, also above their nameplates.
 
 ## License
 

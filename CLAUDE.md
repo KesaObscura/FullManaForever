@@ -26,6 +26,10 @@ and `/fmf log` (kept in releases for bug reports).
 - **Every control that can be clicked has a tooltip** (owner, 0.8.3), also while greyed out
   (`Tip` sets `SetMotionScriptsWhileDisabled`); a test walks all controls of the settings and
   the item list.
+- **`/fmf selftest` grows with the addon** (owner, 19 Nov): every new setting goes into its steps
+  (`SelfTestSteps` in Core.lua: a switch flips, a choice runs through its values, a number gets its
+  ends; risky combinations as extra steps), or with a reason into `ns.SELFTEST_SKIP`. A test fails
+  otherwise. New features that can break only in a fight: ask the owner to run it in combat too.
 - **Run the tests after every change:** `lua5.1 tests/run.lua` must end with `0 failed`.
 - **After every change, hand the owner a test zip** built from the committed state:
   `git archive --format=zip --prefix=FullManaForever/ -o FullManaForever-<version>-<hash>.zip HEAD -- . ':!tests' ':!tools' ':!docs' ':!.gitignore' ':!.gitattributes' ':!.pkgmeta' ':!CURSEFORGE.md' ':!CLAUDE.md'`
