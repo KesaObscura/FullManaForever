@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.15"
+ns.VERSION = "0.9.16"
 -- the commit a zip was built from: git fills it in when it packs the zip (export-subst)
 local build = "$Format:%h$"
 ns.BUILD = build:find("^%$") == nil and build ~= "" and build or nil

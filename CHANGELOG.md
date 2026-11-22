@@ -1,5 +1,10 @@
 # Changelog
 
+**Full Mana Forever 0.9.16**
+
+- **Time to full mana** also counts the Refreshing Red Apple while you eat it
+- **`/fmf selftest`** now also tries *Solo*, *In a party* and *In a raid*, *Show icons before ready* and *Keep health above*
+
 **Full Mana Forever 0.9.15**
 
 Asked for by players:
