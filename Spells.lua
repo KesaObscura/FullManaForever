@@ -342,14 +342,20 @@ function S.ActiveList(out)
   return out
 end
 
--- mana% at or below which the icon lights up: its own setting, else the spell's default;
--- a fit spell (Life Tap) when its mana fits into the missing mana
-function S.Threshold(sp, maxMana)
-  local a = sp.fit and amount[sp]
-  if a and maxMana and maxMana > 0 then return math.max(0, 1 - a / maxMana) end
+-- the threshold set in the list: its own setting, else the spell's default (a fit spell: 1 = only
+-- "when it fits")
+function S.Setting(sp)
   local own = type(ns.db.spellThr) == "table" and ns.db.spellThr[sp.key]
   if type(own) ~= "number" then own = nil end -- a damaged file: the default
-  return own or sp.thr or 0.5
+  return own or sp.thr or (sp.fit and 1) or 0.5
+end
+
+-- mana% at or below which the icon lights up; a fit spell (Life Tap) when its mana fits into the
+-- missing mana and the mana is at or below its own setting (0.9.17)
+function S.Threshold(sp, maxMana)
+  local a = sp.fit and amount[sp]
+  if a and maxMana and maxMana > 0 then return math.min(math.max(0, 1 - a / maxMana), S.Setting(sp)) end
+  return S.Setting(sp)
 end
 
 function S.SetThreshold(sp, v)

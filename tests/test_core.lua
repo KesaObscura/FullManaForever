@@ -822,6 +822,19 @@ test("Life Tap lights up when its mana fits, with the rune health check", functi
   noSpellApis()
 end)
 
+test("Life Tap with its own threshold: lights up only when it fits and the mana is at or below it", function()
+  local ns = M.load({ spellThr = { lifetap = 0.5 } }, { class = "WARLOCK" })
+  spellApis({ 1454 }, { desc = { [1454] = "Converts 300 Health into 300 Mana for you." } })
+  ns.Spells.Rebuild()
+  M.state.manaPct = 0.6; M.tick() -- 300 fit, but above 50 %
+  ok(not spellSlot(ns), "shown above its own threshold")
+  M.state.manaPct = 0.45; M.tick()
+  ok(spellSlot(ns), "hidden at or below its own threshold")
+  ns.db.spellThr.lifetap = 0.95; M.state.manaPct = 0.9; M.tick() -- below 95 %, but 300 do not fit
+  ok(not spellSlot(ns), "shown although 300 mana do not fit")
+  noSpellApis()
+end)
+
 test("no mana spells: no slot, no room on the bar; spells are not items", function()
   local ns = M.load(nil, { class = "PRIEST" })
   local before = ns.AutoBarLength()
@@ -1727,7 +1740,7 @@ test("item list: spells of the class with their state, threshold -/+ and on/off"
   noSpellApis()
 end)
 
-test("item list: why a spell is missing (level, talent, trainer); Life Tap fits instead of a threshold", function()
+test("item list: why a spell is missing (level, talent, trainer); Life Tap: when it fits, or a threshold", function()
   local ns = M.load(nil, { class = "PRIEST", level = 30 })
   spellApis({}, { learned = {} })
   ns.Spells.Rebuild()
@@ -1745,7 +1758,13 @@ test("item list: why a spell is missing (level, talent, trainer); Life Tap fits 
   for _, r in ipairs(rows) do if r.sp and r.sp.key == "lifetap" and r.frame.shown then tap = r end end
   ok(tap, "Life Tap not listed")
   eq(tap.amount.text, ns.L.libSpellFit)
-  ok(not tap.minus.shown and not tap.plus.shown, "Life Tap has -/+")
+  ok(tap.minus.shown and tap.plus.shown, "Life Tap has no -/+")
+  ok(not tap.plus.enabled, "+ above \"when it fits\"")
+  tap.minus.scripts.OnClick()
+  ok(math.abs(ns.db.spellThr.lifetap - 0.95) < 1e-9, "not 95 %")
+  eq(tap.amount.text, ns.L.libSpellThr:format(95))
+  tap.plus.scripts.OnClick()
+  eq(tap.amount.text, ns.L.libSpellFit, "back to when it fits")
   noSpellApis()
 end)
 
