@@ -3420,3 +3420,56 @@ test("/fmf selftest covers every setting: a new one goes into its steps or, with
     ok(not keys[k], "setting both tested and skipped: " .. k)
   end
 end)
+
+-- 0.9.17 ------------------------------------------------------------------------------------
+
+test("0.9.17: \"Drink\" under the regen out of combat at low mana, not in a fight, off by default", function()
+  local ns = M.load(nil, { bags = POT })
+  regenApis(15, 0)
+  local b = bar(ns)
+  M.state.manaPct = 0.3; M.tick()
+  ok(not b.drink.shown, "shown although switched off")
+  ns.db.drinkHint, ns.db.drinkAt = true, 0.5
+  M.tick()
+  ok(b.drink.shown, "not shown when switched on")
+  eq(b.drink.text, ns.L.drinkHint)
+  eq(b.drink.alpha, 1, "not visible at 30 % with the mark at 50 %")
+  M.state.manaPct = 0.8; M.tick()
+  eq(b.drink.alpha, 0, "visible above the mark")
+  M.state.manaPct = 0.3; M.state.combat = true; M.tick()
+  ok(not b.drink.shown, "shown in a fight")
+  M.state.combat = false; M.tick()
+  ok(b.drink.shown, "not back after the fight")
+  ns.db.regenText = false; M.tick()
+  ok(not b.drink.shown, "shown without the regen text")
+end)
+
+test("0.9.17: \"what's new\" window once after an update to a version with news, not on a fresh install", function()
+  local function shown()
+    local f = _G.FullManaForeverNews
+    return f and f.shown and true or false
+  end
+  _G.FullManaForeverNews = nil
+  local ns = M.load(nil)
+  ok(not shown(), "news on a fresh install")
+  ns.NEWS[ns.VERSION] = ns.NEWS[ns.VERSION] or { "news0917a" }
+  _G.FullManaForeverNews = nil
+  ns = M.load({ seenVersion = "0.9.16" })
+  ok(shown(), "no news after the update")
+  _G.FullManaForeverNews = nil
+  ns = M.load({ seenVersion = ns.VERSION })
+  ok(not shown(), "news again for the same version")
+  -- switched off: nothing; /fmf news still shows it
+  _G.FullManaForeverNews = nil
+  ns = M.load({ seenVersion = "0.9.16", profiles = { Shared = { showNews = false } } })
+  ok(not shown(), "news although switched off")
+  SlashCmdList.FULLMANAFOREVER("news")
+  ok(shown(), "/fmf news does not show it")
+  -- in a fight it waits for the fight's end
+  _G.FullManaForeverNews = nil
+  M.state.combat = true
+  ns.ShowNews(ns.VERSION, true)
+  ok(not shown(), "news window in a fight")
+  M.state.combat = false; M.Fire("PLAYER_REGEN_ENABLED")
+  ok(shown(), "news window not shown after the fight")
+end)

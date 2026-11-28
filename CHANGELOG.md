@@ -1,5 +1,11 @@
 # Changelog
 
+**Full Mana Forever 0.9.17**
+
+Also new:
+- **"Drink" between fights** (new switch under *Texts*, off by default): out of combat, "Drink" shows under the regen while your mana is at or below a mark you set (50 % by default) and you are not drinking yet
+- **What's new after an update:** after an update with something new, a short window lists it once, out of combat; *Open settings* takes you there. Switch it off at the bottom of the settings; `/fmf news` shows it again
+
 **Full Mana Forever 0.9.16**
 
 Asked for in the comments:

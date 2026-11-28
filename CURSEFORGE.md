@@ -4,7 +4,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ![A mana potion lights up the moment it fits into your missing mana](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/mana-potion-at-the-right-moment.png)
 
-**New in 0.9.16:** Life Tap with its own threshold. **0.9.15:** see what your cast costs on the bar; time to full mana in a fight too.
+**New in 0.9.17:** "Drink" between fights, and a short "what's new" window after an update. **0.9.16:** Life Tap with its own threshold.
 
 *Features asked for in the comments get built. Tell us what you need: comment here or open an issue on [GitHub](https://github.com/KesaObscura/FullManaForever/issues).*
 
@@ -40,6 +40,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 ### Know when to drink: live mana regen and time to full mana
 
 - **Time to full mana** out of combat: "full in ~27 s" next to the regen while you drink or rest, the five-second rule and the end of your drink included. Switch on *In combat too* for an estimate in a fight as well.
+- **"Drink" between fights** (optional): out of combat, "Drink" shows under the regen while your mana is at or below a mark you choose (50 % by default) and you are not drinking yet.
 - **Live mana regen per second,** also in combat, including Spirit Tap, drinking, Blessing of Wisdom and Mana Spring Totem (in a fight they show next to the number for as long as they are on you: "17.5/s +3.6 +2.0"; one switch turns that off). It turns **green** with a small up arrow when it is above your normal rate of the last minutes (drinking, Spirit Tap, ... out of combat; in combat after your own Evocation or Read Leyline) and **red** with a down arrow while Resurrection Sickness holds it down.
 - **Mana text** like the game's status text: numeric value, percentage or both, with its own switch and text size.
 - **Your layout.** The mana numbers, the five-second seconds and the regen also show with the mana bar switched off, and *Move texts freely* lets you drag each of them anywhere.
@@ -88,12 +89,15 @@ Works in combat and follows Forever's addon rules: the right icon lights up at t
 | `/fmf reset size` | icon size, spacing, bar thickness, bar length and text sizes back to the defaults |
 | `/fmf probe` | print API status for bug reports (also kept in the settings file) |
 | `/fmf selftest` | tries every setting for a moment and lists any error (about 20 s; your settings come back at the end) |
+| `/fmf news` | show the "what's new" window of this version again |
 | `/fmf log on` / `/fmf log off` | record casts and regen for a bug report |
 
 The settings are also in *Options → AddOns → Full Mana Forever* and in the addon menu at the minimap (left-click: settings, right-click: items and spells).
 
 ## FAQ
 
+- **Is there a mana potion or five-second rule (5SR) addon for WoW Forever?** Full Mana Forever: the right mana potion, rune, mana gem or mana spell lights up when it fits your missing mana, next to a mana bar with the five-second rule, live regen and time to full mana. Made for the WoW Forever client (1.60.1), no other addons needed.
+- **How do I see my mana regen in WoW Forever?** Full Mana Forever shows your regen per second next to the mana bar, also in combat, green while it is above normal (drinking) and red under Resurrection Sickness.
 - **Does it work in combat?** Yes, it was built and tested for combat in Forever.
 - **Does it drink for me?** No. The icon tells you when; you press your potion button.
 - **Does it work in WoW Classic Era, Hardcore or retail?** No. It is made for World of Warcraft: Forever (client 1.60.1) and its addon rules.

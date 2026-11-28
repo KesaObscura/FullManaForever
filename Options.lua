@@ -811,6 +811,15 @@ Build = function()
   c.Row(Check(col, L.optFullTimerCombat, function() return db.fullTimerCombat end,
     function(v) db.fullTimerCombat = v; ns.PlacePlus() end, L.tipFullTimerCombat,
     function() return db.regenText and db.fullTimer ~= false end), PAD + 52, 26)
+  -- "Drink" under the regen between fights while the mana is low (0.9.17, off by default)
+  c.Row(Check(col, L.optDrinkHint, function() return db.drinkHint end,
+    function(v) db.drinkHint = v; ns.RefreshOptions() end, L.tipDrinkHint,
+    function() return db.regenText end), PAD + 26, 26)
+  local drinkAt = Stepper(col, PAD + 52, L.optDrinkAt, function() return db.drinkAt or 0.5 end,
+    function(v) db.drinkAt = v end,
+    { step = 0.05, lo = 0.10, hi = 0.90, tip = L.tipDrinkAt, fmt = pct, scale = 100 })
+  c.Row(drinkAt.label, PAD + 52, 30)
+  ActiveIf(function() return db.regenText and db.drinkHint end, drinkAt)
 
   ------------------------------------------------------------ right column
   c = right
@@ -1041,6 +1050,11 @@ Build = function()
   end)
   Tip(resetSize, L.optResetSize, L.tipResetSize)
   fc.y = fc.y - 34
+  -- the short "what's new" window after an update (0.9.17)
+  local news = Check(win, L.optShowNews, function() return db.showNews ~= false end,
+    function(v) db.showNews = v end, L.tipShowNews)
+  news:SetPoint("TOPLEFT", win, "TOPLEFT", PAD, fc.y + 4)
+  fc.y = fc.y - 28
 
   win:SetWidth(2 * W)
   win:SetHeight(-fc.y + 4)
@@ -1428,4 +1442,75 @@ function ns.InitOptions()
   end)
   local category = Settings.RegisterCanvasLayoutCategory(panel, "Full Mana Forever")
   Settings.RegisterAddOnCategory(category)
+end
+
+------------------------------------------------------------------------
+-- "what's new" after an update (0.9.17): only for versions with news (ns.NEWS), only out of
+-- combat, at most once per version; a switch in the settings turns it off
+------------------------------------------------------------------------
+-- version -> locale keys of its lines (one to three); the newest first
+ns.NEWS = {
+  ["0.9.17"] = { "news0917a", "news0917b" },
+}
+local nwin
+local NW = 420
+local function BuildNews(version)
+  nwin = CreateFrame("Frame", "FullManaForeverNews", UIParent)
+  nwin:SetPoint("CENTER", 0, 120)
+  nwin:SetWidth(NW)
+  nwin:SetFrameStrata("DIALOG")
+  nwin:SetToplevel(true)
+  nwin:SetMovable(true)
+  nwin:EnableMouse(true)
+  nwin:SetClampedToScreen(true)
+  nwin:RegisterForDrag("LeftButton")
+  nwin:SetScript("OnDragStart", nwin.StartMoving)
+  nwin:SetScript("OnDragStop", nwin.StopMovingOrSizing)
+  nwin:Hide()
+  EscListed(nwin, "FullManaForeverNews")
+  Skin.Window(nwin, 0, { portrait = Skin.LOGO })
+  local T0 = 44 + Skin.ContentTop(nwin)
+  local title = Label(nwin, L.newsTitle:format(version), "GameFontNormalLarge")
+  Skin.PlaceTitle(title, nwin, PAD)
+  local close = CloseButton(nwin)
+  Skin.PlaceClose(close, nwin)
+  close:SetScript("OnClick", function() nwin:Hide() end)
+  Tip(close, L.optClose, L.tipClose)
+  local y = -48 + T0
+  nwin.lines = {}
+  for _, key in ipairs(ns.NEWS[version] or {}) do
+    local line = Label(nwin, "• " .. (L[key] or key), "GameFontHighlight")
+    line:SetWidth(NW - 2 * PAD)
+    line:SetJustifyH("LEFT")
+    line:SetPoint("TOPLEFT", PAD, y)
+    nwin.lines[#nwin.lines + 1] = line
+    y = y - math.max(18, line:GetStringHeight() or 18) - 8
+  end
+  y = y - 8
+  local open = Button(nwin, L.newsSettings, 160)
+  open:SetPoint("TOPLEFT", PAD, y)
+  open:SetScript("OnClick", function() nwin:Hide(); ns.ToggleOptions(true) end)
+  Tip(open, L.newsSettings, L.tipNewsSettings)
+  local ok = Button(nwin, L.newsOk, 100)
+  ok:SetPoint("TOPRIGHT", nwin, "TOPRIGHT", -PAD, y)
+  ok:SetScript("OnClick", function() nwin:Hide() end)
+  Tip(ok, L.newsOk, L.tipNewsOk)
+  nwin:SetHeight(-y + 40)
+end
+
+-- shows the news of this version now, or after the fight; true when there is something to show
+function ns.ShowNews(version, force)
+  if not (ns.NEWS and ns.NEWS[version]) then return false end
+  if not force and ns.db and ns.db.showNews == false then return false end
+  if InCombatLockdown() then
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("PLAYER_REGEN_ENABLED")
+    f:SetScript("OnEvent", function(self) self:UnregisterAllEvents(); ns.ShowNews(version, force) end)
+    return true
+  end
+  if nwin then nwin:Hide(); nwin = nil end -- built anew: the language may have changed
+  BuildNews(version)
+  nwin:Show()
+  nwin:Raise()
+  return true
 end

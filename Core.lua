@@ -9,7 +9,7 @@
 
 local ADDON, ns = ...
 local L = ns.L
-ns.VERSION = "0.9.16"
+ns.VERSION = "0.9.17"
 -- the commit a zip was built from: git fills it in when it packs the zip (export-subst)
 local build = "$Format:%h$"
 ns.BUILD = build:find("^%$") == nil and build ~= "" and build or nil
@@ -45,6 +45,9 @@ local DEFAULTS = {
   oomOutAt   = 0.05,
   fullTimer  = true,    -- "~27 s" to full mana next to the regen, out of combat (0.9.7)
   fullTimerCombat = false, -- the same in a fight, as an estimate (0.9.15, asked for by a player)
+  drinkHint  = false,   -- "Drink" under the regen out of combat while the mana is low (0.9.17)
+  drinkAt    = 0.5,     -- ... at or below this share of the mana
+  showNews   = true,    -- a short "what's new" window after an update (0.9.17)
   regenPlus  = true,    -- in a fight the blessing's and totem's "+" next to the regen (0.9.15)
   potionSound = false,  -- a short sound when the mana potion cooldown is over
   potionSoundKind = "drop", -- which one: "drop" / "crystal" / "glass" (Sounds/, tools/sound.py)
@@ -1265,6 +1268,12 @@ local function CreateBar()
   bar.fullIn:SetPoint("LEFT", bar.regen, "RIGHT", 18, 0)
   bar.fullIn:SetTextColor(0.8, 0.82, 0.86)
   bar.fullIn:Hide()
+  -- "Drink" under the regen between fights while the mana is low (0.9.17)
+  bar.drink = bar.regenBox:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  OutlineFont(bar.drink, "GameFontHighlightSmall", true)
+  bar.drink:SetPoint("TOPLEFT", bar.regen, "BOTTOMLEFT", 0, -1)
+  bar.drink:SetTextColor(0.45, 0.8, 1)
+  bar.drink:Hide()
   bar.regenUp = bar.regenBox:CreateTexture(nil, "OVERLAY")
   bar.regenUp:SetTexture("Interface\\Buttons\\Arrow-Up-Up")
   bar.regenUp:SetSize(16, 16)
@@ -2301,6 +2310,33 @@ local function UpdateFullTimer(visible)
 end
 
 -- mana numbers, the rule's seconds and the regen, with or without the bar
+-- "Drink" out of combat while the mana is at or below db.drinkAt and no drink is on (0.9.17).
+-- The mana is secret: a numeric step curve gives the text alpha 1 at or below the mark, 0 above;
+-- without numeric curves the hint stays hidden (fail closed).
+local drinkNum, drinkKey
+local function UpdateDrinkHint(visible)
+  local fs = bar.drink
+  local drinking = ns.DrinkLeft and ns.DrinkLeft()
+  if not visible or not db.drinkHint or not db.regenText or InCombatLockdown() or drinking
+    or UnitIsDeadOrGhost("player") then
+    if fs:IsShown() then fs:Hide() end
+    return
+  end
+  local at = type(db.drinkAt) == "number" and db.drinkAt or 0.5
+  local key = at * 1000 + Scale()
+  if key ~= drinkKey then
+    drinkNum = numericOK and C_CurveUtil and C_CurveUtil.CreateCurve and Enum and Enum.LuaCurveType
+      and NumCurve(0, 1, (at + EPS) * Scale(), 0) or nil
+    drinkKey = key
+  end
+  if bar.drinkText ~= L.drinkHint then bar.drinkText = L.drinkHint; fs:SetText(L.drinkHint) end
+  if not NumAlpha(fs, drinkNum) then
+    if fs:IsShown() then fs:Hide() end
+    return
+  end
+  if not fs:IsShown() then fs:Show() end
+end
+
 local function UpdateTexts(maxMana)
   local visible = TextsVisible()
   local manaOn = visible and db.manaTextOn
@@ -2319,6 +2355,7 @@ local function UpdateTexts(maxMana)
   ShowBox(bar.fsrBox, left > 0)
   UpdateRegenText(visible)
   UpdateFullTimer(visible)
+  UpdateDrinkHint(visible)
 end
 
 -- out of combat the bar and its texts can fade (0.9.4): to db.fadeAlpha, and with db.fadeFull
@@ -2687,7 +2724,8 @@ local function SelfTestSteps()
   end
   for _, k in ipairs({ "onlyCombat", "showIcons", "iconsCombat", "fadeFull", "fadeCombat", "showBar",
     "fsr", "regenText", "fullTimer", "fullTimerCombat", "regenPlus", "fsrNum", "fsrWhole", "textFree",
-    "manaTextOn", "vertical", "barBorder", "barFree", "onTop", "showSolo", "showParty", "showRaid" }) do
+    "manaTextOn", "vertical", "barBorder", "barFree", "onTop", "showSolo", "showParty", "showRaid",
+    "drinkHint", "showNews" }) do
     add(k, not db[k])
   end
   add("pickMode", "fit", "strongest")
@@ -2708,6 +2746,8 @@ local function SelfTestSteps()
   add("regenScale", 0.5, 2)
   add("cdShow", 0, 30)
   add("runeMargin", 0, 0.6)
+  add("drinkAt", 0.1, 0.9)
+  steps[#steps + 1] = { { "regenText", true }, { "drinkHint", true }, { "drinkAt", 0.9 } }
   -- a few settings that work together
   steps[#steps + 1] = { { "vertical", true }, { "barSide", "left" }, { "barStyle", "markers" } }
   steps[#steps + 1] = { { "vertical", true }, { "barSide", "right" }, { "iconGrow", "reverse" } }
@@ -2981,6 +3021,8 @@ SlashCmdList.FULLMANAFOREVER = function(msg)
     ns.AddCustom(args[2], args[3], args[4])
   elseif cmd == "selftest" then
     ns.SelfTest(args[2])
+  elseif cmd == "news" then
+    if not (ns.ShowNews and ns.ShowNews(ns.VERSION, true)) then Print(L.newsNone) end
   elseif cmd == "probe" and args[2] == "5sr" then
     if ns.Probe5SR then ns.Probe5SR() end
   elseif cmd == "log" then
@@ -3207,6 +3249,8 @@ boot:SetScript("OnEvent", function(self, event, arg1)
     elseif acct.seenVersion ~= ns.VERSION or (ns.BUILD and acct.seenBuild ~= ns.BUILD) then
       -- also after a new test build of the same version
       Print(L.loaded, ns.VersionText())
+      -- a new version (not a new build of the same one) may bring a short "what's new" window
+      if acct.seenVersion ~= ns.VERSION and ns.ShowNews then pcall(ns.ShowNews, ns.VERSION) end
     end
     acct.seenVersion, acct.seenBuild = ns.VERSION, ns.BUILD
   end
