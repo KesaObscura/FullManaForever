@@ -147,12 +147,13 @@ local function NewRow()
   r.owned:SetJustifyH("RIGHT")
   if r.owned.SetWordWrap then r.owned:SetWordWrap(false) end
 
-  -- own spells: their mana threshold, - / + next to it (Life Tap: "when it fits", no buttons)
+  -- own spells: their mana threshold, - / + next to it (Life Tap: "when it fits" at the top,
+  -- a threshold below it, 0.9.17)
   local function Step(d)
     local sp = row.sp
-    local v = ns.Spells.Threshold(sp)
+    local v = ns.Spells.Setting(sp)
     v = math.floor((v + d) / SPELL_STEP + 0.5) * SPELL_STEP
-    ns.Spells.SetThreshold(sp, math.max(SPELL_LO, math.min(SPELL_HI, v)))
+    ns.Spells.SetThreshold(sp, math.max(SPELL_LO, math.min(sp.fit and 1 or SPELL_HI, v)))
     r.Refresh()
   end
   r.minus = ui.ArrowButton(row, -1, 18)
@@ -182,16 +183,17 @@ local function NewRow()
       r.name:SetText(ns.Spells.Name(SpellID(sp)) or "?")
       r.tag:SetText("")
       r.owned:SetText(SpellStatusText(sp))
-      if sp.fit then
+      local v = ns.Spells.Setting(sp)
+      local hi = sp.fit and 1 or SPELL_HI
+      if sp.fit and v >= 1 then
         r.amount:SetText(L.libSpellFit)
       else
-        local v = ns.Spells.Threshold(sp)
         r.amount:SetText(L.libSpellThr:format(math.floor(v * 100 + 0.5)))
-        -- a switched-off spell has nothing to set (0.9.1)
-        local on = ns.Spells.Enabled(sp)
-        r.minus:SetEnabled(on and v > SPELL_LO + 0.001)
-        r.plus:SetEnabled(on and v < SPELL_HI - 0.001)
       end
+      -- a switched-off spell has nothing to set (0.9.1)
+      local on = ns.Spells.Enabled(sp)
+      r.minus:SetEnabled(on and v > SPELL_LO + 0.001)
+      r.plus:SetEnabled(on and v < hi - 0.001)
     elseif r.it then
       local tags = {}
       if r.it.custom then tags[#tags + 1] = "|cff4fa3ff(" .. L.libOwn .. ")|r" end
@@ -283,7 +285,7 @@ local function BuildContent()
             r.amount:SetText(L.libRestore:format(it.max))
           end
         end
-        local steps = sp and not sp.fit or false
+        local steps = sp and true or false
         r.minus:SetShown(steps)
         r.plus:SetShown(steps)
         r.amountTip:ClearAllPoints()

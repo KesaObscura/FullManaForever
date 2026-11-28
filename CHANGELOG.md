@@ -1,5 +1,14 @@
 # Changelog
 
+**Full Mana Forever 0.9.16**
+
+Asked for in the comments:
+- **Life Tap with its own threshold:** in `/fmf items` Life Tap now has - / + like the other mana spells. At the top it stays *when it fits* (as before); lower it, for example to 50 %, and Life Tap lights up only when its mana fits and your mana is at or below that
+
+Also new:
+- **Time to full mana** also counts the Refreshing Red Apple while you eat it
+- **`/fmf selftest`** now also tries *Solo*, *In a party* and *In a raid*, *Show icons before ready* and *Keep health above*
+
 **Full Mana Forever 0.9.15**
 
 Asked for by players:

@@ -48,7 +48,7 @@ when the icon lights up.
 - **Own mana spells**: Evocation, Innervate, Mana Tide Totem, Inner Focus, Life Tap and the
   racials Eureka! (gnome) and Read Leyline (Skyborne): every ready spell gets its own icon
   when your mana is at or below its own threshold (sensible defaults per spell, set in the list
-  below); Life Tap when its mana fits.
+  below); Life Tap when its mana fits, and if you like only at or below a threshold of its own.
 - **Mana bar with markers**: a thick marker where an icon lights up, thin ones where a
   stronger potion becomes the best fit. Icons stand in the order they light up (highest
   threshold first), so lit icons never leave a gap. Icons in a row or a column, growing either way
