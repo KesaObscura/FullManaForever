@@ -4,7 +4,7 @@ A mana potion, rune, mana gem or your own mana spell (Evocation, Innervate, Mana
 
 ![A mana potion lights up the moment it fits into your missing mana](https://raw.githubusercontent.com/KesaObscura/FullManaForever/main/docs/images/mana-potion-at-the-right-moment.png)
 
-**New in 0.9.15:** see what your cast costs on the bar; time to full mana in a fight too.
+**New in 0.9.16:** Life Tap with its own threshold. **0.9.15:** see what your cast costs on the bar; time to full mana in a fight too.
 
 *Features asked for in the comments get built. Tell us what you need: comment here or open an issue on [GitHub](https://github.com/KesaObscura/FullManaForever/issues).*
 
